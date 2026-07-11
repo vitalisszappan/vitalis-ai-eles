@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: vitalis-kerdezd-a-keszitot
+    runtime: node
+    plan: starter
+    buildCommand: npm test
+    startCommand: npm start
+    healthCheckPath: /api/status
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: ADMIN_TOKEN
+        generateValue: true

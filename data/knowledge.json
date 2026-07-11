@@ -1,0 +1,2781 @@
+[
+  {
+    "id": "kb_46419eeca8fb3faf",
+    "title": "Kapok kuponkódot? Még nem érkezett?",
+    "canonicalQuestion": "Kapok kuponkódot? Még nem érkezett!",
+    "questionVariants": [
+      "Kapok kuponkódot? Még nem érkezett!",
+      "Hogy kapok kuponkódot"
+    ],
+    "shortAnswer": "A feliratozás után kapja meg a kódot. Milyen email címmel történt a felíratkozás?",
+    "fullAnswer": "A feliratozás után kapja meg a kódot. Milyen email címmel történt a felíratkozás?",
+    "category": "kedvezmenyek",
+    "products": [],
+    "keywords": [
+      "kapok",
+      "kuponkodot",
+      "erkezett",
+      "feliratozas",
+      "utan",
+      "kapja",
+      "kodot",
+      "email",
+      "cimmel",
+      "tortent",
+      "feliratkozas",
+      "regisztraciot",
+      "kovetoen",
+      "rendszer",
+      "kikuldi",
+      "megadott",
+      "cimre",
+      "vasarlaskor"
+    ],
+    "intents": [
+      "discount_question"
+    ],
+    "priority": 60
+  },
+  {
+    "id": "kb_c75d1a461bfec85e",
+    "title": "Mennyibe kerül?",
+    "canonicalQuestion": "Mennyibe kerül?",
+    "questionVariants": [
+      "Mennyibe kerül?",
+      "Mennyibe kerül a szállítás?"
+    ],
+    "shortAnswer": "Ekcémára a Dermavital krém és szappan javasolt. https://www.vitalis-szappan.hu/dermavital-balzsam-100-ml https://www.vitalis-szappan.hu/vitalis-dermavital-szappan",
+    "fullAnswer": "Ekcémára a Dermavital krém és szappan javasolt. https://www.vitalis-szappan.hu/dermavital-balzsam-100-ml https://www.vitalis-szappan.hu/vitalis-dermavital-szappan",
+    "category": "kedvezmenyek",
+    "products": [
+      "dermavital",
+      "kezmuves-szappan"
+    ],
+    "keywords": [
+      "mennyibe",
+      "kerul",
+      "elnezest",
+      "elirtam",
+      "ekcemara",
+      "dermavital",
+      "krem",
+      "szappan",
+      "javasolt",
+      "https",
+      "www",
+      "vitalis",
+      "szallitas",
+      "szallitasi",
+      "felteteleknel",
+      "tud",
+      "tajekozodni",
+      "tobbfele",
+      "lehetosegbol",
+      "valaszthat"
+    ],
+    "intents": [
+      "discount_question",
+      "shipping_question"
+    ],
+    "priority": 60
+  },
+  {
+    "id": "kb_f9254665c4ce68d1",
+    "title": "Pikelysomorre. Ennyire jó ez a termék ?? Mennyire. Hatásos ?",
+    "canonicalQuestion": "Pikelysomorre. Ennyire jó ez a termék ?? Mennyire. Hatásos ??",
+    "questionVariants": [
+      "Pikelysomorre. Ennyire jó ez a termék ?? Mennyire. Hatásos ??"
+    ],
+    "shortAnswer": "Igen, sokan rendelik visszatérő vásárlók is pikkelysömörre.",
+    "fullAnswer": "Igen, sokan rendelik visszatérő vásárlók is pikkelysömörre.",
+    "category": "borapolas",
+    "subcategory": "pikkelysomor",
+    "products": [],
+    "keywords": [
+      "pikelysomorre",
+      "ennyire",
+      "termek",
+      "mennyire",
+      "hatasos",
+      "igen",
+      "sokan",
+      "rendelik",
+      "visszatero",
+      "vasarlok",
+      "pikkelysomorre"
+    ],
+    "intents": [
+      "product_suitability"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_57011297133bca72",
+    "title": "Kislányoknak szeretnék ekcémás és száraz bőrre rendelni 9eves?",
+    "canonicalQuestion": "Kislányoknak szeretnék ekcémás és száraz bőrre rendelni 9eves",
+    "questionVariants": [
+      "Kislányoknak szeretnék ekcémás és száraz bőrre rendelni 9eves"
+    ],
+    "shortAnswer": "Natúr kecsketejes szappan, Olíva szappan, Shea vajas szappan Ápolásként organikus shea vaj.",
+    "fullAnswer": "Natúr kecsketejes szappan, Olíva szappan, Shea vajas szappan Ápolásként organikus shea vaj.",
+    "category": "borapolas",
+    "subcategory": "ekcema",
+    "products": [
+      "shea-vajas-szappan",
+      "kezmuves-szappan"
+    ],
+    "keywords": [
+      "kislanyoknak",
+      "szeretnek",
+      "ekcemas",
+      "szaraz",
+      "borre",
+      "rendelni",
+      "9eves",
+      "natur",
+      "kecsketejes",
+      "szappan",
+      "oliva",
+      "shea"
+    ],
+    "intents": [
+      "product_suitability"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_0bbcfe082236bd2f",
+    "title": "Rendelni szeretnék egy doboz HoltTengeri balzsamot , pikkelysömör,és ekcéma kezelésére, köszönöm szépen,szép napot?",
+    "canonicalQuestion": "Rendelni szeretnék egy doboz HoltTengeri balzsamot , pikkelysömör,és ekcéma kezelésére, köszönöm szépen,szép napot!",
+    "questionVariants": [
+      "Rendelni szeretnék egy doboz HoltTengeri balzsamot , pikkelysömör,és ekcéma kezelésére, köszönöm szépen,szép napot!"
+    ],
+    "shortAnswer": "Szívesen segítek, szükség lenne az adataira. Egyszerűbb lenne emaiben, ha mód van rá. Tudna adni telefonszámot?",
+    "fullAnswer": "Szívesen segítek, szükség lenne az adataira. Egyszerűbb lenne emaiben, ha mód van rá. Tudna adni telefonszámot?",
+    "category": "borapolas",
+    "subcategory": "pikkelysomor",
+    "products": [],
+    "keywords": [
+      "rendelni",
+      "szeretnek",
+      "doboz",
+      "holttengeri",
+      "balzsamot",
+      "pikkelysomor",
+      "ekcema",
+      "kezelesere",
+      "koszonom",
+      "szepen",
+      "szep",
+      "napot"
+    ],
+    "intents": [
+      "product_suitability"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_9c937880bf38caf3",
+    "title": "Pikkelysömörös fejbőrre is jó a balzsam?",
+    "canonicalQuestion": "Pikkelysömörös fejbőrre is jó a balzsam?",
+    "questionVariants": [
+      "Pikkelysömörös fejbőrre is jó a balzsam?"
+    ],
+    "shortAnswer": "Egy speciális sampont javaslok: Dermavital sampon\nJavasolnám a Holt tengeri iszapos szappant is, amivel rutinszerűen lehet hajat mosni. Csomagban olcsóbb. Psorivital csomag",
+    "fullAnswer": "Egy speciális sampont javaslok: Dermavital sampon\nJavasolnám a Holt tengeri iszapos szappant is, amivel rutinszerűen lehet hajat mosni. Csomagban olcsóbb. Psorivital csomag",
+    "category": "borapolas",
+    "subcategory": "pikkelysomor",
+    "products": [
+      "psorivital-csomag",
+      "holt-tengeri-so-balzsam",
+      "kezmuves-szappan"
+    ],
+    "keywords": [
+      "pikkelysomoros",
+      "fejborre",
+      "balzsam",
+      "igen",
+      "oda",
+      "javasolnam",
+      "holt",
+      "tengeri",
+      "iszapos",
+      "szappant",
+      "amivel",
+      "rutinszeruen"
+    ],
+    "intents": [
+      "product_suitability"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_616d4febe9a7856e",
+    "title": "Üdvözlöm!Érdeklődni szeretnék ,hogy a Holt- tengeri balzsam a pikkelysömörös bőr piros foltjait elttünteti/halvanyitja?Már több terméket próbáltam (nem az Önök termékei) és még a piros foltok negszüntetédm Megszüntetésére nem találtam megfelelő készitményt. Üdvözlettel,és köszönöm a válaszukat ?",
+    "canonicalQuestion": "Üdvözlöm!Érdeklődni szeretnék ,hogy a Holt- tengeri balzsam a pikkelysömörös bőr piros foltjait elttünteti/halvanyitja?Már több terméket próbáltam (nem az Önök termékei) és még a piros foltok negszüntetédm Megszüntetésére nem találtam megfelelő készitményt. Üdvözlettel,és köszönöm a válaszukat .",
+    "questionVariants": [
+      "Üdvözlöm!Érdeklődni szeretnék ,hogy a Holt- tengeri balzsam a pikkelysömörös bőr piros foltjait elttünteti/halvanyitja?Már több terméket próbáltam (nem az Önök termékei) és még a piros foltok negszüntetédm Megszüntetésére nem találtam megfelelő készitményt. Üdvözlettel,és köszönöm a válaszukat ."
+    ],
+    "shortAnswer": "Kedves Érdeklődő! Tapasztalataink szerint a tüneteket enyhíti, sok esetben teljesen tünetmentes tesz.",
+    "fullAnswer": "Kedves Érdeklődő! Tapasztalataink szerint a tüneteket enyhíti, sok esetben teljesen tünetmentes tesz.",
+    "category": "borapolas",
+    "subcategory": "pikkelysomor",
+    "products": [
+      "holt-tengeri-so-balzsam"
+    ],
+    "keywords": [
+      "udvozlom",
+      "erdeklodni",
+      "szeretnek",
+      "holt",
+      "tengeri",
+      "balzsam",
+      "pikkelysomoros",
+      "bor",
+      "piros",
+      "foltjait",
+      "elttunteti",
+      "halvanyitja"
+    ],
+    "intents": [
+      "product_suitability"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_60efea4aee791906",
+    "title": "Nem találom az árát, csak pikkelysömör sós tengeri krémet szeretnék?",
+    "canonicalQuestion": "Nem találom az árát, csak pikkelysömör sós tengeri krémet szeretnék",
+    "questionVariants": [
+      "Nem találom az árát, csak pikkelysömör sós tengeri krémet szeretnék"
+    ],
+    "shortAnswer": "Köszönöm érdeklődését, 4.290 Ft. https://www.vitalis-szappan.hu/termek/holt-tengeri-so-balzsam",
+    "fullAnswer": "Köszönöm érdeklődését, 4.290 Ft. https://www.vitalis-szappan.hu/termek/holt-tengeri-so-balzsam",
+    "category": "borapolas",
+    "subcategory": "pikkelysomor",
+    "products": [
+      "holt-tengeri-so-balzsam",
+      "kezmuves-szappan"
+    ],
+    "keywords": [
+      "talalom",
+      "arat",
+      "csak",
+      "pikkelysomor",
+      "sos",
+      "tengeri",
+      "kremet",
+      "szeretnek",
+      "koszonom",
+      "erdeklodeset",
+      "290",
+      "https"
+    ],
+    "intents": [
+      "product_suitability"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_61f6e9f92efbbaeb",
+    "title": "Ekcémára a holt tengeri balzsam mit csinál?",
+    "canonicalQuestion": "Ekcémára a holt tengeri balzsam mit csinál?",
+    "questionVariants": [
+      "Ekcémára a holt tengeri balzsam mit csinál?"
+    ],
+    "shortAnswer": "Ápol. Az elhalt hámréteget távolítja el, megerősíti az új réteget.",
+    "fullAnswer": "Ápol. Az elhalt hámréteget távolítja el, megerősíti az új réteget.",
+    "category": "borapolas",
+    "subcategory": "ekcema",
+    "products": [
+      "holt-tengeri-so-balzsam"
+    ],
+    "keywords": [
+      "ekcemara",
+      "holt",
+      "tengeri",
+      "balzsam",
+      "csinal",
+      "apol",
+      "elhalt",
+      "hamreteget",
+      "tavolitja",
+      "megerositi",
+      "reteget"
+    ],
+    "intents": [
+      "product_suitability"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_553bc4d67c282449",
+    "title": "Pikkelyesömöre használ?",
+    "canonicalQuestion": "Pikkelyesömöre használ?",
+    "questionVariants": [
+      "Pikkelyesömöre használ?"
+    ],
+    "shortAnswer": "Rendszeresen rendelik pikkelysömörös problémával.",
+    "fullAnswer": "Rendszeresen rendelik pikkelysömörös problémával.",
+    "category": "borapolas",
+    "subcategory": "pikkelysomor",
+    "products": [],
+    "keywords": [
+      "pikkelyesomore",
+      "hasznal",
+      "rendszeresen",
+      "rendelik",
+      "pikkelysomoros",
+      "problemaval"
+    ],
+    "intents": [
+      "product_suitability"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_1a33cfe94ef2da37",
+    "title": "6 éves lányom arca ekcémás. Ezt a terméket használhatják gyerekek? Arcra is használható?",
+    "canonicalQuestion": "6 éves lányom arca ekcémás. Ezt a terméket használhatják gyerekek? Arcra is használható?",
+    "questionVariants": [
+      "6 éves lányom arca ekcémás. Ezt a terméket használhatják gyerekek? Arcra is használható?"
+    ],
+    "shortAnswer": "A Dermavital krémet javaslom.",
+    "fullAnswer": "A Dermavital krémet javaslom.",
+    "category": "borapolas",
+    "subcategory": "ekcema",
+    "products": [
+      "dermavital"
+    ],
+    "keywords": [
+      "eves",
+      "lanyom",
+      "arca",
+      "ekcemas",
+      "termeket",
+      "hasznalhatjak",
+      "gyerekek",
+      "arcra",
+      "hasznalhato",
+      "dermavital",
+      "kremet",
+      "javaslom"
+    ],
+    "intents": [
+      "product_suitability"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_313bf6f9b34015a1",
+    "title": "Tesz?",
+    "canonicalQuestion": "Tesz?",
+    "questionVariants": [
+      "Tesz?"
+    ],
+    "shortAnswer": "Kaptam értesítést Tamas",
+    "fullAnswer": "Kaptam értesítést Tamas",
+    "category": "egyeb",
+    "products": [],
+    "keywords": [
+      "tesz",
+      "kaptam",
+      "ertesitest",
+      "tamas"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_ff904f2b92bc75ad",
+    "title": "Nos?",
+    "canonicalQuestion": "Nos?",
+    "questionVariants": [
+      "Nos?"
+    ],
+    "shortAnswer": "Oké",
+    "fullAnswer": "Oké",
+    "category": "egyeb",
+    "products": [],
+    "keywords": [
+      "nos",
+      "oke"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_a0f8f972fe7ef192",
+    "title": "Szia, mekkora a kiszerelése ennek a terméknek? https://www.vitalis-szappan.hu/termek/kecsketejes-testapolo-krem-levendula?",
+    "canonicalQuestion": "Szia, mekkora a kiszerelése ennek a terméknek? https://www.vitalis-szappan.hu/termek/kecsketejes-testapolo-krem-levendula",
+    "questionVariants": [
+      "Szia, mekkora a kiszerelése ennek a terméknek? https://www.vitalis-szappan.hu/termek/kecsketejes-testapolo-krem-levendula"
+    ],
+    "shortAnswer": "250ml",
+    "fullAnswer": "250ml",
+    "category": "egyeb",
+    "products": [
+      "kezmuves-szappan"
+    ],
+    "keywords": [
+      "szia",
+      "mekkora",
+      "kiszerelese",
+      "ennek",
+      "termeknek",
+      "https",
+      "www",
+      "vitalis",
+      "szappan",
+      "termek",
+      "kecsketejes",
+      "testapolo"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_95c249119eaddf3d",
+    "title": "üdv. érdeklődöm, hogy a shea vajas krém és a holttengeri krém használható-e egyszerre?",
+    "canonicalQuestion": "üdv. érdeklődöm, hogy a shea vajas krém és a holttengeri krém használható-e egyszerre?",
+    "questionVariants": [
+      "üdv. érdeklődöm, hogy a shea vajas krém és a holttengeri krém használható-e egyszerre?"
+    ],
+    "shortAnswer": "Igen, lehet felváltva használni.",
+    "fullAnswer": "Igen, lehet felváltva használni.",
+    "category": "egyeb",
+    "products": [],
+    "keywords": [
+      "udv",
+      "erdeklodom",
+      "shea",
+      "vajas",
+      "krem",
+      "holttengeri",
+      "hasznalhato",
+      "egyszerre",
+      "igen",
+      "felvaltva",
+      "hasznalni"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_582655684f236e0e",
+    "title": "Fejbőrre is lehet használni?",
+    "canonicalQuestion": "Fejbőrre is lehet használni?",
+    "questionVariants": [
+      "Fejbőrre is lehet használni?"
+    ],
+    "shortAnswer": "Természetesen, kicsi mennyiséget a problémáss felületre.",
+    "fullAnswer": "Természetesen, kicsi mennyiséget a problémáss felületre.",
+    "category": "egyeb",
+    "products": [],
+    "keywords": [
+      "fejborre",
+      "hasznalni",
+      "termeszetesen",
+      "kicsi",
+      "mennyiseget",
+      "problemass",
+      "feluletre"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_6ba70fce3ad730be",
+    "title": "Akkor most már tudok rendelni?",
+    "canonicalQuestion": "Akkor most már tudok rendelni?",
+    "questionVariants": [
+      "Akkor most már tudok rendelni?"
+    ],
+    "shortAnswer": "Igen.",
+    "fullAnswer": "Igen.",
+    "category": "egyeb",
+    "products": [],
+    "keywords": [
+      "akkor",
+      "most",
+      "mar",
+      "tudok",
+      "rendelni",
+      "igen"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_a1cf05688ede5be8",
+    "title": "Jó napot.Érdeklődnék Jakuzziba is bele lehet rakni?700 liter vízhez mennyit javasol és meddig lehet használni?köszönöm?",
+    "canonicalQuestion": "Jó napot.Érdeklődnék Jakuzziba is bele lehet rakni?700 liter vízhez mennyit javasol és meddig lehet használni?köszönöm.",
+    "questionVariants": [
+      "Jó napot.Érdeklődnék Jakuzziba is bele lehet rakni?700 liter vízhez mennyit javasol és meddig lehet használni?köszönöm."
+    ],
+    "shortAnswer": "Üdözlöm! Igen, viszik jakuzziba is. A mennyiséggel kapcsolatban, attól függ, mi a szándék, mit szeretne elérni. 1-5 kg. Nem romlik. Só.",
+    "fullAnswer": "Üdözlöm! Igen, viszik jakuzziba is. A mennyiséggel kapcsolatban, attól függ, mi a szándék, mit szeretne elérni. 1-5 kg. Nem romlik. Só.",
+    "category": "egyeb",
+    "products": [],
+    "keywords": [
+      "napot",
+      "erdeklodnek",
+      "jakuzziba",
+      "bele",
+      "rakni",
+      "700",
+      "liter",
+      "vizhez",
+      "mennyit",
+      "javasol",
+      "meddig",
+      "hasznalni"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_9ae0b28b7ed16432",
+    "title": "Minek kell a jelszó vásárláskor?mikor soha nem fogadják el sehol.Így nem lesz üzlet?",
+    "canonicalQuestion": "Minek kell a jelszó vásárláskor?mikor soha nem fogadják el sehol.Így nem lesz üzlet!",
+    "questionVariants": [
+      "Minek kell a jelszó vásárláskor?mikor soha nem fogadják el sehol.Így nem lesz üzlet!"
+    ],
+    "shortAnswer": "Nem kell jelszó. Regisztració nélkül is lehet vásárolni.",
+    "fullAnswer": "Nem kell jelszó. Regisztració nélkül is lehet vásárolni.",
+    "category": "egyeb",
+    "products": [],
+    "keywords": [
+      "minek",
+      "jelszo",
+      "vasarlaskor",
+      "mikor",
+      "soha",
+      "fogadjak",
+      "sehol",
+      "igy",
+      "lesz",
+      "uzlet",
+      "regisztracio",
+      "nelkul"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_03810f964f2220ac",
+    "title": "Akkor. Jó lehet. Ilyen bőr. Problémára !))?",
+    "canonicalQuestion": "Akkor. Jó lehet. Ilyen bőr. Problémára !))?",
+    "questionVariants": [
+      "Akkor. Jó lehet. Ilyen bőr. Problémára !))?"
+    ],
+    "shortAnswer": "Igen, érdemes kipróbálni.",
+    "fullAnswer": "Igen, érdemes kipróbálni.",
+    "category": "egyeb",
+    "products": [],
+    "keywords": [
+      "akkor",
+      "ilyen",
+      "bor",
+      "problemara",
+      "igen",
+      "erdemes",
+      "kiprobalni"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_0d5ff6ce697d3f1a",
+    "title": "Ezek mellett szappanok mellett szükséges pl. hidratáló krémet használni, nem szárítják ki a bőrt?",
+    "canonicalQuestion": "Ezek mellett szappanok mellett szükséges pl. hidratáló krémet használni, nem szárítják ki a bőrt?",
+    "questionVariants": [
+      "Ezek mellett szappanok mellett szükséges pl. hidratáló krémet használni, nem szárítják ki a bőrt?"
+    ],
+    "shortAnswer": "Nem feltétlenül, bőrtípus függő. Vannak nagyon tápláló arc és testápoló krémjeink is.",
+    "fullAnswer": "Nem feltétlenül, bőrtípus függő. Vannak nagyon tápláló arc és testápoló krémjeink is.",
+    "category": "egyeb",
+    "products": [
+      "kezmuves-szappan"
+    ],
+    "keywords": [
+      "ezek",
+      "mellett",
+      "szappanok",
+      "szukseges",
+      "hidratalo",
+      "kremet",
+      "hasznalni",
+      "szaritjak",
+      "bort",
+      "feltetlenul",
+      "bortipus",
+      "fuggo"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_6a99e06933510aae",
+    "title": "Akor szeretném meg rendelni Mennyibe kerül?",
+    "canonicalQuestion": "Akor szeretném meg rendelni Mennyibe kerül",
+    "questionVariants": [
+      "Akor szeretném meg rendelni Mennyibe kerül"
+    ],
+    "shortAnswer": "Kérlek keress rá az oldalon mindkettőre, rakd kosárba, minden automata. Jelezz, ha nem boldogulsz.",
+    "fullAnswer": "Kérlek keress rá az oldalon mindkettőre, rakd kosárba, minden automata. Jelezz, ha nem boldogulsz.",
+    "category": "egyeb",
+    "products": [],
+    "keywords": [
+      "akor",
+      "szeretnem",
+      "rendelni",
+      "mennyibe",
+      "kerul",
+      "kerlek",
+      "keress",
+      "oldalon",
+      "mindkettore",
+      "rakd",
+      "kosarba",
+      "minden"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_2e575ab7b442a2c6",
+    "title": "Üdvözlöm , rendelni szeretnék ,de 1 sajnos szükségem lenne segítségre,?",
+    "canonicalQuestion": "Üdvözlöm , rendelni szeretnék ,de 1 sajnos szükségem lenne segítségre,",
+    "questionVariants": [
+      "Üdvözlöm , rendelni szeretnék ,de 1 sajnos szükségem lenne segítségre,"
+    ],
+    "shortAnswer": "Üdvözlöm! Miben segíthetek?",
+    "fullAnswer": "Üdvözlöm! Miben segíthetek?",
+    "category": "egyeb",
+    "products": [],
+    "keywords": [
+      "udvozlom",
+      "rendelni",
+      "szeretnek",
+      "sajnos",
+      "szuksegem",
+      "lenne",
+      "segitsegre",
+      "miben",
+      "segithetek"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_9ec9cee936bd5937",
+    "title": "Nem hasuználom ,ha így nem megy akkor köszönöm !Telefon szàmuk nincs amin lehetne rendelni? 06706074327?",
+    "canonicalQuestion": "Nem hasuználom ,ha így nem megy akkor köszönöm !Telefon szàmuk nincs amin lehetne rendelni? 06706074327",
+    "questionVariants": [
+      "Nem hasuználom ,ha így nem megy akkor köszönöm !Telefon szàmuk nincs amin lehetne rendelni? 06706074327"
+    ],
+    "shortAnswer": "9 órakor hívni fogja kollégám, ha megfelel. A mi számunk 06305314202. 9 órától.",
+    "fullAnswer": "9 órakor hívni fogja kollégám, ha megfelel. A mi számunk 06305314202. 9 órától.",
+    "category": "egyeb",
+    "products": [],
+    "keywords": [
+      "hasuznalom",
+      "igy",
+      "megy",
+      "akkor",
+      "koszonom",
+      "telefon",
+      "szamuk",
+      "nincs",
+      "amin",
+      "lehetne",
+      "rendelni",
+      "06706074327"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_16e92f304936f201",
+    "title": "Email címet meg tudná írni?",
+    "canonicalQuestion": "Email címet meg tudná írni?",
+    "questionVariants": [
+      "Email címet meg tudná írni?"
+    ],
+    "shortAnswer": "Az oldalon a kapcsolat menüben. ugyfelszolgalat@vitalis-szappan.hu",
+    "fullAnswer": "Az oldalon a kapcsolat menüben. ugyfelszolgalat@vitalis-szappan.hu",
+    "category": "egyeb",
+    "products": [
+      "kezmuves-szappan"
+    ],
+    "keywords": [
+      "email",
+      "cimet",
+      "tudna",
+      "irni",
+      "oldalon",
+      "kapcsolat",
+      "menuben",
+      "ugyfelszolgalat",
+      "vitalis",
+      "szappan"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_a145f0f8d176334b",
+    "title": "Üdv. Hány gr-os a parajdi sószappan? Köszönöm?",
+    "canonicalQuestion": "Üdv. Hány gr-os a parajdi sószappan? Köszönöm",
+    "questionVariants": [
+      "Üdv. Hány gr-os a parajdi sószappan? Köszönöm"
+    ],
+    "shortAnswer": "Kérem keressen emaiben P",
+    "fullAnswer": "Kérem keressen emaiben P",
+    "category": "egyeb",
+    "products": [
+      "kezmuves-szappan"
+    ],
+    "keywords": [
+      "udv",
+      "hany",
+      "parajdi",
+      "soszappan",
+      "koszonom",
+      "kerem",
+      "keressen",
+      "emaiben"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_f7e89441bf7e226e",
+    "title": "Férjemnek keresek megfelelő só szappant amivel tudnám kezelni az aknés hátát arcát?",
+    "canonicalQuestion": "Férjemnek keresek megfelelő só szappant amivel tudnám kezelni az aknés hátát arcát",
+    "questionVariants": [
+      "Férjemnek keresek megfelelő só szappant amivel tudnám kezelni az aknés hátát arcát"
+    ],
+    "shortAnswer": "A sószappannál sokkal megfelelőbb a Gyógyászati kátrány szappan és az aktív szenes szappan. Minden nap, tetőtől talpig használhatja. Mindkettőt az aknés bőrre fejlesztettük.",
+    "fullAnswer": "A sószappannál sokkal megfelelőbb a Gyógyászati kátrány szappan és az aktív szenes szappan. Minden nap, tetőtől talpig használhatja. Mindkettőt az aknés bőrre fejlesztettük.",
+    "category": "egyeb",
+    "products": [
+      "kezmuves-szappan"
+    ],
+    "keywords": [
+      "ferjemnek",
+      "keresek",
+      "megfelelo",
+      "szappant",
+      "amivel",
+      "tudnam",
+      "kezelni",
+      "aknes",
+      "hatat",
+      "arcat",
+      "soszappannal",
+      "sokkal"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_9f8974238abc9cb2",
+    "title": "Szia! Az izzadásgátló dezodorokat gyerekek is használhatják?",
+    "canonicalQuestion": "Szia! Az izzadásgátló dezodorokat gyerekek is használhatják?",
+    "questionVariants": [
+      "Szia! Az izzadásgátló dezodorokat gyerekek is használhatják?"
+    ],
+    "shortAnswer": "Igen.",
+    "fullAnswer": "Igen.",
+    "category": "egyeb",
+    "products": [
+      "dezodor"
+    ],
+    "keywords": [
+      "szia",
+      "izzadasgatlo",
+      "dezodorokat",
+      "gyerekek",
+      "hasznalhatjak",
+      "igen"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_15f4a63da1707dc7",
+    "title": "És a tisztaság illatú? Tisztaság illatú krém dezodor?",
+    "canonicalQuestion": "És a tisztaság illatú? Tisztaság illatú krém dezodor?",
+    "questionVariants": [
+      "És a tisztaság illatú? Tisztaság illatú krém dezodor?"
+    ],
+    "shortAnswer": "Teafa-levendula, Cubeba, Ylang-narancs, rózsa.",
+    "fullAnswer": "Teafa-levendula, Cubeba, Ylang-narancs, rózsa.",
+    "category": "egyeb",
+    "products": [
+      "dezodor"
+    ],
+    "keywords": [
+      "tisztasag",
+      "illatu",
+      "krem",
+      "dezodor",
+      "teafa",
+      "levendula",
+      "cubeba",
+      "ylang",
+      "narancs",
+      "rozsa"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_f56d0418af40eb75",
+    "title": "Olvastam, hogy Balatonlellén árulják a termékeket?",
+    "canonicalQuestion": "Olvastam, hogy Balatonlellén árulják a termékeket.",
+    "questionVariants": [
+      "Olvastam, hogy Balatonlellén árulják a termékeket."
+    ],
+    "shortAnswer": "Balatonlelle Móló sétány",
+    "fullAnswer": "Balatonlelle Móló sétány",
+    "category": "egyeb",
+    "products": [],
+    "keywords": [
+      "olvastam",
+      "balatonlellen",
+      "aruljak",
+      "termekeket",
+      "balatonlelle",
+      "molo",
+      "setany"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_74c8d5af3e0e9a64",
+    "title": "Üdvözlöm! Azt szeretném kérdezni , hogy önök vannak kint a balatonlellei soron a termékeikkel?",
+    "canonicalQuestion": "Üdvözlöm! Azt szeretném kérdezni , hogy önök vannak kint a balatonlellei soron a termékeikkel?",
+    "questionVariants": [
+      "Üdvözlöm! Azt szeretném kérdezni , hogy önök vannak kint a balatonlellei soron a termékeikkel?"
+    ],
+    "shortAnswer": "Igen.",
+    "fullAnswer": "Igen.",
+    "category": "egyeb",
+    "products": [],
+    "keywords": [
+      "udvozlom",
+      "szeretnem",
+      "kerdezni",
+      "onok",
+      "vannak",
+      "kint",
+      "balatonlellei",
+      "soron",
+      "termekeikkel",
+      "igen"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_98dcd82553f18ac0",
+    "title": "Hova tudok emailt írni? Milyen címre?",
+    "canonicalQuestion": "Hova tudok emailt írni? Milyen címre?",
+    "questionVariants": [
+      "Hova tudok emailt írni? Milyen címre?"
+    ],
+    "shortAnswer": "vitalis.szappan.gmail.com",
+    "fullAnswer": "vitalis.szappan.gmail.com",
+    "category": "egyeb",
+    "products": [
+      "kezmuves-szappan"
+    ],
+    "keywords": [
+      "hova",
+      "tudok",
+      "emailt",
+      "irni",
+      "cimre",
+      "vitalis",
+      "szappan",
+      "gmail",
+      "com"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_f09041076869765c",
+    "title": "Nem regisztráltam, anélkül szeretnék rendelni?",
+    "canonicalQuestion": "Nem regisztráltam, anélkül szeretnék rendelni.",
+    "questionVariants": [
+      "Nem regisztráltam, anélkül szeretnék rendelni."
+    ],
+    "shortAnswer": "Semmi akadálya, viszont akkor nincs szükség jelszóra.",
+    "fullAnswer": "Semmi akadálya, viszont akkor nincs szükség jelszóra.",
+    "category": "egyeb",
+    "products": [],
+    "keywords": [
+      "regisztraltam",
+      "anelkul",
+      "szeretnek",
+      "rendelni",
+      "semmi",
+      "akadalya",
+      "viszont",
+      "akkor",
+      "nincs",
+      "szukseg",
+      "jelszora"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_e74393674a37f37c",
+    "title": "Pikkejsömörre szeretnèk?",
+    "canonicalQuestion": "Pikkejsömörre szeretnèk",
+    "questionVariants": [
+      "Pikkejsömörre szeretnèk"
+    ],
+    "shortAnswer": "Holt tengeri só balzsam",
+    "fullAnswer": "Holt tengeri só balzsam",
+    "category": "egyeb",
+    "products": [
+      "holt-tengeri-so-balzsam"
+    ],
+    "keywords": [
+      "pikkejsomorre",
+      "szeretnek",
+      "holt",
+      "tengeri",
+      "balzsam"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_a9dde5d48eeab497",
+    "title": "szia, a parajdi sószappant úgy kell használni, mint egy átlagos szappant?",
+    "canonicalQuestion": "szia, a parajdi sószappant úgy kell használni, mint egy átlagos szappant?",
+    "questionVariants": [
+      "szia, a parajdi sószappant úgy kell használni, mint egy átlagos szappant?"
+    ],
+    "shortAnswer": "Szia! Nem. Az egy sótömb. A nedves bőrfelületet kell átsimítani vele. Nem habzik, nem tisztít, csak gyógyít.",
+    "fullAnswer": "Szia! Nem. Az egy sótömb. A nedves bőrfelületet kell átsimítani vele. Nem habzik, nem tisztít, csak gyógyít.",
+    "category": "egyeb",
+    "products": [
+      "kezmuves-szappan"
+    ],
+    "keywords": [
+      "szia",
+      "parajdi",
+      "soszappant",
+      "ugy",
+      "hasznalni",
+      "mint",
+      "atlagos",
+      "szappant",
+      "sotomb",
+      "nedves",
+      "borfeluletet",
+      "atsimitani"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_a835bf69d1b81b57",
+    "title": "és utána jön a szappan?",
+    "canonicalQuestion": "és utána jön a szappan?",
+    "questionVariants": [
+      "és utána jön a szappan?"
+    ],
+    "shortAnswer": "Nem, nem kell lemosni. Száradjon meg a bőrfelület. Rövidesen írok hozzá egy bővebb termékleírást.",
+    "fullAnswer": "Nem, nem kell lemosni. Száradjon meg a bőrfelület. Rövidesen írok hozzá egy bővebb termékleírást.",
+    "category": "egyeb",
+    "products": [
+      "kezmuves-szappan"
+    ],
+    "keywords": [
+      "utana",
+      "jon",
+      "szappan",
+      "lemosni",
+      "szaradjon",
+      "borfelulet",
+      "rovidesen",
+      "irok",
+      "hozza",
+      "bovebb",
+      "termekleirast"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_e6755f78baa3515e",
+    "title": "Kedves Zoltán!Sajnos fiók nélkül vásároltam...Ma már regisztráltam,de nem tudom akciósan megvenni a termékeket:cry:tudna ebben segíteni?",
+    "canonicalQuestion": "Kedves Zoltán!Sajnos fiók nélkül vásároltam...Ma már regisztráltam,de nem tudom akciósan megvenni a termékeket:cry:tudna ebben segíteni?",
+    "questionVariants": [
+      "Kedves Zoltán!Sajnos fiók nélkül vásároltam...Ma már regisztráltam,de nem tudom akciósan megvenni a termékeket:cry:tudna ebben segíteni?"
+    ],
+    "shortAnswer": "Kérem, az ügyfelszolgalat@vitalis-szappan.hu emailcímre jelezzen!",
+    "fullAnswer": "Kérem, az ügyfelszolgalat@vitalis-szappan.hu emailcímre jelezzen!",
+    "category": "egyeb",
+    "products": [
+      "kezmuves-szappan"
+    ],
+    "keywords": [
+      "kedves",
+      "zoltan",
+      "sajnos",
+      "fiok",
+      "nelkul",
+      "vasaroltam",
+      "mar",
+      "regisztraltam",
+      "tudom",
+      "akciosan",
+      "megvenni",
+      "termekeket"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_2a108f1a33b5e548",
+    "title": "Hajhullasra és zsirosodasra, kicsit lelapuló hajra is jo?",
+    "canonicalQuestion": "Hajhullasra és zsirosodasra, kicsit lelapuló hajra is jo?",
+    "questionVariants": [
+      "Hajhullasra és zsirosodasra, kicsit lelapuló hajra is jo?"
+    ],
+    "shortAnswer": "Igen, de arra a hajtípusra érdemes hajmosás után egy borecetes öblítés. Három rész víz, egy rész jó minőségű bor, vagy almaecet.",
+    "fullAnswer": "Igen, de arra a hajtípusra érdemes hajmosás után egy borecetes öblítés. Három rész víz, egy rész jó minőségű bor, vagy almaecet.",
+    "category": "egyeb",
+    "products": [],
+    "keywords": [
+      "hajhullasra",
+      "zsirosodasra",
+      "kicsit",
+      "lelapulo",
+      "hajra",
+      "igen",
+      "arra",
+      "hajtipusra",
+      "erdemes",
+      "hajmosas",
+      "utan",
+      "borecetes"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_3df780febbc069aa",
+    "title": "Szia, Balmazújvárosban lehet-e személyesen vásárolni, vagy csak rendelni lehet tőletek?",
+    "canonicalQuestion": "Szia, Balmazújvárosban lehet-e személyesen vásárolni, vagy csak rendelni lehet tőletek?",
+    "questionVariants": [
+      "Szia, Balmazújvárosban lehet-e személyesen vásárolni, vagy csak rendelni lehet tőletek?"
+    ],
+    "shortAnswer": "Email ben kérnék egy jelzést.",
+    "fullAnswer": "Email ben kérnék egy jelzést.",
+    "category": "egyeb",
+    "products": [],
+    "keywords": [
+      "szia",
+      "balmazujvarosban",
+      "szemelyesen",
+      "vasarolni",
+      "vagy",
+      "csak",
+      "rendelni",
+      "toletek",
+      "email",
+      "ben",
+      "kernek",
+      "jelzest"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_957f90e8be383443",
+    "title": "Szia! Szeretnék samponszappant rendelni, de ezen az oldalon nem találom a termékek között. Tudsz segíteni? Tegnap reggel is beszélgettünk itt?",
+    "canonicalQuestion": "Szia! Szeretnék samponszappant rendelni, de ezen az oldalon nem találom a termékek között. Tudsz segíteni? Tegnap reggel is beszélgettünk itt.",
+    "questionVariants": [
+      "Szia! Szeretnék samponszappant rendelni, de ezen az oldalon nem találom a termékek között. Tudsz segíteni? Tegnap reggel is beszélgettünk itt."
+    ],
+    "shortAnswer": "Elnézést kérek, a még ma írok üzenetet.",
+    "fullAnswer": "Elnézést kérek, a még ma írok üzenetet.",
+    "category": "egyeb",
+    "products": [
+      "samponszappan",
+      "kezmuves-szappan"
+    ],
+    "keywords": [
+      "szia",
+      "szeretnek",
+      "samponszappant",
+      "rendelni",
+      "ezen",
+      "oldalon",
+      "talalom",
+      "termekek",
+      "kozott",
+      "tudsz",
+      "segiteni",
+      "tegnap"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_ba61cab2e415749a",
+    "title": "meddig jó a szappan? meddig tartható el?",
+    "canonicalQuestion": "meddig jó a szappan? meddig tartható el?",
+    "questionVariants": [
+      "meddig jó a szappan? meddig tartható el?"
+    ],
+    "shortAnswer": "A csomagolason rajta van. Álalában 1-1,5 év.",
+    "fullAnswer": "A csomagolason rajta van. Álalában 1-1,5 év.",
+    "category": "egyeb",
+    "products": [
+      "kezmuves-szappan"
+    ],
+    "keywords": [
+      "meddig",
+      "szappan",
+      "tarthato",
+      "csomagolason",
+      "rajta",
+      "alalaban"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_7182cd4b61275f00",
+    "title": "2db balzsamot szeretnék rendelni?",
+    "canonicalQuestion": "2db balzsamot szeretnék rendelni",
+    "questionVariants": [
+      "2db balzsamot szeretnék rendelni"
+    ],
+    "shortAnswer": "Hajrá. Elnézest, miben segíthetek?",
+    "fullAnswer": "Hajrá. Elnézest, miben segíthetek?",
+    "category": "egyeb",
+    "products": [],
+    "keywords": [
+      "2db",
+      "balzsamot",
+      "szeretnek",
+      "rendelni",
+      "hajra",
+      "elnezest",
+      "miben",
+      "segithetek"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_91bfeb5ccad6692b",
+    "title": "Köszönöm, igen, épp keresem, hol lehet feliratkozni - tegnap este regisztráltam?",
+    "canonicalQuestion": "Köszönöm, igen, épp keresem, hol lehet feliratkozni - tegnap este regisztráltam.",
+    "questionVariants": [
+      "Köszönöm, igen, épp keresem, hol lehet feliratkozni - tegnap este regisztráltam."
+    ],
+    "shortAnswer": "Jobb felső sarok egy fej sziluett, fiókom, ott regisztrálás, ha jól emlékszek pipát kell elhelyezni a hírlevél felíratkozáshoz. Segitek szívesen, ha kapok email címet és belépési adatokat, ha nem sikerül.",
+    "fullAnswer": "Jobb felső sarok egy fej sziluett, fiókom, ott regisztrálás, ha jól emlékszek pipát kell elhelyezni a hírlevél felíratkozáshoz. Segitek szívesen, ha kapok email címet és belépési adatokat, ha nem sikerül.",
+    "category": "egyeb",
+    "products": [],
+    "keywords": [
+      "koszonom",
+      "igen",
+      "epp",
+      "keresem",
+      "hol",
+      "feliratkozni",
+      "tegnap",
+      "este",
+      "regisztraltam",
+      "jobb",
+      "felso",
+      "sarok"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_a57284cf357c3731",
+    "title": "nem tudom melyik billenytyű a kukac?",
+    "canonicalQuestion": "nem tudom melyik billenytyű a kukac",
+    "questionVariants": [
+      "nem tudom melyik billenytyű a kukac"
+    ],
+    "shortAnswer": ". Alt+v",
+    "fullAnswer": ". Alt+v",
+    "category": "egyeb",
+    "products": [],
+    "keywords": [
+      "tudom",
+      "melyik",
+      "billenytyu",
+      "kukac",
+      "alt"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_a9eeccd05acd2ecf",
+    "title": "És meddig tart a balzsam mekkora a kiszerelés?",
+    "canonicalQuestion": "És meddig tart a balzsam mekkora a kiszerelés?",
+    "questionVariants": [
+      "És meddig tart a balzsam mekkora a kiszerelés?"
+    ],
+    "shortAnswer": "250 ml.",
+    "fullAnswer": "250 ml.",
+    "category": "egyeb",
+    "products": [],
+    "keywords": [
+      "meddig",
+      "tart",
+      "balzsam",
+      "mekkora",
+      "kiszereles",
+      "250"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_cf5d5c9e53704b99",
+    "title": "Pikely sömör re szeretnék valami kremet Ami tèleg jó és nem mást kuldenek?",
+    "canonicalQuestion": "Pikely sömör re szeretnék valami kremet Ami tèleg jó és nem mást kuldenek",
+    "questionVariants": [
+      "Pikely sömör re szeretnék valami kremet Ami tèleg jó és nem mást kuldenek"
+    ],
+    "shortAnswer": "Kérem emailban küldjön üznetet.",
+    "fullAnswer": "Kérem emailban küldjön üznetet.",
+    "category": "egyeb",
+    "products": [],
+    "keywords": [
+      "pikely",
+      "somor",
+      "szeretnek",
+      "valami",
+      "kremet",
+      "ami",
+      "teleg",
+      "mast",
+      "kuldenek",
+      "kerem",
+      "emailban",
+      "kuldjon"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_767c51391efbdd9d",
+    "title": "Picit tágult pólusok is vannak az arcbőrömön. Akkor is jó a krém?",
+    "canonicalQuestion": "Picit tágult pólusok is vannak az arcbőrömön. Akkor is jó a krém?",
+    "questionVariants": [
+      "Picit tágult pólusok is vannak az arcbőrömön. Akkor is jó a krém?"
+    ],
+    "shortAnswer": "Jó lehet, mert nem tömíti a pórusokat.",
+    "fullAnswer": "Jó lehet, mert nem tömíti a pórusokat.",
+    "category": "egyeb",
+    "products": [],
+    "keywords": [
+      "picit",
+      "tagult",
+      "polusok",
+      "vannak",
+      "arcboromon",
+      "akkor",
+      "krem",
+      "mert",
+      "tomiti",
+      "porusokat"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_228d74a55c7efba7",
+    "title": "Mit csinál keszem?",
+    "canonicalQuestion": "Mit csinál keszem",
+    "questionVariants": [
+      "Mit csinál keszem"
+    ],
+    "shortAnswer": "Ezt nem értem.",
+    "fullAnswer": "Ezt nem értem.",
+    "category": "egyeb",
+    "products": [],
+    "keywords": [
+      "csinal",
+      "keszem",
+      "ertem"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_67a3d8b683806ce1",
+    "title": "Van nálatok?",
+    "canonicalQuestion": "Van nálatok?",
+    "questionVariants": [
+      "Van nálatok?"
+    ],
+    "shortAnswer": "Van.",
+    "fullAnswer": "Van.",
+    "category": "egyeb",
+    "products": [],
+    "keywords": [
+      "nalatok"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_bddc78bafc7f5924",
+    "title": "Szia Csontkukac van?",
+    "canonicalQuestion": "Szia Csontkukac van?",
+    "questionVariants": [
+      "Szia Csontkukac van?"
+    ],
+    "shortAnswer": "Csak neked",
+    "fullAnswer": "Csak neked",
+    "category": "egyeb",
+    "products": [],
+    "keywords": [
+      "szia",
+      "csontkukac",
+      "csak",
+      "neked"
+    ],
+    "intents": [
+      "general_information"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_5fc9740504d44963",
+    "title": "Szia, Holt-tengeri só balzsamot szerettem volna ismét rendelni, azonban azt láttam, hogy egy másik, nem a Vitalis oldalán olcsóbban megvásárolható. Ez lehetséges?",
+    "canonicalQuestion": "Szia, Holt-tengeri só balzsamot szerettem volna ismét rendelni, azonban azt láttam, hogy egy másik, nem a Vitalis oldalán olcsóbban megvásárolható. Ez lehetséges?",
+    "questionVariants": [
+      "Szia, Holt-tengeri só balzsamot szerettem volna ismét rendelni, azonban azt láttam, hogy egy másik, nem a Vitalis oldalán olcsóbban megvásárolható. Ez lehetséges?"
+    ],
+    "shortAnswer": "Vannak viszonteladóink. A balzsamot mi készítjük, elvileg nálunk kapható a legjobb áron.",
+    "fullAnswer": "Vannak viszonteladóink. A balzsamot mi készítjük, elvileg nálunk kapható a legjobb áron.",
+    "category": "elerhetoseg",
+    "products": [
+      "holt-tengeri-so-balzsam"
+    ],
+    "keywords": [
+      "szia",
+      "holt",
+      "tengeri",
+      "balzsamot",
+      "szerettem",
+      "volna",
+      "ismet",
+      "rendelni",
+      "azonban",
+      "lattam",
+      "masik",
+      "vitalis"
+    ],
+    "intents": [
+      "availability_question"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_71982541a2e14802",
+    "title": "Szia, az arcradír csomagban elérhető, de külön nem rendelhető?",
+    "canonicalQuestion": "Szia, az arcradír csomagban elérhető, de külön nem rendelhető?",
+    "questionVariants": [
+      "Szia, az arcradír csomagban elérhető, de külön nem rendelhető?"
+    ],
+    "shortAnswer": "Egyelőre igen.",
+    "fullAnswer": "Egyelőre igen.",
+    "category": "elerhetoseg",
+    "products": [],
+    "keywords": [
+      "szia",
+      "arcradir",
+      "csomagban",
+      "elerheto",
+      "kulon",
+      "rendelheto",
+      "egyelore",
+      "igen"
+    ],
+    "intents": [
+      "availability_question"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_f01f00e48ea16088",
+    "title": "Holt tengeri só krémet szeretnék rendelni ?",
+    "canonicalQuestion": "Holt tengeri só krémet szeretnék rendelni !",
+    "questionVariants": [
+      "Holt tengeri só krémet szeretnék rendelni !"
+    ],
+    "shortAnswer": "Rakd kosárba, állítsd be hány, darab, aztán fizetés.",
+    "fullAnswer": "Rakd kosárba, állítsd be hány, darab, aztán fizetés.",
+    "category": "fizetes",
+    "products": [
+      "holt-tengeri-so-balzsam"
+    ],
+    "keywords": [
+      "holt",
+      "tengeri",
+      "kremet",
+      "szeretnek",
+      "rendelni",
+      "rakd",
+      "kosarba",
+      "allitsd",
+      "hany",
+      "darab",
+      "aztan",
+      "fizetes"
+    ],
+    "intents": [
+      "payment_question"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_6f82421d5c822386",
+    "title": "Kedves Zoltán! Ezen a héten szerdán rendeltem Önöktől termékeket, viszont nem lehetett kártyásan kifizetni (eddig mindig kártyával fizettem és sosem volt gond).. Átállítottam a fizetési módot előreutalásra, de nem érkezett azóta sem számla, amit ki tudnék fizetni. Ebben kérem a segítségét! Köszönettel, Berettyán-Müller Ágnes?",
+    "canonicalQuestion": "Kedves Zoltán! Ezen a héten szerdán rendeltem Önöktől termékeket, viszont nem lehetett kártyásan kifizetni (eddig mindig kártyával fizettem és sosem volt gond).. Átállítottam a fizetési módot előreutalásra, de nem érkezett azóta sem számla, amit ki tudnék fizetni. Ebben kérem a segítségét! Köszönettel, Berettyán-Müller Ágnes",
+    "questionVariants": [
+      "Kedves Zoltán! Ezen a héten szerdán rendeltem Önöktől termékeket, viszont nem lehetett kártyásan kifizetni (eddig mindig kártyával fizettem és sosem volt gond).. Átállítottam a fizetési módot előreutalásra, de nem érkezett azóta sem számla, amit ki tudnék fizetni. Ebben kérem a segítségét! Köszönettel, Berettyán-Müller Ágnes"
+    ],
+    "shortAnswer": "Hétfőn keresni fogom, a Kecsketejes Levendula szappan kedd szerda körül lesz csomagolva.",
+    "fullAnswer": "Hétfőn keresni fogom, a Kecsketejes Levendula szappan kedd szerda körül lesz csomagolva.",
+    "category": "fizetes",
+    "products": [
+      "kezmuves-szappan"
+    ],
+    "keywords": [
+      "kedves",
+      "zoltan",
+      "ezen",
+      "heten",
+      "szerdan",
+      "rendeltem",
+      "onoktol",
+      "termekeket",
+      "viszont",
+      "lehetett",
+      "kartyasan",
+      "kifizetni"
+    ],
+    "intents": [
+      "payment_question"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_532f862424690b04",
+    "title": "Utánvét és fizetés kehetséges?",
+    "canonicalQuestion": "Utánvét és fizetés kehetséges?",
+    "questionVariants": [
+      "Utánvét és fizetés kehetséges?"
+    ],
+    "shortAnswer": "Igen, a kosár oldalon ki lehet választani.",
+    "fullAnswer": "Igen, a kosár oldalon ki lehet választani.",
+    "category": "fizetes",
+    "products": [],
+    "keywords": [
+      "utanvet",
+      "fizetes",
+      "kehetseges",
+      "igen",
+      "kosar",
+      "oldalon",
+      "valasztani"
+    ],
+    "intents": [
+      "payment_question"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_3943dad9fd7f0376",
+    "title": "Utánvéttel lehet?",
+    "canonicalQuestion": "Utánvéttel lehet?",
+    "questionVariants": [
+      "Utánvéttel lehet?"
+    ],
+    "shortAnswer": "Igen.",
+    "fullAnswer": "Igen.",
+    "category": "fizetes",
+    "products": [],
+    "keywords": [
+      "utanvettel",
+      "igen"
+    ],
+    "intents": [
+      "payment_question"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_0c6bd2c9f0bc96ca",
+    "title": "Látod amit gépelek? POnt írok?",
+    "canonicalQuestion": "Látod amit gépelek? POnt írok",
+    "questionVariants": [
+      "Látod amit gépelek? POnt írok"
+    ],
+    "shortAnswer": "Igen",
+    "fullAnswer": "Igen",
+    "category": "kedvezmenyek",
+    "products": [],
+    "keywords": [
+      "latod",
+      "amit",
+      "gepelek",
+      "pont",
+      "irok",
+      "igen"
+    ],
+    "intents": [
+      "discount_question"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_38e6655500b63f06",
+    "title": "Koszonom. Hogy hasznaljam oket?",
+    "canonicalQuestion": "Koszonom. Hogy hasznaljam oket?",
+    "questionVariants": [
+      "Koszonom. Hogy hasznaljam oket?"
+    ],
+    "shortAnswer": "Lehetőleg napi rendszerességgel, többször naponta. Tetőtől talpig használhatod.",
+    "fullAnswer": "Lehetőleg napi rendszerességgel, többször naponta. Tetőtől talpig használhatod.",
+    "category": "kedvezmenyek",
+    "products": [],
+    "keywords": [
+      "koszonom",
+      "hasznaljam",
+      "oket",
+      "lehetoleg",
+      "napi",
+      "rendszeresseggel",
+      "tobbszor",
+      "naponta",
+      "tetotol",
+      "talpig",
+      "hasznalhatod"
+    ],
+    "intents": [
+      "discount_question"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_9bb3705a3a01dbd0",
+    "title": "Ha most regizek torzsvásárlokent vásárolhatók?",
+    "canonicalQuestion": "Ha most regizek torzsvásárlokent vásárolhatók?",
+    "questionVariants": [
+      "Ha most regizek torzsvásárlokent vásárolhatók?"
+    ],
+    "shortAnswer": "Jelenleg az új felírtakozóknak jár egy alkalommal 10% kedvezmény. Ezt érdemes elkésziteni, ha a későbbi törzsvásárlói kedvezmények is érdekelnék.",
+    "fullAnswer": "Jelenleg az új felírtakozóknak jár egy alkalommal 10% kedvezmény. Ezt érdemes elkésziteni, ha a későbbi törzsvásárlói kedvezmények is érdekelnék.",
+    "category": "kedvezmenyek",
+    "products": [],
+    "keywords": [
+      "most",
+      "regizek",
+      "torzsvasarlokent",
+      "vasarolhatok",
+      "jelenleg",
+      "felirtakozoknak",
+      "jar",
+      "alkalommal",
+      "kedvezmeny",
+      "erdemes",
+      "elkesziteni",
+      "kesobbi"
+    ],
+    "intents": [
+      "discount_question"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_fd0b18b195abbe98",
+    "title": "Szeretnék torzsvasarlo lenni Vagyis az leszek Mikortol fog épni Élni?",
+    "canonicalQuestion": "Szeretnék torzsvasarlo lenni Vagyis az leszek Mikortol fog épni Élni",
+    "questionVariants": [
+      "Szeretnék torzsvasarlo lenni Vagyis az leszek Mikortol fog épni Élni"
+    ],
+    "shortAnswer": "A rendszer kialakítás alatt van, kérlek íratkozz fel, hogy értesíthessünk a történésekről. A felíratkozásért is jár egyszeri 10% kedvezmény!",
+    "fullAnswer": "A rendszer kialakítás alatt van, kérlek íratkozz fel, hogy értesíthessünk a történésekről. A felíratkozásért is jár egyszeri 10% kedvezmény!",
+    "category": "kedvezmenyek",
+    "products": [],
+    "keywords": [
+      "szeretnek",
+      "torzsvasarlo",
+      "lenni",
+      "vagyis",
+      "leszek",
+      "mikortol",
+      "fog",
+      "epni",
+      "elni",
+      "rendszer",
+      "kialakitas",
+      "alatt"
+    ],
+    "intents": [
+      "discount_question"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_fb19e8a3482a6e4a",
+    "title": "A Móló sétányon pontosan hol találom? Éppen ott vagyok?",
+    "canonicalQuestion": "A Móló sétányon pontosan hol találom? Éppen ott vagyok",
+    "questionVariants": [
+      "A Móló sétányon pontosan hol találom? Éppen ott vagyok"
+    ],
+    "shortAnswer": "Faházak. A Balaton felé haladva bal oldalon.",
+    "fullAnswer": "Faházak. A Balaton felé haladva bal oldalon.",
+    "category": "kedvezmenyek",
+    "products": [],
+    "keywords": [
+      "molo",
+      "setanyon",
+      "pontosan",
+      "hol",
+      "talalom",
+      "eppen",
+      "ott",
+      "vagyok",
+      "fahazak",
+      "balaton",
+      "fele",
+      "haladva"
+    ],
+    "intents": [
+      "discount_question"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_1e3845388d2b804f",
+    "title": "Szeretnék rendelni, de csak a jövő hónapban, 10-ke környéke lenne nekem jó?",
+    "canonicalQuestion": "Szeretnék rendelni, de csak a jövő hónapban, 10-ke környéke lenne nekem jó!!",
+    "questionVariants": [
+      "Szeretnék rendelni, de csak a jövő hónapban, 10-ke környéke lenne nekem jó!!"
+    ],
+    "shortAnswer": "Rendben.",
+    "fullAnswer": "Rendben.",
+    "category": "kedvezmenyek",
+    "products": [],
+    "keywords": [
+      "szeretnek",
+      "rendelni",
+      "csak",
+      "jovo",
+      "honapban",
+      "kornyeke",
+      "lenne",
+      "nekem",
+      "rendben"
+    ],
+    "intents": [
+      "discount_question"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_f1c35b7f83e8dcb7",
+    "title": "Kedves Zoltán! Évek óta vásárolok Öntől és már régebben is kigyűjtöttem a 150 pontot, de nem látok azóta sem törzsvásárlói árat. Kérem nézzen már rá a fiókomra, hogy mi miatt lehet ez! Segítségét előre is köszönöm! Berettyán-Müller Ágnes?",
+    "canonicalQuestion": "Kedves Zoltán! Évek óta vásárolok Öntől és már régebben is kigyűjtöttem a 150 pontot, de nem látok azóta sem törzsvásárlói árat. Kérem nézzen már rá a fiókomra, hogy mi miatt lehet ez! Segítségét előre is köszönöm! Berettyán-Müller Ágnes",
+    "questionVariants": [
+      "Kedves Zoltán! Évek óta vásárolok Öntől és már régebben is kigyűjtöttem a 150 pontot, de nem látok azóta sem törzsvásárlói árat. Kérem nézzen már rá a fiókomra, hogy mi miatt lehet ez! Segítségét előre is köszönöm! Berettyán-Müller Ágnes"
+    ],
+    "shortAnswer": "Természetesen, holnap jelzek!",
+    "fullAnswer": "Természetesen, holnap jelzek!",
+    "category": "kedvezmenyek",
+    "products": [],
+    "keywords": [
+      "kedves",
+      "zoltan",
+      "evek",
+      "ota",
+      "vasarolok",
+      "ontol",
+      "mar",
+      "regebben",
+      "kigyujtottem",
+      "150",
+      "pontot",
+      "latok"
+    ],
+    "intents": [
+      "discount_question"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_addad08d51c2bccb",
+    "title": "Kedves Zoltán! Tegnap írtam a törzsvásárlói tagsággal kapcsolatban. Ígérte, hogy ma utánanéz. Megköszönöm, ha visszajelez ezzel kapcsolatban. Üdvözlettel: Berettyán-Müller Ágnes?",
+    "canonicalQuestion": "Kedves Zoltán! Tegnap írtam a törzsvásárlói tagsággal kapcsolatban. Ígérte, hogy ma utánanéz. Megköszönöm, ha visszajelez ezzel kapcsolatban. Üdvözlettel: Berettyán-Müller Ágnes",
+    "questionVariants": [
+      "Kedves Zoltán! Tegnap írtam a törzsvásárlói tagsággal kapcsolatban. Ígérte, hogy ma utánanéz. Megköszönöm, ha visszajelez ezzel kapcsolatban. Üdvözlettel: Berettyán-Müller Ágnes"
+    ],
+    "shortAnswer": "Köszönöm jelzését, emailben keresem rövidesen.",
+    "fullAnswer": "Köszönöm jelzését, emailben keresem rövidesen.",
+    "category": "kedvezmenyek",
+    "products": [],
+    "keywords": [
+      "kedves",
+      "zoltan",
+      "tegnap",
+      "irtam",
+      "torzsvasarloi",
+      "tagsaggal",
+      "kapcsolatban",
+      "igerte",
+      "utananez",
+      "megkoszonom",
+      "visszajelez",
+      "ezzel"
+    ],
+    "intents": [
+      "discount_question"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_78e4ebe39519a0fb",
+    "title": "A VItal10kupon miért nem ervenye? Mist leptem be, első vásárlásom Tőletek kaptam VITAL10?",
+    "canonicalQuestion": "A VItal10kupon miért nem ervenye? Mist leptem be, első vásárlásom Tőletek kaptam VITAL10",
+    "questionVariants": [
+      "A VItal10kupon miért nem ervenye? Mist leptem be, első vásárlásom Tőletek kaptam VITAL10"
+    ],
+    "shortAnswer": "Vissza kell igazolni a felídatkozást, aztán a fiókba belépve lehet érvényesíteni a kódot. Milyen email címmel történt a felíratkozás?",
+    "fullAnswer": "Vissza kell igazolni a felídatkozást, aztán a fiókba belépve lehet érvényesíteni a kódot. Milyen email címmel történt a felíratkozás?",
+    "category": "kedvezmenyek",
+    "products": [],
+    "keywords": [
+      "vital10kupon",
+      "miert",
+      "ervenye",
+      "mist",
+      "leptem",
+      "elso",
+      "vasarlasom",
+      "toletek",
+      "kaptam",
+      "vital10",
+      "vissza",
+      "igazolni"
+    ],
+    "intents": [
+      "discount_question"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_1d52bbe0cdec9825",
+    "title": "Szia, az első képernyőn felugrott egy lehetőség az első vásárláskori 10% kedvezményről, de nem találom. Hogy lehet élni vele?",
+    "canonicalQuestion": "Szia, az első képernyőn felugrott egy lehetőség az első vásárláskori 10% kedvezményről, de nem találom. Hogy lehet élni vele?",
+    "questionVariants": [
+      "Szia, az első képernyőn felugrott egy lehetőség az első vásárláskori 10% kedvezményről, de nem találom. Hogy lehet élni vele?"
+    ],
+    "shortAnswer": "Regisztrálni és felíratkozni szükséges, ezek után megy a kód emailben. Feltétel a felíratkozás.",
+    "fullAnswer": "Regisztrálni és felíratkozni szükséges, ezek után megy a kód emailben. Feltétel a felíratkozás.",
+    "category": "kedvezmenyek",
+    "products": [],
+    "keywords": [
+      "szia",
+      "elso",
+      "kepernyon",
+      "felugrott",
+      "lehetoseg",
+      "vasarlaskori",
+      "kedvezmenyrol",
+      "talalom",
+      "elni",
+      "vele",
+      "regisztralni",
+      "feliratkozni"
+    ],
+    "intents": [
+      "discount_question"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_1cf513282981743f",
+    "title": "Köszönöm szépen! A kód nem érkezett meg, de akkor ezt írom be, jó?",
+    "canonicalQuestion": "Köszönöm szépen! A kód nem érkezett meg, de akkor ezt írom be, jó?",
+    "questionVariants": [
+      "Köszönöm szépen! A kód nem érkezett meg, de akkor ezt írom be, jó?"
+    ],
+    "shortAnswer": "Szükséges regisztrálni, felíratkozni Igen, a VITAL10 a kód.",
+    "fullAnswer": "Szükséges regisztrálni, felíratkozni Igen, a VITAL10 a kód.",
+    "category": "kedvezmenyek",
+    "products": [],
+    "keywords": [
+      "koszonom",
+      "szepen",
+      "kod",
+      "erkezett",
+      "akkor",
+      "irom",
+      "szukseges",
+      "regisztralni",
+      "feliratkozni",
+      "igen",
+      "vital10"
+    ],
+    "intents": [
+      "discount_question"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_2382b0ff6e3e4390",
+    "title": "Személyes átvételre van lehetőség?",
+    "canonicalQuestion": "Személyes átvételre van lehetőség?",
+    "questionVariants": [
+      "Személyes átvételre van lehetőség?"
+    ],
+    "shortAnswer": "Balmazújvároson, előre egyeztetett időpontban.",
+    "fullAnswer": "Balmazújvároson, előre egyeztetett időpontban.",
+    "category": "kedvezmenyek",
+    "products": [],
+    "keywords": [
+      "szemelyes",
+      "atvetelre",
+      "lehetoseg",
+      "balmazujvaroson",
+      "elore",
+      "egyeztetett",
+      "idopontban"
+    ],
+    "intents": [
+      "discount_question"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_bb8a23a5a55add53",
+    "title": "Szia Zoli! Az előbb kiválasztottak 2 krémet, de míg megkerestem az e- mail -ben a kuponkódot addig eltűnt. Már szinte teljesen kitöltöttem a rendelést. Nem vagyok benne biztos, hogy elment -e. Meg tudnád mondani? A nevem Sarkadi-Nagy Magdolna?",
+    "canonicalQuestion": "Szia Zoli! Az előbb kiválasztottak 2 krémet, de míg megkerestem az e- mail -ben a kuponkódot addig eltűnt. Már szinte teljesen kitöltöttem a rendelést. Nem vagyok benne biztos, hogy elment -e. Meg tudnád mondani? A nevem Sarkadi-Nagy Magdolna",
+    "questionVariants": [
+      "Szia Zoli! Az előbb kiválasztottak 2 krémet, de míg megkerestem az e- mail -ben a kuponkódot addig eltűnt. Már szinte teljesen kitöltöttem a rendelést. Nem vagyok benne biztos, hogy elment -e. Meg tudnád mondani? A nevem Sarkadi-Nagy Magdolna"
+    ],
+    "shortAnswer": "Nem látok ilyen néven megrendelést. Tehát regisztrálni, felíratkozni, felíratkozást megerősíteni szükséges. Milyen emailcímmel történt a feliratkozás?",
+    "fullAnswer": "Nem látok ilyen néven megrendelést. Tehát regisztrálni, felíratkozni, felíratkozást megerősíteni szükséges. Milyen emailcímmel történt a feliratkozás?",
+    "category": "kedvezmenyek",
+    "products": [],
+    "keywords": [
+      "szia",
+      "zoli",
+      "elobb",
+      "kivalasztottak",
+      "kremet",
+      "mig",
+      "megkerestem",
+      "mail",
+      "ben",
+      "kuponkodot",
+      "addig",
+      "eltunt"
+    ],
+    "intents": [
+      "discount_question"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_18d90dc28723a6c1",
+    "title": "Melyik az két van róla Kép?",
+    "canonicalQuestion": "Melyik az két van róla Kép",
+    "questionVariants": [
+      "Melyik az két van róla Kép"
+    ],
+    "shortAnswer": "https://www.vitalis-szappan.hu/dermavital-balzsam-100-ml",
+    "fullAnswer": "https://www.vitalis-szappan.hu/dermavital-balzsam-100-ml",
+    "category": "kedvezmenyek",
+    "products": [
+      "dermavital",
+      "kezmuves-szappan"
+    ],
+    "keywords": [
+      "melyik",
+      "ket",
+      "rola",
+      "kep",
+      "https",
+      "www",
+      "vitalis",
+      "szappan",
+      "dermavital",
+      "balzsam",
+      "100"
+    ],
+    "intents": [
+      "discount_question"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_f8d8b096b17d1c68",
+    "title": "Szia! Kaptam az első vásárlásomra 10%-os kupont 2x is, viszont az e-mail címre azóta sem lett elküldve. Mi ilyenkor a teendő?",
+    "canonicalQuestion": "Szia! Kaptam az első vásárlásomra 10%-os kupont 2x is, viszont az e-mail címre azóta sem lett elküldve. Mi ilyenkor a teendő?",
+    "questionVariants": [
+      "Szia! Kaptam az első vásárlásomra 10%-os kupont 2x is, viszont az e-mail címre azóta sem lett elküldve. Mi ilyenkor a teendő?"
+    ],
+    "shortAnswer": "Arra az email címre küldi ki a rendszer, amelyet megadtál. Ha a felíratkozás megtörtént ki kellett mennie.",
+    "fullAnswer": "Arra az email címre küldi ki a rendszer, amelyet megadtál. Ha a felíratkozás megtörtént ki kellett mennie.",
+    "category": "kedvezmenyek",
+    "products": [],
+    "keywords": [
+      "szia",
+      "kaptam",
+      "elso",
+      "vasarlasomra",
+      "kupont",
+      "viszont",
+      "mail",
+      "cimre",
+      "azota",
+      "sem",
+      "lett",
+      "elkuldve"
+    ],
+    "intents": [
+      "discount_question"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_206e62d9e0be47df",
+    "title": "Hogy lehetek törzsvásárló?",
+    "canonicalQuestion": "Hogy lehetek törzsvásárló?",
+    "questionVariants": [
+      "Hogy lehetek törzsvásárló?"
+    ],
+    "shortAnswer": "Egyelőre kidolgozás alatt van a rendszer.",
+    "fullAnswer": "Egyelőre kidolgozás alatt van a rendszer.",
+    "category": "kedvezmenyek",
+    "products": [],
+    "keywords": [
+      "lehetek",
+      "torzsvasarlo",
+      "egyelore",
+      "kidolgozas",
+      "alatt",
+      "rendszer"
+    ],
+    "intents": [
+      "discount_question"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_24cdca9f2ef55e36",
+    "title": "Szia, szeretném a kupont zsíros bőrre?",
+    "canonicalQuestion": "Szia, szeretném a kupont zsíros bőrre",
+    "questionVariants": [
+      "Szia, szeretném a kupont zsíros bőrre"
+    ],
+    "shortAnswer": "Fel kell íratkozni és email ben lesz kiküldve.",
+    "fullAnswer": "Fel kell íratkozni és email ben lesz kiküldve.",
+    "category": "kedvezmenyek",
+    "products": [],
+    "keywords": [
+      "szia",
+      "szeretnem",
+      "kupont",
+      "zsiros",
+      "borre",
+      "fel",
+      "iratkozni",
+      "email",
+      "ben",
+      "lesz",
+      "kikuldve"
+    ],
+    "intents": [
+      "discount_question"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_560893892886ecba",
+    "title": "Kettőt szeretnék vásárolni a holt tengeri balzsamból. Első vásárlás lesz. Kérem szépen a kedvezményt?",
+    "canonicalQuestion": "Kettőt szeretnék vásárolni a holt tengeri balzsamból. Első vásárlás lesz. Kérem szépen a kedvezményt.",
+    "questionVariants": [
+      "Kettőt szeretnék vásárolni a holt tengeri balzsamból. Első vásárlás lesz. Kérem szépen a kedvezményt."
+    ],
+    "shortAnswer": "Regisztráció és FELÍRATKOZÁST követően a rendszer kiküldi a 10%-os kuponkódot a megadott email címre.",
+    "fullAnswer": "Regisztráció és FELÍRATKOZÁST követően a rendszer kiküldi a 10%-os kuponkódot a megadott email címre.",
+    "category": "kedvezmenyek",
+    "products": [
+      "holt-tengeri-so-balzsam"
+    ],
+    "keywords": [
+      "kettot",
+      "szeretnek",
+      "vasarolni",
+      "holt",
+      "tengeri",
+      "balzsambol",
+      "elso",
+      "vasarlas",
+      "lesz",
+      "kerem",
+      "szepen",
+      "kedvezmenyt"
+    ],
+    "intents": [
+      "discount_question"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_fa4b27272c2c5424",
+    "title": "Szia. Hajas fejbőrön vannak foltok. Mit ajánlasz?",
+    "canonicalQuestion": "Szia. Hajas fejbőrön vannak foltok. Mit ajánlasz?",
+    "questionVariants": [
+      "Szia. Hajas fejbőrön vannak foltok. Mit ajánlasz?"
+    ],
+    "shortAnswer": "Most készítettem el a Dermavital sampont. Még nincs feltöltve a vebshopba, ezért e-mailben kérnék megértését, ha aktuális a részedről",
+    "fullAnswer": "Most készítettem el a Dermavital sampont. Még nincs feltöltve a vebshopba, ezért e-mailben kérnék megértését, ha aktuális a részedről",
+    "category": "kedvezmenyek",
+    "products": [
+      "dermavital"
+    ],
+    "keywords": [
+      "szia",
+      "hajas",
+      "fejboron",
+      "vannak",
+      "foltok",
+      "ajanlasz",
+      "most",
+      "keszitettem",
+      "dermavital",
+      "sampont",
+      "nincs",
+      "feltoltve"
+    ],
+    "intents": [
+      "discount_question"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_77275c5f4ad0b57f",
+    "title": "Regisztráltam és szeretném a 10 % kzponkodot?",
+    "canonicalQuestion": "Regisztráltam és szeretném a 10 % kzponkodot",
+    "questionVariants": [
+      "Regisztráltam és szeretném a 10 % kzponkodot"
+    ],
+    "shortAnswer": "Fel is kell íratkozni, majd megerősíteni. E-mailben megy a kupon",
+    "fullAnswer": "Fel is kell íratkozni, majd megerősíteni. E-mailben megy a kupon",
+    "category": "kedvezmenyek",
+    "products": [],
+    "keywords": [
+      "regisztraltam",
+      "szeretnem",
+      "kzponkodot",
+      "fel",
+      "iratkozni",
+      "majd",
+      "megerositeni",
+      "mailben",
+      "megy",
+      "kupon"
+    ],
+    "intents": [
+      "discount_question"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_042a94318a68c057",
+    "title": "arcápoláshoz értenek? vagy csak rendelésről lehet érdeklődni? enibádi?",
+    "canonicalQuestion": "arcápoláshoz értenek? vagy csak rendelésről lehet érdeklődni? enibádi?",
+    "questionVariants": [
+      "arcápoláshoz értenek? vagy csak rendelésről lehet érdeklődni? enibádi?"
+    ],
+    "shortAnswer": "Szia! Miben tudunk segíteni?",
+    "fullAnswer": "Szia! Miben tudunk segíteni?",
+    "category": "rendeles",
+    "products": [],
+    "keywords": [
+      "arcapolashoz",
+      "ertenek",
+      "vagy",
+      "csak",
+      "rendelesrol",
+      "erdeklodni",
+      "enibadi",
+      "szia",
+      "miben",
+      "tudunk",
+      "segiteni"
+    ],
+    "intents": [
+      "order_status"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_ccc302642f8de17e",
+    "title": "Üdvözlöm itt is le lehet adni rendelés?",
+    "canonicalQuestion": "Üdvözlöm itt is le lehet adni rendelés?",
+    "questionVariants": [
+      "Üdvözlöm itt is le lehet adni rendelés?"
+    ],
+    "shortAnswer": "Igen.",
+    "fullAnswer": "Igen.",
+    "category": "rendeles",
+    "products": [],
+    "keywords": [
+      "udvozlom",
+      "itt",
+      "adni",
+      "rendeles",
+      "igen"
+    ],
+    "intents": [
+      "order_status"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_2e08d76f9c0325f2",
+    "title": "Visszalèpnèk a rendelèsembe hogy folytassam?",
+    "canonicalQuestion": "Visszalèpnèk a rendelèsembe hogy folytassam",
+    "questionVariants": [
+      "Visszalèpnèk a rendelèsembe hogy folytassam"
+    ],
+    "shortAnswer": "Elvileg van ott egy tovább vásárolok, vagy befejezés gomb.",
+    "fullAnswer": "Elvileg van ott egy tovább vásárolok, vagy befejezés gomb.",
+    "category": "rendeles",
+    "products": [],
+    "keywords": [
+      "visszalepnek",
+      "rendelesembe",
+      "folytassam",
+      "elvileg",
+      "ott",
+      "tovabb",
+      "vasarolok",
+      "vagy",
+      "befejezes",
+      "gomb"
+    ],
+    "intents": [
+      "order_status"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_ae3ebba08e2093a4",
+    "title": "Jónapot kívánok! Érdeklődni szeretnék, hogy a rendelésem mikorra várható. Amikor megrendeltem azt írták 25-én megérkezik. Fontos lenne tudnom, mert legkésőbb csütörtökig tudok vele várni. Válaszát előre is köszönöm?",
+    "canonicalQuestion": "Jónapot kívánok! Érdeklődni szeretnék, hogy a rendelésem mikorra várható. Amikor megrendeltem azt írták 25-én megérkezik. Fontos lenne tudnom, mert legkésőbb csütörtökig tudok vele várni. Válaszát előre is köszönöm.",
+    "questionVariants": [
+      "Jónapot kívánok! Érdeklődni szeretnék, hogy a rendelésem mikorra várható. Amikor megrendeltem azt írták 25-én megérkezik. Fontos lenne tudnom, mert legkésőbb csütörtökig tudok vele várni. Válaszát előre is köszönöm."
+    ],
+    "shortAnswer": "Milyen néven került megrendelésre?",
+    "fullAnswer": "Milyen néven került megrendelésre?",
+    "category": "rendeles",
+    "products": [],
+    "keywords": [
+      "jonapot",
+      "kivanok",
+      "erdeklodni",
+      "szeretnek",
+      "rendelesem",
+      "mikorra",
+      "varhato",
+      "amikor",
+      "megrendeltem",
+      "irtak",
+      "megerkezik",
+      "fontos"
+    ],
+    "intents": [
+      "order_status"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_0f19e4ee472508dd",
+    "title": "Kétszer raktam véletlenül a kosárba! Hogy tudom törölni ?",
+    "canonicalQuestion": "Kétszer raktam véletlenül a kosárba! Hogy tudom törölni ?",
+    "questionVariants": [
+      "Kétszer raktam véletlenül a kosárba! Hogy tudom törölni ?"
+    ],
+    "shortAnswer": "Van ott egy kuka, de a +, - jelekkel is lehet módosítani.",
+    "fullAnswer": "Van ott egy kuka, de a +, - jelekkel is lehet módosítani.",
+    "category": "rendeles",
+    "products": [],
+    "keywords": [
+      "ketszer",
+      "raktam",
+      "veletlenul",
+      "kosarba",
+      "tudom",
+      "torolni",
+      "ott",
+      "kuka",
+      "jelekkel",
+      "modositani"
+    ],
+    "intents": [
+      "order_status"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_0cd6fc4907074abf",
+    "title": "Èrdeklődnèk,szeptember 14 adtam le rendelést önöknek 99212-456931 azonosító számú rendelést,lehet tudni mikor kerűl feladásra?",
+    "canonicalQuestion": "Èrdeklődnèk,szeptember 14 adtam le rendelést önöknek 99212-456931 azonosító számú rendelést,lehet tudni mikor kerűl feladásra?",
+    "questionVariants": [
+      "Èrdeklődnèk,szeptember 14 adtam le rendelést önöknek 99212-456931 azonosító számú rendelést,lehet tudni mikor kerűl feladásra?"
+    ],
+    "shortAnswer": "Milyen néven lett leadva?",
+    "fullAnswer": "Milyen néven lett leadva?",
+    "category": "rendeles",
+    "products": [],
+    "keywords": [
+      "erdeklodnek",
+      "szeptember",
+      "adtam",
+      "rendelest",
+      "onoknek",
+      "99212",
+      "456931",
+      "azonosito",
+      "szamu",
+      "tudni",
+      "mikor",
+      "kerul"
+    ],
+    "intents": [
+      "order_status"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_28c817aeeaa36955",
+    "title": "küldjem?",
+    "canonicalQuestion": "küldjem?",
+    "questionVariants": [
+      "küldjem?"
+    ],
+    "shortAnswer": "Igen, kérném, aztán lehet módosítani, ha szükséges.",
+    "fullAnswer": "Igen, kérném, aztán lehet módosítani, ha szükséges.",
+    "category": "rendeles",
+    "products": [],
+    "keywords": [
+      "kuldjem",
+      "igen",
+      "kernem",
+      "aztan",
+      "modositani",
+      "szukseges"
+    ],
+    "intents": [
+      "order_status"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_018c300df9bb9813",
+    "title": "Tegnap rendeltem Önöktől Tóth Judit névre. Mikor érkezik a Postara Siófokra?",
+    "canonicalQuestion": "Tegnap rendeltem Önöktől Tóth Judit névre. Mikor érkezik a Postara Siófokra?",
+    "questionVariants": [
+      "Tegnap rendeltem Önöktől Tóth Judit névre. Mikor érkezik a Postara Siófokra?"
+    ],
+    "shortAnswer": "Kérem írjon emailt ezzel kapcsolatban.",
+    "fullAnswer": "Kérem írjon emailt ezzel kapcsolatban.",
+    "category": "szallitas",
+    "products": [],
+    "keywords": [
+      "tegnap",
+      "rendeltem",
+      "onoktol",
+      "toth",
+      "judit",
+      "nevre",
+      "mikor",
+      "erkezik",
+      "postara",
+      "siofokra",
+      "kerem",
+      "irjon"
+    ],
+    "intents": [
+      "shipping_question"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_53a7666bb445e28e",
+    "title": "Utánvétes hizetés nem lehetséges?",
+    "canonicalQuestion": "Utánvétes hizetés nem lehetséges?",
+    "questionVariants": [
+      "Utánvétes hizetés nem lehetséges?"
+    ],
+    "shortAnswer": "Dpd házhozszállítás esetén lehetséges.",
+    "fullAnswer": "Dpd házhozszállítás esetén lehetséges.",
+    "category": "szallitas",
+    "products": [],
+    "keywords": [
+      "utanvetes",
+      "hizetes",
+      "lehetseges",
+      "dpd",
+      "hazhozszallitas",
+      "eseten"
+    ],
+    "intents": [
+      "shipping_question"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_83897c43cdf787e4",
+    "title": "Köszönöm, de , hogy tudok akkor tovább lépni?",
+    "canonicalQuestion": "Köszönöm, de , hogy tudok akkor tovább lépni?",
+    "questionVariants": [
+      "Köszönöm, de , hogy tudok akkor tovább lépni?"
+    ],
+    "shortAnswer": "A terméket, vagy termékeket kérem tegye kosárba, majd a kosárba oldalon válassza a regisztráció nélkül vásárolok gombot. Ott megadhatja a címet, kiválaszthatja a fizetési szállítási módot.",
+    "fullAnswer": "A terméket, vagy termékeket kérem tegye kosárba, majd a kosárba oldalon válassza a regisztráció nélkül vásárolok gombot. Ott megadhatja a címet, kiválaszthatja a fizetési szállítási módot.",
+    "category": "szallitas",
+    "products": [],
+    "keywords": [
+      "koszonom",
+      "tudok",
+      "akkor",
+      "tovabb",
+      "lepni",
+      "termeket",
+      "vagy",
+      "termekeket",
+      "kerem",
+      "tegye",
+      "kosarba",
+      "majd"
+    ],
+    "intents": [
+      "shipping_question"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_efd2123699634ff4",
+    "title": "Mindhármat vásároltam már. :) A samponszappanok (a teafás és rozmaringos is) jobban beváltak nekem, de ezeket nem találom a webshopban. Illetve a parajdisopiac.hu-n láttam, de csak teafásat. Most kaptam e-mailen ingyenes szállításkupont, azt szeretném felhasználni?",
+    "canonicalQuestion": "Mindhármat vásároltam már. :) A samponszappanok (a teafás és rozmaringos is) jobban beváltak nekem, de ezeket nem találom a webshopban. Illetve a parajdisopiac.hu-n láttam, de csak teafásat. Most kaptam e-mailen ingyenes szállításkupont, azt szeretném felhasználni.",
+    "questionVariants": [
+      "Mindhármat vásároltam már. :) A samponszappanok (a teafás és rozmaringos is) jobban beváltak nekem, de ezeket nem találom a webshopban. Illetve a parajdisopiac.hu-n láttam, de csak teafásat. Most kaptam e-mailen ingyenes szállításkupont, azt szeretném felhasználni."
+    ],
+    "shortAnswer": "Kaphatnék email címet? Itt körülményes egyeztetni.",
+    "fullAnswer": "Kaphatnék email címet? Itt körülményes egyeztetni.",
+    "category": "szallitas",
+    "products": [
+      "samponszappan",
+      "kezmuves-szappan"
+    ],
+    "keywords": [
+      "mindharmat",
+      "vasaroltam",
+      "mar",
+      "samponszappanok",
+      "teafas",
+      "rozmaringos",
+      "jobban",
+      "bevaltak",
+      "nekem",
+      "ezeket",
+      "talalom",
+      "webshopban"
+    ],
+    "intents": [
+      "shipping_question"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_30537c84bfe30661",
+    "title": "És lehet házhoz szállítással is fizetni ?",
+    "canonicalQuestion": "És lehet házhoz szállítással is fizetni ?",
+    "questionVariants": [
+      "És lehet házhoz szállítással is fizetni ?"
+    ],
+    "shortAnswer": "https://www.vitalis-szappan.hu/termek/holt-tengeri-so-balzsam Igen, utánvéttel, GLS futárral. 1800 Ft + 400 Ft utánvételi díj",
+    "fullAnswer": "https://www.vitalis-szappan.hu/termek/holt-tengeri-so-balzsam Igen, utánvéttel, GLS futárral. 1800 Ft + 400 Ft utánvételi díj",
+    "category": "szallitas",
+    "products": [
+      "holt-tengeri-so-balzsam",
+      "kezmuves-szappan"
+    ],
+    "keywords": [
+      "hazhoz",
+      "szallitassal",
+      "fizetni",
+      "https",
+      "www",
+      "vitalis",
+      "szappan",
+      "termek",
+      "holt",
+      "tengeri",
+      "balzsam",
+      "igen"
+    ],
+    "intents": [
+      "shipping_question"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_4d31f1b69fdea0de",
+    "title": "Csak annyi kérdésem van hogy van e személyes a futárnál való fizetés ?",
+    "canonicalQuestion": "Csak annyi kérdésem van hogy van e személyes a futárnál való fizetés ?",
+    "questionVariants": [
+      "Csak annyi kérdésem van hogy van e személyes a futárnál való fizetés ?"
+    ],
+    "shortAnswer": "Igen, válassza az utánvétes fizetési módot.",
+    "fullAnswer": "Igen, válassza az utánvétes fizetési módot.",
+    "category": "szallitas",
+    "products": [],
+    "keywords": [
+      "csak",
+      "annyi",
+      "kerdesem",
+      "szemelyes",
+      "futarnal",
+      "valo",
+      "fizetes",
+      "igen",
+      "valassza",
+      "utanvetes",
+      "fizetesi",
+      "modot"
+    ],
+    "intents": [
+      "shipping_question"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_d67f4230ab5f96c5",
+    "title": "Mennyi idő alatt háznál?",
+    "canonicalQuestion": "Mennyi idő alatt háznál",
+    "questionVariants": [
+      "Mennyi idő alatt háznál"
+    ],
+    "shortAnswer": "2 nap.",
+    "fullAnswer": "2 nap.",
+    "category": "szallitas",
+    "products": [],
+    "keywords": [
+      "mennyi",
+      "ido",
+      "alatt",
+      "haznal",
+      "nap"
+    ],
+    "intents": [
+      "shipping_question"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_d8e65b58ea811ed1",
+    "title": "Szia gyulladt pattanásokra mit ajánlasz?",
+    "canonicalQuestion": "Szia gyulladt pattanásokra mit ajánlasz?",
+    "questionVariants": [
+      "Szia gyulladt pattanásokra mit ajánlasz?"
+    ],
+    "shortAnswer": "Szia, a Gyógyászati katrány szappant, Teafás szappant, Aktív szenes szappant. Felvaltva ajánlom használni",
+    "fullAnswer": "Szia, a Gyógyászati katrány szappant, Teafás szappant, Aktív szenes szappant. Felvaltva ajánlom használni",
+    "category": "termekajanlas",
+    "products": [
+      "kezmuves-szappan"
+    ],
+    "keywords": [
+      "szia",
+      "gyulladt",
+      "pattanasokra",
+      "ajanlasz",
+      "gyogyaszati",
+      "katrany",
+      "szappant",
+      "teafas",
+      "aktiv",
+      "szenes",
+      "felvaltva",
+      "ajanlom"
+    ],
+    "intents": [
+      "product_recommendation"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_5054934771c17b09",
+    "title": "Szia! Aknés, zsíros érett bőrre (48 éves vagyok) milyen terméket tudsz ajánlani?",
+    "canonicalQuestion": "Szia! Aknés, zsíros érett bőrre (48 éves vagyok) milyen terméket tudsz ajánlani?",
+    "questionVariants": [
+      "Szia! Aknés, zsíros érett bőrre (48 éves vagyok) milyen terméket tudsz ajánlani?"
+    ],
+    "shortAnswer": "Szia, szappanokat fogok ajánlani, amelyekez minden nap használhatsz. Kiemelkedő hatású az aknéra a Gyógyászati kátrány szappan. Jó lehet még az Aktív szenes, Teafa és a Holt tengeri iszap szappan. Lehet váltakozva használni.",
+    "fullAnswer": "Szia, szappanokat fogok ajánlani, amelyekez minden nap használhatsz. Kiemelkedő hatású az aknéra a Gyógyászati kátrány szappan. Jó lehet még az Aktív szenes, Teafa és a Holt tengeri iszap szappan. Lehet váltakozva használni.",
+    "category": "termekajanlas",
+    "products": [
+      "holt-tengeri-so-balzsam",
+      "iszap-szappan",
+      "kezmuves-szappan"
+    ],
+    "keywords": [
+      "szia",
+      "aknes",
+      "zsiros",
+      "erett",
+      "borre",
+      "eves",
+      "vagyok",
+      "termeket",
+      "tudsz",
+      "ajanlani",
+      "szappanokat",
+      "fogok"
+    ],
+    "intents": [
+      "product_recommendation"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_5636a9f03556fa47",
+    "title": "Jónapot kívánok! Atópiás dermatitiszes az arcom, sokszor piros gyulladt Holt tengeri só balzsam jó rá?",
+    "canonicalQuestion": "Jónapot kívánok! Atópiás dermatitiszes az arcom, sokszor piros gyulladt Holt tengeri só balzsam jó rá?",
+    "questionVariants": [
+      "Jónapot kívánok! Atópiás dermatitiszes az arcom, sokszor piros gyulladt Holt tengeri só balzsam jó rá?"
+    ],
+    "shortAnswer": "Nem javaslom. Keressen email üzenetben, kérem.",
+    "fullAnswer": "Nem javaslom. Keressen email üzenetben, kérem.",
+    "category": "termekajanlas",
+    "products": [
+      "holt-tengeri-so-balzsam"
+    ],
+    "keywords": [
+      "jonapot",
+      "kivanok",
+      "atopias",
+      "dermatitiszes",
+      "arcom",
+      "sokszor",
+      "piros",
+      "gyulladt",
+      "holt",
+      "tengeri",
+      "balzsam",
+      "javaslom"
+    ],
+    "intents": [
+      "product_recommendation"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_805a66ee5a0dc5c5",
+    "title": "Üdv! Atópiás dermatitisz bőrre ezzel ajánlott a fürdés? Vagy tud mást javasolni?",
+    "canonicalQuestion": "Üdv! Atópiás dermatitisz bőrre ezzel ajánlott a fürdés? Vagy tud mást javasolni?",
+    "questionVariants": [
+      "Üdv! Atópiás dermatitisz bőrre ezzel ajánlott a fürdés? Vagy tud mást javasolni?"
+    ],
+    "shortAnswer": "Ez nem klasszikus szappan, hanem egy szappan alakú sótömb. Nem. Nem ajánlott. Kérem keressen meg e-mailben, vagy adja meg itt az email címét.",
+    "fullAnswer": "Ez nem klasszikus szappan, hanem egy szappan alakú sótömb. Nem. Nem ajánlott. Kérem keressen meg e-mailben, vagy adja meg itt az email címét.",
+    "category": "termekajanlas",
+    "products": [
+      "kezmuves-szappan"
+    ],
+    "keywords": [
+      "udv",
+      "atopias",
+      "dermatitisz",
+      "borre",
+      "ezzel",
+      "ajanlott",
+      "furdes",
+      "vagy",
+      "tud",
+      "mast",
+      "javasolni",
+      "klasszikus"
+    ],
+    "intents": [
+      "product_recommendation"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_92b004248d8bdd5e",
+    "title": "Azt szeretném kérdezni,hogy esetleg van e valamilyen arclemosótok,hámló viszkető ,gyulladt arcra?",
+    "canonicalQuestion": "Azt szeretném kérdezni,hogy esetleg van e valamilyen arclemosótok,hámló viszkető ,gyulladt arcra?",
+    "questionVariants": [
+      "Azt szeretném kérdezni,hogy esetleg van e valamilyen arclemosótok,hámló viszkető ,gyulladt arcra?"
+    ],
+    "shortAnswer": "Szia, szappant fogok ajánlani. Olíva szappan natúr, és a Kecsketejes szappan natúr változatát. Mindkettőt napi rendszerességgel használhatod, nem irritálja azt a bőrt, tökéletes a smink eltávolításban.",
+    "fullAnswer": "Szia, szappant fogok ajánlani. Olíva szappan natúr, és a Kecsketejes szappan natúr változatát. Mindkettőt napi rendszerességgel használhatod, nem irritálja azt a bőrt, tökéletes a smink eltávolításban.",
+    "category": "termekajanlas",
+    "products": [
+      "kezmuves-szappan"
+    ],
+    "keywords": [
+      "szeretnem",
+      "kerdezni",
+      "esetleg",
+      "valamilyen",
+      "arclemosotok",
+      "hamlo",
+      "viszketo",
+      "gyulladt",
+      "arcra",
+      "szia",
+      "szappant",
+      "fogok"
+    ],
+    "intents": [
+      "product_recommendation"
+    ],
+    "priority": 50
+  },
+  {
+    "id": "kb_759a3fdb37c6c270",
+    "title": "Szia! Hajas, viszkető fejbőrre van termékük?",
+    "canonicalQuestion": "Szia! Hajas, viszkető fejbőrre van termékük?",
+    "questionVariants": [
+      "Szia! Hajas, viszkető fejbőrre van termékük?"
+    ],
+    "shortAnswer": "Üdvözlöm! A Psorivital csomag mindkét szapppanja alkalmas hajat mosni. Szokásos módon kell használni.",
+    "fullAnswer": "Üdvözlöm! A Psorivital csomag mindkét szapppanja alkalmas hajat mosni. Szokásos módon kell használni.",
+    "category": "termekajanlas",
+    "products": [
+      "psorivital-csomag"
+    ],
+    "keywords": [
+      "szia",
+      "hajas",
+      "viszketo",
+      "fejborre",
+      "termekuk",
+      "udvozlom",
+      "psorivital",
+      "csomag",
+      "mindket",
+      "szapppanja",
+      "alkalmas",
+      "hajat"
+    ],
+    "intents": [
+      "product_recommendation"
+    ],
+    "priority": 50
+  }
+]

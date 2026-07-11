@@ -1,0 +1,513 @@
+[
+  {
+    "id": "usage_aktiv_szenes_szappan",
+    "priority": 2100,
+    "intent": "product_usage",
+    "matchAll": [
+      "aktív szenes szappan"
+    ],
+    "matchAny": [
+      "hogyan használjam",
+      "hogyan hasznaljam",
+      "milyen gyakran",
+      "naponta hányszor",
+      "naponta hanyszor",
+      "használata",
+      "hasznalata"
+    ],
+    "primaryProduct": "aktiv_szenes_szappan",
+    "secondaryProducts": [],
+    "answer": "Az Aktív szenes szappant nedves bőrön habosítsd fel, finoman mosd át vele az érintett területet, majd alaposan öblítsd le. Zsíros, pattanásos bőrnél napi egy használat általában elegendő. Ha húzódik vagy kiszárad tőle a bőr, ritkítsd a használatát.",
+    "askFollowUp": false,
+    "safetyNote": "Szembe ne kerüljön, irritáció esetén hagyd abba a használatát."
+  },
+  {
+    "id": "usage_dermavital_sampon",
+    "priority": 2100,
+    "intent": "product_usage",
+    "matchAll": [
+      "dermavital sampon"
+    ],
+    "matchAny": [
+      "hogyan használjam",
+      "hogyan hasznaljam",
+      "milyen gyakran",
+      "naponta hányszor",
+      "naponta hanyszor",
+      "használata",
+      "hasznalata"
+    ],
+    "primaryProduct": "dermavital_sampon",
+    "secondaryProducts": [],
+    "answer": "A Dermavital sampont nedves hajon és fejbőrön habosítsd fel, finoman masszírozd be, majd alaposan öblítsd le. Problémás fejbőrnél rendszeresen használható; kezdetben heti 2–3 alkalom jó kiindulás lehet.",
+    "askFollowUp": false,
+    "safetyNote": "Szembe ne kerüljön. Tartós vagy romló fejbőrpanasz esetén kérj bőrgyógyászati tanácsot."
+  },
+  {
+    "id": "usage_dermavital_krem",
+    "priority": 2100,
+    "intent": "product_usage",
+    "matchAll": [
+      "dermavital krém"
+    ],
+    "matchAny": [
+      "hogyan használjam",
+      "hogyan hasznaljam",
+      "milyen gyakran",
+      "naponta hányszor",
+      "naponta hanyszor",
+      "használata",
+      "hasznalata"
+    ],
+    "primaryProduct": "dermavital_krem",
+    "secondaryProducts": [],
+    "answer": "A Dermavital krémből kis mennyiséget vigyél fel a megtisztított, száraz bőrre, majd finoman oszlasd el. Szükség szerint naponta többször is használható, különösen tisztálkodás után.",
+    "askFollowUp": false,
+    "safetyNote": "Első használat előtt érdemes kis bőrfelületen próbát végezni."
+  },
+  {
+    "id": "usage_dermavital_szappan",
+    "priority": 2100,
+    "intent": "product_usage",
+    "matchAll": [
+      "dermavital szappan"
+    ],
+    "matchAny": [
+      "hogyan használjam",
+      "hogyan hasznaljam",
+      "milyen gyakran",
+      "naponta hányszor",
+      "naponta hanyszor",
+      "használata",
+      "hasznalata"
+    ],
+    "primaryProduct": "dermavital_szappan",
+    "secondaryProducts": [],
+    "answer": "A Dermavital szappant nedves bőrön habosítsd fel, gyengéden tisztítsd meg vele a bőrt, majd alaposan öblítsd le. Napi tisztálkodáshoz használható; érzékeny bőrnél kerüld a hosszas dörzsölést.",
+    "askFollowUp": false
+  },
+  {
+    "id": "usage_shea_vajas_szappan",
+    "priority": 2100,
+    "intent": "product_usage",
+    "matchAll": [
+      "shea vajas szappan"
+    ],
+    "matchAny": [
+      "hogyan használjam",
+      "hogyan hasznaljam",
+      "milyen gyakran",
+      "naponta hányszor",
+      "naponta hanyszor",
+      "használata",
+      "hasznalata"
+    ],
+    "primaryProduct": "shea_vajas_szappan",
+    "secondaryProducts": [],
+    "answer": "A Shea vajas szappant nedves bőrön habosítsd fel, kíméletesen tisztítsd meg vele a bőrt, majd öblítsd le. Száraz bőrnél napi használatra is alkalmas lehet, de ha húzódást tapasztalsz, ritkítsd.",
+    "askFollowUp": false
+  },
+  {
+    "id": "generic_skin_problem",
+    "priority": 500,
+    "intent": "clarify_skin_problem",
+    "matchAny": [
+      "bőrproblémával kapcsolatban kérdeznék",
+      "borproblemaval kapcsolatban kerdeznek",
+      "bőrproblémám van",
+      "borproblemam van"
+    ],
+    "primaryProduct": null,
+    "secondaryProducts": [],
+    "answer": "Írd meg röviden, mi a fő panaszod, és rögtön a leginkább megfelelő Vitalis terméket ajánlom.",
+    "askFollowUp": true,
+    "suggestions": [
+      {
+        "label": "Ekcéma",
+        "question": "Ekcémára mit ajánlasz?"
+      },
+      {
+        "label": "Pikkelysömör",
+        "question": "Pikkelysömörre mit ajánlasz?"
+      },
+      {
+        "label": "Száraz bőr",
+        "question": "Száraz bőrre mit ajánlasz?"
+      },
+      {
+        "label": "Pattanásos bőr",
+        "question": "Pattanásos bőrre mit ajánlasz?"
+      },
+      {
+        "label": "Fejbőr",
+        "question": "Fejbőrproblémára mit ajánlasz?"
+      }
+    ]
+  },
+  {
+    "id": "generic_product_choice",
+    "priority": 500,
+    "intent": "clarify_product_choice",
+    "matchAny": [
+      "segíts terméket választani",
+      "segits termeket valasztani",
+      "mit válasszak",
+      "mit valasszak",
+      "milyen terméket ajánlasz",
+      "milyen termeket ajanlasz"
+    ],
+    "primaryProduct": null,
+    "secondaryProducts": [],
+    "answer": "Írd meg, milyen problémára vagy melyik testrészre keresel terméket. Egy rövid válasz elég.",
+    "askFollowUp": true,
+    "suggestions": [
+      {
+        "label": "Fejbőr",
+        "question": "Fejbőrproblémára keresek terméket."
+      },
+      {
+        "label": "Arc",
+        "question": "Arcbőrre keresek terméket."
+      },
+      {
+        "label": "Test",
+        "question": "Testápolásra keresek terméket."
+      },
+      {
+        "label": "Rendelés",
+        "question": "Rendeléssel kapcsolatban kérdeznék."
+      }
+    ]
+  },
+  {
+    "id": "scalp_general",
+    "priority": 1000,
+    "intent": "scalp_problem",
+    "matchAny": [
+      "fejbőr",
+      "fejbor",
+      "korpa",
+      "korpás",
+      "korpas",
+      "hámlik a fejbőr",
+      "hamlik a fejbor",
+      "viszket a fejbőr",
+      "viszket a fejbor",
+      "problémás fejbőr",
+      "problemas fejbor"
+    ],
+    "excludeAny": [
+      "pikkelysömör",
+      "pikkelysomor",
+      "pszoriázis",
+      "pszoriazis",
+      "hajhullás",
+      "hajhullas"
+    ],
+    "primaryProduct": "dermavital_sampon",
+    "secondaryProducts": [],
+    "answer": "Problémás, korpás, viszkető vagy hámló fejbőrre elsőként a Dermavital sampont javaslom. Ez a Vitalis kifejezetten problémás fejbőrre készült samponja.",
+    "askFollowUp": false,
+    "safetyNote": "Tartós, erős vagy romló panasz esetén érdemes bőrgyógyásszal is egyeztetni.",
+    "suggestions": [
+      {
+        "label": "Hogyan használjam?",
+        "question": "Hogyan használjam a Dermavital sampont?"
+      },
+      {
+        "label": "Pikkelysömörös fejbőr",
+        "question": "Pikkelysömörös a fejbőröm."
+      },
+      {
+        "label": "Hajhullás is van",
+        "question": "Hajhullásom is van."
+      }
+    ]
+  },
+  {
+    "id": "scalp_psoriasis",
+    "priority": 1200,
+    "intent": "scalp_psoriasis",
+    "matchAll": [
+      "fejbőr"
+    ],
+    "matchAny": [
+      "pikkelysömör",
+      "pikkelysomor",
+      "pszoriázis",
+      "pszoriazis"
+    ],
+    "primaryProduct": "dermavital_sampon",
+    "secondaryProducts": [
+      "rozmaringos_samponszappan"
+    ],
+    "answer": "Pikkelysömörös fejbőrre elsőként a Dermavital sampont javaslom. Kiegészítésként a rozmaringos samponszappan is használható.",
+    "askFollowUp": false,
+    "safetyNote": "A termékek kozmetikai ápolást nyújtanak, nem helyettesítik az orvosi kezelést."
+  },
+  {
+    "id": "scalp_itchy",
+    "priority": 1100,
+    "intent": "scalp_itchy",
+    "matchAll": [
+      "fejbőr"
+    ],
+    "matchAny": [
+      "viszket",
+      "viszkető",
+      "viszketo"
+    ],
+    "primaryProduct": "dermavital_sampon",
+    "secondaryProducts": [
+      "rozmaringos_samponszappan"
+    ],
+    "answer": "Viszkető fejbőrre elsőként a Dermavital sampont javaslom. Kiegészítésként a rozmaringos samponszappan is szóba jöhet.",
+    "askFollowUp": false,
+    "safetyNote": "Erős, sebes vagy tartós panasz esetén kérj bőrgyógyászati tanácsot."
+  },
+  {
+    "id": "hair_loss",
+    "priority": 900,
+    "intent": "hair_loss",
+    "matchAny": [
+      "hajhullás",
+      "hajhullas",
+      "hullik a hajam",
+      "ritkul a hajam"
+    ],
+    "primaryProduct": "rozmaringos_samponszappan",
+    "secondaryProducts": [],
+    "answer": "Hajhullás esetén elsőként a rozmaringos samponszappant javaslom. A termék kozmetikai haj- és fejbőrápolásra szolgál; a hajhullás okát nem diagnosztizálja.",
+    "askFollowUp": false,
+    "safetyNote": "Hirtelen vagy erős hajhullásnál érdemes orvosi kivizsgálást kérni."
+  },
+  {
+    "id": "eczema",
+    "priority": 1000,
+    "intent": "eczema",
+    "matchAny": [
+      "ekcéma",
+      "ekcema",
+      "atópiás",
+      "atopias",
+      "dermatitisz"
+    ],
+    "primaryProduct": "dermavital_krem",
+    "secondaryProducts": [
+      "dermavital_szappan"
+    ],
+    "answer": "Ekcémára hajlamos, száraz és irritált bőr mindennapi ápolására elsőként a Dermavital krémet, mellé pedig a Dermavital szappant javaslom.",
+    "askFollowUp": false,
+    "safetyNote": "A termékek kozmetikumok, nem gyógyszerek.",
+    "suggestions": [
+      {
+        "label": "Melyik szappan mellé?",
+        "question": "Milyen szappant használjak mellé?"
+      },
+      {
+        "label": "Gyermeknek is?",
+        "question": "Gyermeknek is használható?"
+      },
+      {
+        "label": "Hogyan használjam?",
+        "question": "Hogyan használjam a Dermavital krémet?"
+      }
+    ]
+  },
+  {
+    "id": "psoriasis_body",
+    "priority": 950,
+    "intent": "psoriasis_body",
+    "matchAny": [
+      "pikkelysömör",
+      "pikkelysomor",
+      "pszoriázis",
+      "pszoriazis"
+    ],
+    "excludeAny": [
+      "fejbőr",
+      "fejbor"
+    ],
+    "primaryProduct": "psorivital_csomag",
+    "secondaryProducts": [
+      "holt_tengeri_so_balzsam"
+    ],
+    "answer": "Pikkelysömörre hajlamos, száraz és hámló bőr mindennapi kozmetikai ápolására elsőként a PsoriVital csomagot javaslom. Kiegészítésként a Holt-tengeri só balzsam használható.",
+    "askFollowUp": false,
+    "safetyNote": "A termékek nem helyettesítik az orvosi kezelést."
+  },
+  {
+    "id": "acne",
+    "priority": 900,
+    "intent": "acne",
+    "matchAny": [
+      "akné",
+      "akne",
+      "pattanás",
+      "pattanas",
+      "pattanásos",
+      "pattanasos",
+      "mitesszer"
+    ],
+    "primaryProduct": "aktiv_szenes_szappan",
+    "secondaryProducts": [
+      "katrany_szappan"
+    ],
+    "answer": "Zsíros, pattanásos bőrre elsőként az Aktív szenes szappant javaslom. Makacsabb, problémás bőrnél a gyógyászati kátrány szappan is szóba jöhet.",
+    "askFollowUp": false,
+    "safetyNote": "A túl gyakori, erős tisztítás kiszáríthatja a bőrt.",
+    "suggestions": [
+      {
+        "label": "Arcon jelentkezik",
+        "question": "Az arcomon pattanásos a bőröm."
+      },
+      {
+        "label": "Háton vagy testen",
+        "question": "A hátamon vagy a testemen vannak pattanások."
+      },
+      {
+        "label": "Hogyan használjam?",
+        "question": "Hogyan használjam az Aktív szenes szappant?"
+      }
+    ]
+  },
+  {
+    "id": "dry_skin",
+    "priority": 880,
+    "intent": "dry_skin",
+    "matchAny": [
+      "száraz bőr",
+      "szaraz bor",
+      "húzódik a bőröm",
+      "huzodik a borom",
+      "kiszáradt a bőröm",
+      "kiszáradt bor"
+    ],
+    "primaryProduct": "shea_vajas_szappan",
+    "secondaryProducts": [],
+    "answer": "Száraz, húzódó bőrre elsőként a Shea vajas szappant javaslom kímélő mindennapi tisztításhoz.",
+    "askFollowUp": false,
+    "safetyNote": "Ha a bőr repedezett, gyulladt vagy tartósan viszket, érdemes bőrgyógyásszal is egyeztetni.",
+    "suggestions": [
+      {
+        "label": "Arcra keresek",
+        "question": "Száraz arcbőrre mit ajánlasz?"
+      },
+      {
+        "label": "Kézre keresek",
+        "question": "Nagyon száraz a kezem."
+      }
+    ]
+  },
+  {
+    "id": "shipping_time",
+    "priority": 1000,
+    "intent": "shipping_time",
+    "matchAny": [
+      "mennyi a szállítási idő",
+      "mennyi a szallitasi ido",
+      "mikor érkezik",
+      "mikor erkezik",
+      "mennyi idő alatt",
+      "mennyi ido alatt"
+    ],
+    "primaryProduct": null,
+    "secondaryProducts": [],
+    "answer": "A kiszállítás általában körülbelül 2 munkanap. A pontos érkezés a rendelés időpontjától és a választott szállítási módtól függ.",
+    "askFollowUp": false
+  },
+  {
+    "id": "coupon",
+    "priority": 1000,
+    "intent": "coupon",
+    "matchAny": [
+      "kuponkód",
+      "kuponkod",
+      "kedvezménykód",
+      "kedvezmenykod",
+      "vital10"
+    ],
+    "primaryProduct": null,
+    "secondaryProducts": [],
+    "answer": "A kuponkódhoz fel kell iratkozni a hírlevélre, majd az e-mailben érkező megerősítést elvégezni. Ezután a rendszer elküldi a kódot.",
+    "askFollowUp": false
+  },
+  {
+    "id": "shipping_general",
+    "priority": 900,
+    "intent": "shipping_general",
+    "matchAny": [
+      "szállítás érdekelne",
+      "szallitas erdekelne",
+      "szállítással kapcsolatban",
+      "szallitassal kapcsolatban",
+      "szállításról kérdeznék",
+      "szallitasrol kerdeznek",
+      "szállítás",
+      "szallitas"
+    ],
+    "excludeAny": [
+      "mennyi a szállítási idő",
+      "mennyi a szallitasi ido",
+      "mennyibe kerül a szállítás",
+      "mennyibe kerul a szallitas",
+      "utánvét",
+      "utanvet"
+    ],
+    "primaryProduct": null,
+    "secondaryProducts": [],
+    "answer": "Segítek a szállítással kapcsolatban. Válaszd ki, mire vagy kíváncsi:",
+    "askFollowUp": true,
+    "suggestions": [
+      {
+        "label": "Szállítási idő",
+        "question": "Mennyi a szállítási idő?"
+      },
+      {
+        "label": "Szállítási díj",
+        "question": "Mennyibe kerül a szállítás?"
+      },
+      {
+        "label": "Utánvét",
+        "question": "Lehet utánvéttel fizetni?"
+      },
+      {
+        "label": "Rendelésem állapota",
+        "question": "Hol tart a rendelésem?"
+      }
+    ]
+  },
+  {
+    "id": "order_general",
+    "priority": 850,
+    "intent": "order_general",
+    "matchAny": [
+      "rendeléssel kapcsolatban kérdeznék",
+      "rendelessel kapcsolatban kerdeznek",
+      "rendelés érdekelne",
+      "rendeles erdekelne"
+    ],
+    "primaryProduct": null,
+    "secondaryProducts": [],
+    "answer": "Segítek a rendeléssel kapcsolatban. Válaszd ki a témát:",
+    "askFollowUp": true,
+    "suggestions": [
+      {
+        "label": "Hogyan rendeljek?",
+        "question": "Hogyan tudok rendelni?"
+      },
+      {
+        "label": "Szállítás",
+        "question": "Szállítás érdekelne."
+      },
+      {
+        "label": "Fizetés",
+        "question": "Milyen fizetési módok vannak?"
+      },
+      {
+        "label": "Kuponkód",
+        "question": "Hogyan kapom meg a kuponkódot?"
+      }
+    ]
+  }
+]

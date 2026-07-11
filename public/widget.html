@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Vitalis valós idejű chat</title>
+  <link rel="stylesheet" href="/widget.css?v=1.8.0">
+</head>
+<body class="widget-page">
+  <section class="chat-card" aria-label="Kérdezd a készítőt – azonnali válaszok">
+    <header class="chat-header">
+      <div class="brand-logo"><img src="/vitalis-logo.jpg" alt="Vitalis natúr kozmetikum"></div>
+      <div class="brand-copy">
+        <h1>Kérdezd a készítőt!</h1>
+        <p class="owner">Szalacsi Zoltán · v1.7</p>
+        <p><span class="online-dot"></span>Azonnali válaszok</p>
+      </div>
+      <button id="minimize" class="minimize" type="button" aria-label="Chat bezárása" title="Bezárás">×</button>
+    </header>
+
+    <div id="messages" class="messages" aria-live="polite" aria-relevant="additions">
+      <article class="bubble bot welcome">
+        <strong>Üdvözöllek!</strong>
+        <p><strong>Szalacsi Zoltán vagyok, a Vitalis natúrkozmetikumok fejlesztője és készítője.</strong></p>
+        <p>Ez a chat a Vitalis termékekről, azok használatáról és a sok év alatt felépített szakmai tapasztalataimra és tudásomra épülő válaszokkal segít eligazodni.</p>
+        <p><strong>Írd meg a kérdésedet, és örömmel segítek!</strong></p>
+      </article>
+    </div>
+
+    <div id="typing" class="typing" hidden aria-live="polite">
+      <span></span><span></span><span></span><em>Válasz készül…</em>
+    </div>
+
+    <div class="quick-start" aria-label="Témák">
+      <span class="quick-title">Gyorsindítás</span>
+      <div id="suggestions" class="suggestions">
+        <button type="button" data-question="Ekcémával kapcsolatban kérdeznék.">Ekcéma</button>
+        <button type="button" data-question="Pikkelysömörrel kapcsolatban kérdeznék.">Pikkelysömör</button>
+        <button type="button" data-question="Mit ajánlasz száraz bőrre?">Száraz bőr</button>
+        <button type="button" data-question="Mit ajánlasz zsíros, pattanásos bőrre?">Pattanásos bőr</button>
+        <button type="button" data-question="Mennyi a szállítási idő?">Szállítás</button>
+        <button type="button" data-question="Hogyan kapom meg a kuponkódot?">Kuponkód</button>
+      </div>
+    </div>
+
+    <form id="form" class="composer">
+      <label class="sr-only" for="input">Kérdés</label>
+      <textarea id="input" rows="1" autocomplete="off" placeholder="Írd ide a kérdésed…" maxlength="1200"></textarea>
+      <button id="send" type="submit" aria-label="Kérdés elküldése">Küldés</button>
+    </form>
+
+    <footer>A chat kozmetikai tájékoztatást ad, és nem helyettesít orvosi diagnózist vagy kezelést.</footer>
+  </section>
+  <script src="/widget.js?v=1.7.0"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "name": "vitalis-kerdezd-a-keszitot",
+  "version": "1.8.0",
+  "private": true,
+  "description": "Vitalis webshop chatbot – éles kiadás",
+  "scripts": {
+    "start": "node server.cjs",
+    "test": "node TEST_EXPERT_RULES.cjs && node TEST_1_4.cjs && node TEST_1_5.cjs && node TEST_1_6.cjs && node TEST_1_7.cjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

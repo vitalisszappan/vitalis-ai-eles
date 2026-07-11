@@ -1,0 +1,19 @@
+VITALIS CHATBOT – ÉLESÍTÉS LÉPÉSRŐL LÉPÉSRE
+
+1. Töltsd fel ezt a teljes mappát egy privát GitHub tárolóba.
+2. Render: New > Web Service > válaszd ki a GitHub tárolót.
+3. A Render felismeri a render.yaml fájlt. A szolgáltatás induló csomagja legyen Starter vagy nagyobb.
+4. Várd meg a sikeres telepítést, majd másold ki a nyilvános https://...onrender.com címet.
+5. Ellenőrzés:
+   https://SAJAT-CIM/api/status
+   https://SAJAT-CIM/widget
+6. UNAS adminban: Beállítások > Kinézet, Arculat > Script beszúrás.
+7. Hozz létre külső, defer betöltésű scriptet ezzel a címmel:
+   https://SAJAT-CIM/embed.js
+8. Először korlátozottan teszteld, majd publikáld minden oldalon.
+
+FONTOS:
+- A localhost cím nem használható a webshopban.
+- Az admin tudásfrissítés ADMIN_TOKEN kulccsal védett.
+- Felhőben a fájlrendszer újratelepítéskor visszaállhat. A knowledge.json tartós frissítéséhez később adatbázis vagy tartós lemez szükséges.
+- Éles indulás előtt a chatbotot legalább 20 aranyteszttel ellenőrizd.

@@ -1,0 +1,17 @@
+VITALIS AI – WEBSHOPBA ILLESZTÉS
+
+A vásárlói chatet ez az egy sor jeleníti meg a webshop jobb alsó sarkában:
+
+<script src="https://A_CHATBOT_NYILVANOS_CIME/embed.js" defer></script>
+
+FONTOS:
+- A localhost:3212 csak a saját számítógépeden működik.
+- A valódi webshophoz a chatbot mappáját nyilvános szerveren kell futtatni.
+- A nyilvános cím birtokában a fenti sort az UNAS egyedi JavaScript / egyedi HTML részébe kell illeszteni.
+- Az adminoldal: https://A_CHATBOT_NYILVANOS_CIME/admin
+
+HELYI BEMUTATÓ:
+1. INDITAS_CHATBOT.bat
+2. http://localhost:3212/demo
+
+A logó és a személyes bemutatkozás a VÁSÁRLÓI WIDGETBEN jelenik meg, nem csak az adminoldalon.
