@@ -5,6 +5,19 @@ const send = document.getElementById('send');
 const typing = document.getElementById('typing');
 const suggestionsEl = document.getElementById('suggestions');
 const history = [];
+const sessionId = (() => {
+  try {
+    const key = 'vitalis-chat-session-id';
+    let value = localStorage.getItem(key);
+    if (!value) {
+      value = (crypto.randomUUID ? crypto.randomUUID() : `session-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+      localStorage.setItem(key, value);
+    }
+    return value;
+  } catch {
+    return `session-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  }
+})();
 let pending = false;
 
 function scrollToBottom() {
@@ -156,7 +169,7 @@ async function ask(question) {
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: q, history: priorHistory })
+      body: JSON.stringify({ message: q, history: priorHistory, sessionId, pageUrl: document.referrer || window.location.href })
     });
     const data = await response.json();
     const minimumWait = 550;

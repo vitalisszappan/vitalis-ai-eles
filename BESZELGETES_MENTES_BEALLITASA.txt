@@ -1,0 +1,14 @@
+VITALIS CHAT – BESZÉLGETÉSEK TARTÓS MENTÉSE
+
+A rendszer helyben automatikusan naplóz, de a Render ingyenes tárhelye nem tartós.
+A biztos mentéshez Supabase szükséges.
+
+1. Supabase SQL Editorban futtasd a SUPABASE_BESZELGETES_MENTES.sql fájl tartalmát.
+2. Render > Environment alatt add meg:
+   SUPABASE_URL = a Supabase Project URL
+   SUPABASE_SERVICE_ROLE_KEY = a Supabase service_role kulcs
+   ADMIN_TOKEN = egy hosszú, saját titkos kulcs
+3. Deploy után nyisd meg: /admin
+4. Add meg az ADMIN_TOKEN értékét, majd kattints a Beszélgetések betöltése gombra.
+
+Adatvédelem: IP-cím nem kerül mentésre. A rendszer munkamenet-azonosítót, kérdést, választ, időpontot és az oldal címét tárolja.
