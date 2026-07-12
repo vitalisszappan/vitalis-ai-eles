@@ -16,7 +16,7 @@ for(const [q,id,needle] of tests){
  if(!ok) failed++;
 }
 const html=fs.readFileSync(path.join(__dirname,'public','widget.html'),'utf8');
-for(const needle of ['Kérdezd a készítőt!','Szalacsi Zoltán · v1.4','Azonnali válaszok','sok év alatt felépített szakmai tapasztalataimra']){
+for(const needle of ['Kérdezd a készítőt!','Szalacsi Zoltán · v1.9','Azonnali válaszok','sok év alatt felépített szakmai tapasztalataimra']){
  const ok=html.includes(needle); console.log(ok?'OK  ':'HIBA','UI:',needle); if(!ok) failed++;
 }
 if(failed){console.error(`\n${failed} teszt hibás.`);process.exit(1);} else console.log('\nMinden 1.4 teszt sikeres.');
