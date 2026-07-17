@@ -29,11 +29,29 @@ const unasTestButton =
   document.getElementById('unasTestButton');
 
 const unasTestButtonSecondary =
-  document.getElementById('unasTestButtonSecondary');
+  document.getElementById(
+    'unasTestButtonSecondary'
+  );
 
 const unasStatusMessage =
-  document.getElementById('unasStatusMessage');
+  document.getElementById(
+    'unasStatusMessage'
+  );
 
+const unasSyncButton =
+  document.getElementById(
+    'unasSyncButton'
+  );
+
+const unasSyncButtonSecondary =
+  document.getElementById(
+    'unasSyncButtonSecondary'
+  );
+
+const unasSyncStatusMessage =
+  document.getElementById(
+    'unasSyncStatusMessage'
+  );
 
 /* =========================================================
    ÁLLAPOT
@@ -41,7 +59,6 @@ const unasStatusMessage =
 
 let conversations = [];
 let adminToken = '';
-
 
 /* =========================================================
    ADMIN KULCS
@@ -55,14 +72,12 @@ function getStoredAdminToken() {
   ).trim();
 }
 
-
 function saveAdminToken(token) {
   localStorage.setItem(
     'vitalisAdminToken',
     String(token || '').trim()
   );
 }
-
 
 function clearAdminToken() {
   localStorage.removeItem(
@@ -71,7 +86,6 @@ function clearAdminToken() {
 
   adminToken = '';
 }
-
 
 function ensureAdminToken() {
   adminToken =
@@ -105,7 +119,6 @@ function ensureAdminToken() {
   return true;
 }
 
-
 /* =========================================================
    SEGÉDFÜGGVÉNYEK
 ========================================================= */
@@ -118,7 +131,6 @@ function escapeHtml(value = '') {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 }
-
 
 function formatDate(value) {
   if (!value) {
@@ -147,7 +159,6 @@ function formatDate(value) {
     }
   );
 }
-
 
 function isToday(value) {
   if (!value) {
@@ -178,7 +189,6 @@ function isToday(value) {
   );
 }
 
-
 function getQuestion(item) {
   return String(
     item.question ||
@@ -188,7 +198,6 @@ function getQuestion(item) {
     ''
   ).trim();
 }
-
 
 function getAnswer(item) {
   return String(
@@ -200,7 +209,6 @@ function getAnswer(item) {
   ).trim();
 }
 
-
 function getCreatedAt(item) {
   return (
     item.created_at ||
@@ -211,7 +219,6 @@ function getCreatedAt(item) {
   );
 }
 
-
 function getPageUrl(item) {
   return String(
     item.page_url ||
@@ -220,7 +227,6 @@ function getPageUrl(item) {
     ''
   ).trim();
 }
-
 
 /* =========================================================
    STATISZTIKÁK
@@ -257,7 +263,6 @@ function updateStatistics(
   }
 }
 
-
 /* =========================================================
    BESZÉLGETÉSEK MEGJELENÍTÉSE
 ========================================================= */
@@ -273,7 +278,7 @@ function renderConversations(items) {
 
   if (!items.length) {
     conversationList.innerHTML = `
-      <div class="status">
+      <div class="empty-state">
         Nincs megjeleníthető beszélgetés.
       </div>
     `;
@@ -388,7 +393,6 @@ function renderConversations(items) {
   }
 }
 
-
 /* =========================================================
    BESZÉLGETÉSEK BETÖLTÉSE
 ========================================================= */
@@ -481,7 +485,6 @@ async function loadConversations() {
   }
 }
 
-
 /* =========================================================
    KERESÉS
 ========================================================= */
@@ -526,18 +529,12 @@ function filterConversations() {
   );
 }
 
-
 /* =========================================================
    UNAS KAPCSOLAT TESZTELÉSE
 ========================================================= */
 
 async function testUnasConnection() {
   if (!ensureAdminToken()) {
-    if (unasStatusMessage) {
-      unasStatusMessage.textContent =
-        'Az UNAS teszt megszakadt: nincs megadva admin kulcs.';
-    }
-
     return;
   }
 
@@ -561,7 +558,8 @@ async function testUnasConnection() {
       await fetch(
         '/api/admin/unas/test',
         {
-          method: 'GET',
+          method:
+            'GET',
 
           headers: {
             'X-Admin-Token':
@@ -593,7 +591,6 @@ async function testUnasConnection() {
     ) {
       throw new Error(
         data.error ||
-        data.message ||
         'Az UNAS kapcsolat tesztelése sikertelen.'
       );
     }
@@ -605,9 +602,7 @@ async function testUnasConnection() {
           data.products ?? '–'
         }, kategóriák: ${
           data.categories ?? '–'
-        }. Válaszidő: ${
-          data.responseMs ?? '–'
-        } ms.`;
+        }.`;
     }
 
   } catch (error) {
@@ -634,6 +629,122 @@ async function testUnasConnection() {
   }
 }
 
+/* =========================================================
+   UNAS TUDÁSSZINKRON
+========================================================= */
+
+async function syncUnasKnowledge() {
+  if (!ensureAdminToken()) {
+    return;
+  }
+
+  const confirmed =
+    window.confirm(
+      'Elindítsuk az UNAS termék- és kategóriaadatok szinkronizálását a Vitalis AI tudásbázisába?'
+    );
+
+  if (!confirmed) {
+    return;
+  }
+
+  if (unasSyncStatusMessage) {
+    unasSyncStatusMessage.textContent =
+      'UNAS tudásszinkron folyamatban... Ez néhány másodpercig tarthat.';
+  }
+
+  if (unasSyncButton) {
+    unasSyncButton.disabled =
+      true;
+  }
+
+  if (unasSyncButtonSecondary) {
+    unasSyncButtonSecondary.disabled =
+      true;
+  }
+
+  try {
+    const response =
+      await fetch(
+        '/api/admin/unas/sync',
+        {
+          method:
+            'POST',
+
+          headers: {
+            'X-Admin-Token':
+              adminToken
+          },
+
+          cache:
+            'no-store'
+        }
+      );
+
+    const data =
+      await response.json();
+
+    if (
+      response.status === 401 ||
+      response.status === 403
+    ) {
+      clearAdminToken();
+
+      throw new Error(
+        'Hibás admin kulcs. Frissítsd az oldalt, és add meg újra.'
+      );
+    }
+
+    if (
+      !response.ok ||
+      data.ok === false
+    ) {
+      throw new Error(
+        data.error ||
+        'Az UNAS tudásszinkron sikertelen.'
+      );
+    }
+
+    const baseItems =
+      data.knowledgeStats?.base ??
+      '–';
+
+    const unasItems =
+      data.knowledgeStats?.unas ??
+      data.unasItems ??
+      '–';
+
+    const totalItems =
+      data.knowledgeStats?.total ??
+      '–';
+
+    if (unasSyncStatusMessage) {
+      unasSyncStatusMessage.textContent =
+        `Szinkron sikeres. Alap tudáselemek: ${baseItems}. UNAS tudáselemek: ${unasItems}. Összes aktív tudáselem: ${totalItems}.`;
+    }
+
+  } catch (error) {
+    console.error(
+      'UNAS tudásszinkron hiba:',
+      error
+    );
+
+    if (unasSyncStatusMessage) {
+      unasSyncStatusMessage.textContent =
+        `UNAS tudásszinkron hiba: ${error.message}`;
+    }
+
+  } finally {
+    if (unasSyncButton) {
+      unasSyncButton.disabled =
+        false;
+    }
+
+    if (unasSyncButtonSecondary) {
+      unasSyncButtonSecondary.disabled =
+        false;
+    }
+  }
+}
 
 /* =========================================================
    ESEMÉNYKEZELŐK
@@ -646,14 +757,12 @@ if (searchInput) {
   );
 }
 
-
 if (refreshButton) {
   refreshButton.addEventListener(
     'click',
     loadConversations
   );
 }
-
 
 if (unasTestButton) {
   unasTestButton.addEventListener(
@@ -662,7 +771,6 @@ if (unasTestButton) {
   );
 }
 
-
 if (unasTestButtonSecondary) {
   unasTestButtonSecondary.addEventListener(
     'click',
@@ -670,6 +778,19 @@ if (unasTestButtonSecondary) {
   );
 }
 
+if (unasSyncButton) {
+  unasSyncButton.addEventListener(
+    'click',
+    syncUnasKnowledge
+  );
+}
+
+if (unasSyncButtonSecondary) {
+  unasSyncButtonSecondary.addEventListener(
+    'click',
+    syncUnasKnowledge
+  );
+}
 
 /* =========================================================
    INDÍTÁS
