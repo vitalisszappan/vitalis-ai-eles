@@ -1,4 +1,6 @@
 const https = require('https');
+const fs = require('fs');
+const path = require('path');
 
 const UNAS_API_KEY = String(
   process.env.UNAS_API_KEY || ''
@@ -9,6 +11,14 @@ const UNAS_API_BASE_URL = String(
 )
   .trim()
   .replace(/\/+$/, '');
+
+const ROOT = __dirname;
+const DATA_DIR = path.join(ROOT, 'data');
+
+const UNAS_KNOWLEDGE_PATH = path.join(
+  DATA_DIR,
+  'unas-knowledge.json'
+);
 
 /* =========================================================
    SEGÉDFÜGGVÉNYEK
@@ -23,43 +33,71 @@ function escapeXml(value = '') {
     .replace(/'/g, '&apos;');
 }
 
+function decodeXml(value = '') {
+  return String(value)
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'");
+}
+
+function stripHtml(value = '') {
+  return decodeXml(value)
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function getXmlValue(xml, tagName) {
   const regex = new RegExp(
-    `<${tagName}[^>]*>([\\s\\S]*?)<\\/${tagName}>`,
+    `<${tagName}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tagName}>`,
     'i'
   );
 
   const match = String(xml || '').match(regex);
 
-  if (!match) {
-    return '';
-  }
-
-  return match[1]
-    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
-    .trim();
+  return match
+    ? decodeXml(match[1]).trim()
+    : '';
 }
 
 function getXmlBlocks(xml, tagName) {
   const regex = new RegExp(
-    `<${tagName}(?:\\s[^>]*)?>[\\s\\S]*?<\\/${tagName}>`,
+    `<${tagName}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tagName}>`,
     'gi'
   );
 
-  return String(xml || '').match(regex) || [];
+  const blocks = [];
+  let match;
+
+  while ((match = regex.exec(String(xml || ''))) !== null) {
+    blocks.push(match[1]);
+  }
+
+  return blocks;
 }
 
-function stripHtml(value = '') {
-  return String(value)
-    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
+function countXmlItems(xml, tagName) {
+  return getXmlBlocks(xml, tagName).length;
+}
+
+function normalizeText(value = '') {
+  return stripHtml(value)
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function ensureDataDirectory() {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, {
+      recursive: true
+    });
+  }
 }
 
 /* =========================================================
@@ -84,6 +122,7 @@ function unasRequest({
           `Hibás UNAS API URL: ${error.message}`
         )
       );
+
       return;
     }
 
@@ -91,22 +130,27 @@ function unasRequest({
 
     const headers = {
       Accept: 'application/xml',
-      'Content-Type': 'application/xml; charset=UTF-8',
-      'Content-Length': Buffer.byteLength(bodyText)
+      'Content-Type':
+        'application/xml; charset=UTF-8',
+      'Content-Length':
+        Buffer.byteLength(bodyText)
     };
 
     if (token) {
-      headers.Authorization = `Bearer ${token}`;
+      headers.Authorization =
+        `Bearer ${token}`;
     }
 
     const request = https.request(
       {
         hostname: target.hostname,
         port: 443,
-        path: target.pathname + target.search,
+        path:
+          target.pathname +
+          target.search,
         method: 'POST',
         headers,
-        timeout: 60000
+        timeout: 30000
       },
       (response) => {
         let responseBody = '';
@@ -118,35 +162,52 @@ function unasRequest({
         });
 
         response.on('end', () => {
-          const status = response.statusCode || 0;
+          const status =
+            response.statusCode || 0;
 
-          if (status >= 200 && status < 300) {
+          if (
+            status >= 200 &&
+            status < 300
+          ) {
             resolve({
               ok: true,
               status,
               body: responseBody
             });
+
             return;
           }
 
           reject(
             new Error(
-              `UNAS HTTP ${status}: ${responseBody.slice(0, 1500)}`
+              `UNAS HTTP ${status}: ` +
+              responseBody.slice(
+                0,
+                1500
+              )
             )
           );
         });
       }
     );
 
-    request.on('timeout', () => {
-      request.destroy(
-        new Error(
-          'Az UNAS API kapcsolat időtúllépett.'
-        )
-      );
-    });
+    request.on(
+      'timeout',
+      () => {
+        request.destroy(
+          new Error(
+            'Az UNAS API kapcsolat időtúllépett.'
+          )
+        );
+      }
+    );
 
-    request.on('error', reject);
+    request.on(
+      'error',
+      (error) => {
+        reject(error);
+      }
+    );
 
     request.write(bodyText);
     request.end();
@@ -154,7 +215,7 @@ function unasRequest({
 }
 
 /* =========================================================
-   LOGIN
+   BEJELENTKEZÉS
 ========================================================= */
 
 async function loginToUnas() {
@@ -164,25 +225,33 @@ async function loginToUnas() {
     );
   }
 
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+  const xml =
+`<?xml version="1.0" encoding="UTF-8"?>
 <Params>
   <ApiKey>${escapeXml(UNAS_API_KEY)}</ApiKey>
   <WebshopInfo>true</WebshopInfo>
 </Params>`;
 
-  const response = await unasRequest({
-    endpoint: 'login',
-    body: xml
-  });
+  const response =
+    await unasRequest({
+      endpoint: 'login',
+      body: xml
+    });
 
-  const token = getXmlValue(
-    response.body,
-    'Token'
-  );
+  const token =
+    getXmlValue(
+      response.body,
+      'Token'
+    );
 
   if (!token) {
     throw new Error(
-      `Az UNAS login nem adott vissza tokent. Válasz: ${response.body.slice(0, 1500)}`
+      'Az UNAS login nem adott vissza tokent. ' +
+      'Válasz: ' +
+      response.body.slice(
+        0,
+        1500
+      )
     );
   }
 
@@ -193,156 +262,31 @@ async function loginToUnas() {
 }
 
 /* =========================================================
-   TERMÉKEK LEKÉRÉSE – EGY OLDAL
+   TERMÉKEK LEKÉRÉSE
 ========================================================= */
 
-async function getProductPage(
-  token,
-  {
-    start = 0,
-    limit = 100
-  } = {}
-) {
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+async function getProducts(token) {
+  const xml =
+`<?xml version="1.0" encoding="UTF-8"?>
 <Params>
-  <StatusBase>1,2,3</StatusBase>
-  <LimitNum>${limit}</LimitNum>
-  <LimitStart>${start}</LimitStart>
+  <State>live</State>
   <ContentType>full</ContentType>
+  <Lang>hu</Lang>
 </Params>`;
 
-  const response = await unasRequest({
-    endpoint: 'getProduct',
-    token,
-    body: xml
-  });
-
-  const blocks = getXmlBlocks(
-    response.body,
-    'Product'
-  );
+  const response =
+    await unasRequest({
+      endpoint: 'getProduct',
+      token,
+      body: xml
+    });
 
   return {
     xml: response.body,
-    blocks,
-    count: blocks.length
-  };
-}
-
-/* =========================================================
-   ÖSSZES AKTÍV TERMÉK LEKÉRÉSE
-========================================================= */
-
-async function getAllProducts(
-  token,
-  {
-    pageSize = 100,
-    maxPages = 100
-  } = {}
-) {
-  const allBlocks = [];
-
-  for (
-    let page = 0;
-    page < maxPages;
-    page += 1
-  ) {
-    const start =
-      page * pageSize;
-
-    const result =
-      await getProductPage(
-        token,
-        {
-          start,
-          limit: pageSize
-        }
-      );
-
-    allBlocks.push(
-      ...result.blocks
-    );
-
-    if (
-      result.count <
-      pageSize
-    ) {
-      break;
-    }
-  }
-
-  return {
-    count: allBlocks.length,
-    blocks: allBlocks
-  };
-}
-
-/* =========================================================
-   TERMÉKADATOK KINYERÉSE
-========================================================= */
-
-function parseProductBlock(block) {
-  const name =
-    getXmlValue(
-      block,
-      'Name'
-    );
-
-  const sku =
-    getXmlValue(
-      block,
-      'Sku'
-    );
-
-  const id =
-    getXmlValue(
-      block,
-      'Id'
-    );
-
-  const url =
-    getXmlValue(
-      block,
-      'Url'
-    );
-
-  const description =
-    stripHtml(
-      getXmlValue(
-        block,
-        'Description'
-      )
-    );
-
-  const descriptionLong =
-    stripHtml(
-      getXmlValue(
-        block,
-        'DescriptionLong'
-      )
-    );
-
-  const category =
-    getXmlValue(
-      block,
-      'Category'
-    );
-
-  const price =
-    getXmlValue(
-      block,
-      'Price'
-    );
-
-  return {
-    id,
-    sku,
-    name,
-    url,
-    category,
-    price,
-    description,
-    descriptionLong
+    count: countXmlItems(
+      response.body,
+      'Product'
+    )
   };
 }
 
@@ -350,147 +294,386 @@ function parseProductBlock(block) {
    KATEGÓRIÁK LEKÉRÉSE
 ========================================================= */
 
-async function getCategories(
-  token
-) {
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+async function getCategories(token) {
+  const xml =
+`<?xml version="1.0" encoding="UTF-8"?>
 <Params>
+  <Lang>hu</Lang>
 </Params>`;
 
   const response =
     await unasRequest({
-      endpoint:
-        'getCategory',
-
+      endpoint: 'getCategory',
       token,
-
-      body:
-        xml
+      body: xml
     });
 
+  return {
+    xml: response.body,
+    count: countXmlItems(
+      response.body,
+      'Category'
+    )
+  };
+}
+
+/* =========================================================
+   TERMÉKEK FELDOLGOZÁSA
+========================================================= */
+
+function parseProducts(xml) {
   const blocks =
     getXmlBlocks(
-      response.body,
+      xml,
+      'Product'
+    );
+
+  return blocks
+    .map((block, index) => {
+      const id =
+        getXmlValue(
+          block,
+          'Id'
+        );
+
+      const sku =
+        getXmlValue(
+          block,
+          'Sku'
+        );
+
+      const name =
+        normalizeText(
+          getXmlValue(
+            block,
+            'Name'
+          )
+        );
+
+      const shortDescription =
+        normalizeText(
+          getXmlValue(
+            block,
+            'ShortDescription'
+          )
+        );
+
+      const description =
+        normalizeText(
+          getXmlValue(
+            block,
+            'Description'
+          )
+        );
+
+      const price =
+        normalizeText(
+          getXmlValue(
+            block,
+            'Price'
+          )
+        );
+
+      const url =
+        normalizeText(
+          getXmlValue(
+            block,
+            'Url'
+          )
+        );
+
+      const unit =
+        normalizeText(
+          getXmlValue(
+            block,
+            'Unit'
+          )
+        );
+
+      if (!name) {
+        return null;
+      }
+
+      const answerParts = [];
+
+      if (shortDescription) {
+        answerParts.push(
+          shortDescription
+        );
+      }
+
+      if (
+        description &&
+        description !==
+          shortDescription
+      ) {
+        answerParts.push(
+          description
+        );
+      }
+
+      if (price) {
+        answerParts.push(
+          `Ár: ${price} Ft.`
+        );
+      }
+
+      if (unit) {
+        answerParts.push(
+          `Kiszerelés vagy egység: ${unit}.`
+        );
+      }
+
+      return {
+        id:
+          `unas-product-${id || sku || index + 1}`,
+
+        source: 'unas',
+
+        sourceType:
+          'product',
+
+        type:
+          'product',
+
+        title:
+          name,
+
+        question:
+          `${name} termékinformáció`,
+
+        answer:
+          answerParts.join(
+            ' '
+          ),
+
+        productId:
+          id || '',
+
+        sku:
+          sku || '',
+
+        name,
+
+        price:
+          price || '',
+
+        unit:
+          unit || '',
+
+        url:
+          url || '',
+
+        priority:
+          90,
+
+        active:
+          true,
+
+        updatedAt:
+          new Date()
+            .toISOString()
+      };
+    })
+    .filter(Boolean);
+}
+
+/* =========================================================
+   KATEGÓRIÁK FELDOLGOZÁSA
+========================================================= */
+
+function parseCategories(xml) {
+  const blocks =
+    getXmlBlocks(
+      xml,
       'Category'
     );
 
-  return {
-    xml:
-      response.body,
-
-    count:
-      blocks.length,
-
-    blocks
-  };
-}
-
-/* =========================================================
-   KATEGÓRIAADATOK KINYERÉSE
-========================================================= */
-
-function parseCategoryBlock(
-  block
-) {
-  return {
-    id:
-      getXmlValue(
-        block,
-        'Id'
-      ),
-
-    name:
-      getXmlValue(
-        block,
-        'Name'
-      ),
-
-    parent:
-      getXmlValue(
-        block,
-        'Parent'
-      ),
-
-    url:
-      getXmlValue(
-        block,
-        'Url'
-      ),
-
-    description:
-      stripHtml(
+  return blocks
+    .map((block, index) => {
+      const id =
         getXmlValue(
           block,
-          'Description'
-        )
-      )
-  };
+          'Id'
+        );
+
+      const name =
+        normalizeText(
+          getXmlValue(
+            block,
+            'Name'
+          )
+        );
+
+      const description =
+        normalizeText(
+          getXmlValue(
+            block,
+            'Description'
+          )
+        );
+
+      const url =
+        normalizeText(
+          getXmlValue(
+            block,
+            'Url'
+          )
+        );
+
+      if (!name) {
+        return null;
+      }
+
+      return {
+        id:
+          `unas-category-${id || index + 1}`,
+
+        source:
+          'unas',
+
+        sourceType:
+          'category',
+
+        type:
+          'category',
+
+        title:
+          name,
+
+        question:
+          `${name} kategória`,
+
+        answer:
+          description ||
+          `A Vitalis webshop ${name} kategóriája.`,
+
+        categoryId:
+          id || '',
+
+        name,
+
+        url:
+          url || '',
+
+        priority:
+          70,
+
+        active:
+          true,
+
+        updatedAt:
+          new Date()
+            .toISOString()
+      };
+    })
+    .filter(Boolean);
 }
 
 /* =========================================================
-   TELJES UNAS ADATLEKÉRÉS
+   UNAS TUDÁSBÁZIS ELKÉSZÍTÉSE
 ========================================================= */
 
-async function fetchUnasKnowledgeSource() {
+async function buildUnasKnowledge() {
   const started =
     Date.now();
+
+  ensureDataDirectory();
+
+  console.log(
+    'UNAS bejelentkezés...'
+  );
 
   const login =
     await loginToUnas();
 
-  const [
-    productResult,
-    categoryResult
-  ] =
-    await Promise.all([
-      getAllProducts(
-        login.token
-      ),
+  console.log(
+    'UNAS termékek lekérése...'
+  );
 
-      getCategories(
-        login.token
-      )
-    ]);
+  const productsResponse =
+    await getProducts(
+      login.token
+    );
+
+  console.log(
+    'UNAS kategóriák lekérése...'
+  );
+
+  const categoriesResponse =
+    await getCategories(
+      login.token
+    );
 
   const products =
-    productResult.blocks
-      .map(
-        parseProductBlock
-      )
-      .filter(
-        (item) =>
-          item.name
-      );
+    parseProducts(
+      productsResponse.xml
+    );
 
   const categories =
-    categoryResult.blocks
-      .map(
-        parseCategoryBlock
-      )
-      .filter(
-        (item) =>
-          item.name
-      );
+    parseCategories(
+      categoriesResponse.xml
+    );
 
-  return {
-    ok:
-      true,
+  const items = [
+    ...products,
+    ...categories
+  ];
 
-    products,
+  const knowledge = {
+    version: 1,
 
-    categories,
+    source:
+      'UNAS Vitalis webshop',
 
-    counts: {
+    generatedAt:
+      new Date()
+        .toISOString(),
+
+    stats: {
       products:
         products.length,
 
       categories:
-        categories.length
+        categories.length,
+
+      total:
+        items.length
     },
+
+    items
+  };
+
+  fs.writeFileSync(
+    UNAS_KNOWLEDGE_PATH,
+    JSON.stringify(
+      knowledge,
+      null,
+      2
+    ),
+    'utf8'
+  );
+
+  return {
+    ok: true,
+
+    products:
+      products.length,
+
+    categories:
+      categories.length,
+
+    total:
+      items.length,
 
     responseMs:
       Date.now() -
-      started
+      started,
+
+    file:
+      UNAS_KNOWLEDGE_PATH,
+
+    knowledge
   };
 }
 
@@ -499,24 +682,39 @@ async function fetchUnasKnowledgeSource() {
 ========================================================= */
 
 async function testUnasConnection() {
-  const result =
-    await fetchUnasKnowledgeSource();
+  const started =
+    Date.now();
+
+  const login =
+    await loginToUnas();
+
+  const products =
+    await getProducts(
+      login.token
+    );
+
+  const categories =
+    await getCategories(
+      login.token
+    );
 
   return {
-    ok:
-      true,
+    ok: true,
 
     products:
-      result.counts.products,
+      products.count,
 
     categories:
-      result.counts.categories,
+      categories.count,
 
     responseMs:
-      result.responseMs,
+      Date.now() -
+      started,
 
     message:
-      `Az UNAS API kapcsolat működik. Termékek: ${result.counts.products}, kategóriák: ${result.counts.categories}.`
+      `Az UNAS API kapcsolat működik. ` +
+      `Termékek: ${products.count}, ` +
+      `kategóriák: ${categories.count}.`
   };
 }
 
@@ -530,7 +728,7 @@ async function run() {
   );
 
   console.log(
-    ' Vitalis UNAS teljes adatlekérés'
+    ' Vitalis UNAS tudásbázis szinkronizálás'
   );
 
   console.log(
@@ -539,41 +737,45 @@ async function run() {
 
   try {
     const result =
-      await fetchUnasKnowledgeSource();
+      await buildUnasKnowledge();
 
     console.log(
-      'UNAS KAPCSOLAT SIKERES'
+      'UNAS SZINKRON SIKERES'
     );
 
     console.log(
-      `Termékek száma: ${result.counts.products}`
+      `Termékek: ${result.products}`
     );
 
     console.log(
-      `Kategóriák száma: ${result.counts.categories}`
+      `Kategóriák: ${result.categories}`
     );
 
     console.log(
-      `Válaszidő: ${result.responseMs} ms`
+      `Összes tudáselem: ${result.total}`
     );
 
     console.log(
-      'A lekérés semmilyen adatot nem módosított az UNAS webshopban.'
+      `Fájl: ${result.file}`
     );
 
-  } catch (
-    error
-  ) {
+    console.log(
+      `Futási idő: ${result.responseMs} ms`
+    );
+
+    console.log(
+      'Az UNAS webshopban semmilyen adat nem lett módosítva.'
+    );
+  } catch (error) {
     console.error(
-      'UNAS ADATLEKÉRÉSI HIBA'
+      'UNAS SZINKRON HIBA'
     );
 
     console.error(
       error.message
     );
 
-    process.exitCode =
-      1;
+    process.exitCode = 1;
   }
 
   console.log(
@@ -581,22 +783,20 @@ async function run() {
   );
 }
 
-if (
-  require.main ===
-  module
-) {
+if (require.main === module) {
   run();
 }
 
 /* =========================================================
-   EXPORT
+   EXPORT A SERVER.CJS SZÁMÁRA
 ========================================================= */
 
 module.exports = {
+  testUnasConnection,
+  buildUnasKnowledge,
   loginToUnas,
-  getProductPage,
-  getAllProducts,
+  getProducts,
   getCategories,
-  fetchUnasKnowledgeSource,
-  testUnasConnection
+  parseProducts,
+  parseCategories
 };
