@@ -1,10 +1,17 @@
 <!DOCTYPE html>
 <html lang="hu">
+
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>Vitalis AI Központ</title>
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>
+    Vitalis AI Központ
+  </title>
 
   <link
     rel="stylesheet"
@@ -44,6 +51,13 @@
         type="button"
       >
         UNAS kapcsolat tesztelése
+      </button>
+
+      <button
+        id="unasSyncButton"
+        type="button"
+      >
+        UNAS tudás szinkronizálása
       </button>
 
       <button
@@ -104,7 +118,7 @@
     </section>
 
     <!-- =====================================================
-         UNAS ÁLLAPOT
+         UNAS KAPCSOLAT
     ====================================================== -->
 
     <section class="toolbar">
@@ -136,6 +150,42 @@
       class="status"
     >
       Az UNAS kapcsolat még nincs tesztelve.
+    </section>
+
+    <!-- =====================================================
+         UNAS TUDÁSSZINKRON
+    ====================================================== -->
+
+    <section class="toolbar">
+
+      <div>
+
+        <h2>
+          UNAS tudásbázis
+        </h2>
+
+        <p>
+          A szinkronizálás beolvassa a webshop aktuális
+          termék- és kategóriaadatait, majd azonnal
+          hozzáadja őket a chatbot aktív tudásához.
+        </p>
+
+      </div>
+
+      <button
+        id="unasSyncButtonSecondary"
+        type="button"
+      >
+        Tudás szinkronizálása
+      </button>
+
+    </section>
+
+    <section
+      id="unasSyncStatusMessage"
+      class="status"
+    >
+      Az UNAS tudás még nincs szinkronizálva ebben a futásban.
     </section>
 
     <!-- =====================================================
@@ -183,4 +233,5 @@
   <script src="/admin.js"></script>
 
 </body>
+
 </html>
