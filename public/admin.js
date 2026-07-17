@@ -1,233 +1,186 @@
-const API_URL = '/api/admin/conversations?limit=500';
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-const refreshButton = document.getElementById('refreshButton');
-const searchInput = document.getElementById('searchInput');
-const statusMessage = document.getElementById('statusMessage');
-const conversationList = document.getElementById('conversationList');
+  <title>Vitalis AI Központ</title>
 
-const totalCount = document.getElementById('totalCount');
-const todayCount = document.getElementById('todayCount');
-const visibleCount = document.getElementById('visibleCount');
+  <link
+    rel="stylesheet"
+    href="/admin.css"
+  >
+</head>
 
-let conversations = [];
-let adminToken = '';
+<body>
 
-function getStoredToken() {
-  return localStorage.getItem('vitalisAdminToken') || '';
-}
+  <header class="topbar">
 
-function saveToken(token) {
-  localStorage.setItem('vitalisAdminToken', token);
-}
+    <div class="brand">
 
-function ensureAdminToken() {
-  adminToken = getStoredToken();
+      <img
+        src="/vitalis-logo.jpg"
+        alt="Vitalis"
+      >
 
-  if (adminToken) {
-    return true;
-  }
+      <div>
 
-  const entered = window.prompt(
-    'Add meg a Vitalis admin kulcsot:'
-  );
+        <h1>
+          Vitalis AI Központ
+        </h1>
 
-  if (!entered) {
-    showError('Admin kulcs nélkül a beszélgetések nem tölthetők be.');
-    return false;
-  }
+        <p>
+          Chatbot beszélgetések és tudásfejlesztés
+        </p>
 
-  adminToken = entered.trim();
-  saveToken(adminToken);
-
-  return true;
-}
-
-function showStatus(message) {
-  statusMessage.textContent = message;
-  statusMessage.classList.remove('error');
-}
-
-function showError(message) {
-  statusMessage.textContent = message;
-  statusMessage.classList.add('error');
-}
-
-function formatDate(value) {
-  if (!value) {
-    return 'Ismeretlen időpont';
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat('hu-HU', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  }).format(date);
-}
-
-function isToday(value) {
-  if (!value) {
-    return false;
-  }
-
-  const date = new Date(value);
-  const now = new Date();
-
-  return (
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth() &&
-    date.getDate() === now.getDate()
-  );
-}
-
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
-function createConversationCard(item) {
-  const pageText = item.page_url
-    ? escapeHtml(item.page_url)
-    : 'Oldal nem rögzítve';
-
-  return `
-    <article class="conversation-card">
-      <div class="conversation-header">
-        <div class="conversation-date">
-          ${escapeHtml(formatDate(item.created_at))}
-        </div>
-
-        <div class="conversation-page">
-          ${pageText}
-        </div>
       </div>
 
-      <div class="conversation-body">
-        <div class="message-block question">
-          <span class="message-label">Vásárló kérdése</span>
-          <p class="message-text">
-            ${escapeHtml(item.question || 'Nincs kérdés rögzítve.')}
-          </p>
-        </div>
+    </div>
 
-        <div class="message-block answer">
-          <span class="message-label">Chatbot válasza</span>
-          <p class="message-text">
-            ${escapeHtml(item.answer || 'Nincs válasz rögzítve.')}
-          </p>
-        </div>
+    <div class="topbar-actions">
+
+      <button
+        id="unasTestButton"
+        type="button"
+      >
+        UNAS kapcsolat tesztelése
+      </button>
+
+      <button
+        id="refreshButton"
+        type="button"
+      >
+        Frissítés
+      </button>
+
+    </div>
+
+  </header>
+
+  <main class="container">
+
+    <!-- =====================================================
+         STATISZTIKÁK
+    ====================================================== -->
+
+    <section class="stats">
+
+      <div class="stat-card">
+
+        <span>
+          Összes beszélgetés
+        </span>
+
+        <strong id="totalCount">
+          –
+        </strong>
+
       </div>
-    </article>
-  `;
-}
 
-function renderConversations() {
-  const searchTerm = searchInput.value
-    .trim()
-    .toLowerCase();
+      <div class="stat-card">
 
-  const filtered = conversations.filter((item) => {
-    if (!searchTerm) {
-      return true;
-    }
+        <span>
+          Mai beszélgetések
+        </span>
 
-    const haystack = [
-      item.question,
-      item.answer,
-      item.page_url,
-      item.source,
-      item.session_id
-    ]
-      .filter(Boolean)
-      .join(' ')
-      .toLowerCase();
+        <strong id="todayCount">
+          –
+        </strong>
 
-    return haystack.includes(searchTerm);
-  });
-
-  totalCount.textContent = String(conversations.length);
-
-  todayCount.textContent = String(
-    conversations.filter((item) => isToday(item.created_at)).length
-  );
-
-  visibleCount.textContent = String(filtered.length);
-
-  if (!filtered.length) {
-    conversationList.innerHTML = `
-      <div class="empty-state">
-        Nincs megjeleníthető beszélgetés.
       </div>
-    `;
-    return;
-  }
 
-  conversationList.innerHTML = filtered
-    .map(createConversationCard)
-    .join('');
-}
+      <div class="stat-card">
 
-async function loadConversations() {
-  if (!ensureAdminToken()) {
-    return;
-  }
+        <span>
+          Megjelenített találatok
+        </span>
 
-  showStatus('Beszélgetések betöltése...');
+        <strong id="visibleCount">
+          –
+        </strong>
 
-  try {
-    const response = await fetch(API_URL, {
-      headers: {
-        'X-Admin-Token': adminToken
-      },
-      cache: 'no-store'
-    });
+      </div>
 
-    const data = await response.json();
+    </section>
 
-    if (!response.ok || !data.ok) {
-      if (response.status === 401) {
-        localStorage.removeItem('vitalisAdminToken');
-        adminToken = '';
-        throw new Error(
-          'Hibás admin kulcs. Frissítsd az oldalt, és add meg újra.'
-        );
-      }
+    <!-- =====================================================
+         UNAS ÁLLAPOT
+    ====================================================== -->
 
-      throw new Error(
-        data.error || 'Nem sikerült betölteni a beszélgetéseket.'
-      );
-    }
+    <section class="toolbar">
 
-    conversations = Array.isArray(data.items)
-      ? data.items
-      : [];
+      <div>
 
-    renderConversations();
+        <h2>
+          UNAS webshop kapcsolat
+        </h2>
 
-    showStatus(
-      `Betöltve: ${conversations.length} beszélgetés. Forrás: ${
-        data.storage || 'ismeretlen'
-      }.`
-    );
-  } catch (error) {
-    console.error(error);
-    showError(error.message);
-  }
-}
+        <p>
+          Itt ellenőrizheted, hogy a Vitalis AI rendszer
+          eléri-e az UNAS termék- és kategóriaadatait.
+        </p>
 
-refreshButton.addEventListener('click', loadConversations);
+      </div>
 
-searchInput.addEventListener('input', renderConversations);
+      <button
+        id="unasTestButtonSecondary"
+        type="button"
+      >
+        Kapcsolat ellenőrzése
+      </button>
 
-loadConversations();
+    </section>
+
+    <section
+      id="unasStatusMessage"
+      class="status"
+    >
+      Az UNAS kapcsolat még nincs tesztelve.
+    </section>
+
+    <!-- =====================================================
+         BESZÉLGETÉSEK
+    ====================================================== -->
+
+    <section class="toolbar">
+
+      <div>
+
+        <h2>
+          Vásárlói beszélgetések
+        </h2>
+
+        <p>
+          A webshop chatbotjában feltett kérdések
+          és a chatbot válaszai.
+        </p>
+
+      </div>
+
+      <input
+        type="search"
+        id="searchInput"
+        placeholder="Keresés a beszélgetésekben..."
+      >
+
+    </section>
+
+    <section
+      id="statusMessage"
+      class="status"
+    >
+      Beszélgetések betöltése...
+    </section>
+
+    <section
+      id="conversationList"
+      class="conversation-list"
+    >
+    </section>
+
+  </main>
+
+  <script src="/admin.js"></script>
+
+</body>
+</html>
