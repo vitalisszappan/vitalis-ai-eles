@@ -1,122 +1,20 @@
 const https = require('https');
 
-const API_KEY = String(
+const UNAS_API_KEY = String(
   process.env.UNAS_API_KEY || ''
 ).trim();
 
-const API_BASE = 'https://api.unas.eu/shop';
+const UNAS_API_BASE_URL = String(
+  process.env.UNAS_API_BASE_URL || 'https://api.unas.eu/shop'
+)
+  .trim()
+  .replace(/\/+$/, '');
 
 /* =========================================================
-   HTTP KÉRÉS
+   SEGÉDFÜGGVÉNYEK
 ========================================================= */
 
-function request({
-  method = 'GET',
-  url,
-  headers = {},
-  body = null
-}) {
-  return new Promise((resolve, reject) => {
-    const target = new URL(url);
-
-    const bodyText =
-      body === null
-        ? null
-        : String(body);
-
-    const requestHeaders = {
-      Accept: 'application/xml',
-      ...headers
-    };
-
-    if (bodyText !== null) {
-      requestHeaders['Content-Type'] =
-        'application/xml';
-
-      requestHeaders['Content-Length'] =
-        Buffer.byteLength(bodyText);
-    }
-
-    const req = https.request(
-      {
-        hostname: target.hostname,
-        port: 443,
-        path:
-          target.pathname +
-          target.search,
-        method,
-        headers: requestHeaders,
-        timeout: 30000
-      },
-      (res) => {
-        let responseBody = '';
-
-        res.setEncoding('utf8');
-
-        res.on(
-          'data',
-          (chunk) => {
-            responseBody += chunk;
-          }
-        );
-
-        res.on(
-          'end',
-          () => {
-            const status =
-              res.statusCode || 0;
-
-            if (
-              status >= 200 &&
-              status < 300
-            ) {
-              resolve({
-                status,
-                body: responseBody
-              });
-
-              return;
-            }
-
-            reject(
-              new Error(
-                `UNAS HTTP ${status}: ${responseBody.slice(0, 1000)}`
-              )
-            );
-          }
-        );
-      }
-    );
-
-    req.on(
-      'timeout',
-      () => {
-        req.destroy(
-          new Error(
-            'Az UNAS API kapcsolat időtúllépett.'
-          )
-        );
-      }
-    );
-
-    req.on(
-      'error',
-      reject
-    );
-
-    if (bodyText !== null) {
-      req.write(bodyText);
-    }
-
-    req.end();
-  });
-}
-
-/* =========================================================
-   XML SEGÉDFÜGGVÉNYEK
-========================================================= */
-
-function escapeXml(value) {
+function escapeXml(value = '') {
   return String(value)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -125,114 +23,219 @@ function escapeXml(value) {
     .replace(/'/g, '&apos;');
 }
 
-function getXmlValue(
-  xml,
-  tag
-) {
-  const match =
-    xml.match(
-      new RegExp(
-        `<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`,
-        'i'
-      )
-    );
+function getXmlValue(xml, tagName) {
+  const regex = new RegExp(
+    `<${tagName}[^>]*>([\\s\\S]*?)<\\/${tagName}>`,
+    'i'
+  );
 
-  return match
-    ? match[1].trim()
-    : '';
+  const match = String(xml || '').match(regex);
+
+  if (!match) {
+    return '';
+  }
+
+  return match[1]
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+    .trim();
 }
 
-function countXmlTags(
-  xml,
-  tag
-) {
-  const matches =
-    xml.match(
-      new RegExp(
-        `<${tag}(?:\\s|>)`,
-        'gi'
-      )
-    );
+function countXmlItems(xml, tagName) {
+  const regex = new RegExp(
+    `<${tagName}(?:\\s|>)`,
+    'gi'
+  );
 
-  return matches
-    ? matches.length
-    : 0;
+  const matches = String(xml || '').match(regex);
+
+  return matches ? matches.length : 0;
 }
 
 /* =========================================================
-   UNAS LOGIN
+   UNAS HTTP KÉRÉS
 ========================================================= */
 
-async function login() {
-  if (!API_KEY) {
+function unasRequest({
+  endpoint,
+  token = '',
+  body = ''
+}) {
+  return new Promise((resolve, reject) => {
+    let target;
+
+    try {
+      target = new URL(
+        `${UNAS_API_BASE_URL}/${endpoint}`
+      );
+    } catch (error) {
+      reject(
+        new Error(
+          `Hibás UNAS API URL: ${error.message}`
+        )
+      );
+
+      return;
+    }
+
+    const bodyText = String(body || '');
+
+    const headers = {
+      Accept: 'application/xml',
+      'Content-Type': 'application/xml; charset=UTF-8',
+      'Content-Length': Buffer.byteLength(bodyText)
+    };
+
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    const request = https.request(
+      {
+        hostname: target.hostname,
+        port: 443,
+        path: target.pathname,
+        method: 'POST',
+        headers,
+        timeout: 30000
+      },
+      (response) => {
+        let responseBody = '';
+
+        response.setEncoding('utf8');
+
+        response.on('data', (chunk) => {
+          responseBody += chunk;
+        });
+
+        response.on('end', () => {
+          const status = response.statusCode || 0;
+
+          if (status >= 200 && status < 300) {
+            resolve({
+              ok: true,
+              status,
+              body: responseBody
+            });
+
+            return;
+          }
+
+          reject(
+            new Error(
+              `UNAS HTTP ${status}: ${responseBody.slice(0, 1500)}`
+            )
+          );
+        });
+      }
+    );
+
+    request.on('timeout', () => {
+      request.destroy(
+        new Error(
+          'Az UNAS API kapcsolat időtúllépett.'
+        )
+      );
+    });
+
+    request.on('error', (error) => {
+      reject(error);
+    });
+
+    request.write(bodyText);
+    request.end();
+  });
+}
+
+/* =========================================================
+   BEJELENTKEZÉS
+========================================================= */
+
+async function loginToUnas() {
+  if (!UNAS_API_KEY) {
     throw new Error(
       'Hiányzik az UNAS_API_KEY környezeti változó.'
     );
   }
 
-  console.log(
-    'UNAS: bejelentkezés indul...'
-  );
-
-  const loginXml = `
-<?xml version="1.0" encoding="UTF-8"?>
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <Params>
-  <ApiKey>${escapeXml(API_KEY)}</ApiKey>
-</Params>
-`.trim();
+  <ApiKey>${escapeXml(UNAS_API_KEY)}</ApiKey>
+  <WebshopInfo>true</WebshopInfo>
+</Params>`;
 
-  const response =
-    await request({
-      method: 'POST',
-      url: `${API_BASE}/login`,
-      body: loginXml
-    });
+  const response = await unasRequest({
+    endpoint: 'login',
+    body: xml
+  });
 
-  const token =
-    getXmlValue(
-      response.body,
-      'Token'
-    );
+  const token = getXmlValue(
+    response.body,
+    'Token'
+  );
 
   if (!token) {
     throw new Error(
-      `Az UNAS nem adott vissza tokent. Válasz: ${response.body.slice(0, 1500)}`
+      `Az UNAS login nem adott vissza tokent. Válasz: ${response.body.slice(0, 1500)}`
     );
   }
 
-  console.log(
-    'UNAS: sikeres bejelentkezés.'
-  );
-
-  return token;
+  return {
+    token,
+    raw: response.body
+  };
 }
 
 /* =========================================================
    TERMÉKEK LEKÉRÉSE
 ========================================================= */
 
-async function getProducts(
-  token
-) {
-  console.log(
-    'UNAS: termékek lekérése indul...'
-  );
+async function getProducts(token) {
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<Params>
+  <State>live</State>
+  <ContentType>minimal</ContentType>
+  <Lang>hu</Lang>
+</Params>`;
 
-  const response =
-    await request({
-      method: 'GET',
-      url: `${API_BASE}/getProduct`,
-      headers: {
-        Authorization:
-          `Bearer ${token}`
-      }
-    });
+  const response = await unasRequest({
+    endpoint: 'getProduct',
+    token,
+    body: xml
+  });
 
-  return response.body;
+  return {
+    xml: response.body,
+    count: countXmlItems(
+      response.body,
+      'Product'
+    )
+  };
 }
 
 /* =========================================================
-   SZINKRON TESZT
+   UNAS KAPCSOLATTESZT
+========================================================= */
+
+async function testUnasConnection() {
+  const started = Date.now();
+
+  const login = await loginToUnas();
+
+  const products = await getProducts(
+    login.token
+  );
+
+  return {
+    ok: true,
+    products: products.count,
+    responseMs: Date.now() - started,
+    message:
+      `Az UNAS API kapcsolat működik. Lekért termékek: ${products.count}.`
+  };
+}
+
+/* =========================================================
+   KÉZI FUTTATÁS
 ========================================================= */
 
 async function run() {
@@ -241,7 +244,7 @@ async function run() {
   );
 
   console.log(
-    ' Vitalis UNAS szinkron – kapcsolat teszt'
+    ' Vitalis UNAS API kapcsolat teszt'
   );
 
   console.log(
@@ -249,39 +252,27 @@ async function run() {
   );
 
   try {
-    const token =
-      await login();
-
-    const productsXml =
-      await getProducts(
-        token
-      );
-
-    const productCount =
-      countXmlTags(
-        productsXml,
-        'Product'
-      );
+    const result =
+      await testUnasConnection();
 
     console.log(
-      `UNAS kapcsolat sikeres.`
+      'UNAS KAPCSOLAT SIKERES'
     );
 
     console.log(
-      `Lekért termékek száma: ${productCount}`
+      `Termékek száma: ${result.products}`
     );
 
     console.log(
-      `Kapott adatmennyiség: ${productsXml.length} karakter`
+      `Válaszidő: ${result.responseMs} ms`
     );
 
     console.log(
-      'A teszt nem módosított semmit az UNAS webshopban.'
+      'A teszt semmilyen adatot nem módosított az UNAS webshopban.'
     );
-
   } catch (error) {
     console.error(
-      'UNAS SZINKRON HIBA:'
+      'UNAS KAPCSOLATI HIBA'
     );
 
     console.error(
@@ -296,4 +287,16 @@ async function run() {
   );
 }
 
-run();
+if (require.main === module) {
+  run();
+}
+
+/* =========================================================
+   EXPORT A SERVER.CJS SZÁMÁRA
+========================================================= */
+
+module.exports = {
+  testUnasConnection,
+  loginToUnas,
+  getProducts
+};
