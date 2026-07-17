@@ -40,6 +40,70 @@ const unasStatusMessage =
 ========================================================= */
 
 let conversations = [];
+let adminToken = '';
+
+
+/* =========================================================
+   ADMIN KULCS
+========================================================= */
+
+function getStoredAdminToken() {
+  return (
+    localStorage.getItem(
+      'vitalisAdminToken'
+    ) || ''
+  ).trim();
+}
+
+
+function saveAdminToken(token) {
+  localStorage.setItem(
+    'vitalisAdminToken',
+    String(token || '').trim()
+  );
+}
+
+
+function clearAdminToken() {
+  localStorage.removeItem(
+    'vitalisAdminToken'
+  );
+
+  adminToken = '';
+}
+
+
+function ensureAdminToken() {
+  adminToken =
+    getStoredAdminToken();
+
+  if (adminToken) {
+    return true;
+  }
+
+  const entered =
+    window.prompt(
+      'Add meg a Vitalis AI admin kulcsot:'
+    );
+
+  if (!entered) {
+    return false;
+  }
+
+  adminToken =
+    String(entered)
+      .trim();
+
+  if (!adminToken) {
+    return false;
+  }
+
+  saveAdminToken(
+    adminToken
+  );
+
+  return true;
+}
 
 
 /* =========================================================
@@ -61,9 +125,14 @@ function formatDate(value) {
     return '';
   }
 
-  const date = new Date(value);
+  const date =
+    new Date(value);
 
-  if (Number.isNaN(date.getTime())) {
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
     return String(value);
   }
 
@@ -85,18 +154,27 @@ function isToday(value) {
     return false;
   }
 
-  const date = new Date(value);
+  const date =
+    new Date(value);
 
-  if (Number.isNaN(date.getTime())) {
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
     return false;
   }
 
-  const now = new Date();
+  const now =
+    new Date();
 
   return (
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth() &&
-    date.getDate() === now.getDate()
+    date.getFullYear() ===
+      now.getFullYear() &&
+    date.getMonth() ===
+      now.getMonth() &&
+    date.getDate() ===
+      now.getDate()
   );
 }
 
@@ -148,15 +226,22 @@ function getPageUrl(item) {
    STATISZTIKÁK
 ========================================================= */
 
-function updateStatistics(visibleItems) {
+function updateStatistics(
+  visibleItems
+) {
   const todayCount =
-    conversations.filter((item) =>
-      isToday(getCreatedAt(item))
+    conversations.filter(
+      (item) =>
+        isToday(
+          getCreatedAt(item)
+        )
     ).length;
 
   if (totalCountElement) {
     totalCountElement.textContent =
-      String(conversations.length);
+      String(
+        conversations.length
+      );
   }
 
   if (todayCountElement) {
@@ -166,7 +251,9 @@ function updateStatistics(visibleItems) {
 
   if (visibleCountElement) {
     visibleCountElement.textContent =
-      String(visibleItems.length);
+      String(
+        visibleItems.length
+      );
   }
 }
 
@@ -207,27 +294,44 @@ function renderConversations(items) {
     const pageUrl =
       getPageUrl(item);
 
+    const source =
+      String(
+        item.source ||
+        'ismeretlen'
+      );
+
+    const confidence =
+      item.confidence !== null &&
+      item.confidence !== undefined
+        ? String(
+            item.confidence
+          )
+        : '–';
+
     const article =
-      document.createElement('article');
+      document.createElement(
+        'article'
+      );
 
     article.className =
       'conversation-card';
-
-    const safePageUrl =
-      escapeHtml(pageUrl);
 
     article.innerHTML = `
       <div class="conversation-meta">
 
         <span>
-          ${escapeHtml(formatDate(createdAt))}
+          ${escapeHtml(
+            formatDate(
+              createdAt
+            )
+          )}
         </span>
 
         ${
           pageUrl
             ? `
               <span>
-                ${safePageUrl}
+                ${escapeHtml(pageUrl)}
               </span>
             `
             : ''
@@ -242,7 +346,9 @@ function renderConversations(items) {
         </strong>
 
         <p>
-          ${escapeHtml(question || '–')}
+          ${escapeHtml(
+            question || '–'
+          )}
         </p>
 
       </div>
@@ -254,8 +360,24 @@ function renderConversations(items) {
         </strong>
 
         <p>
-          ${escapeHtml(answer || '–')}
+          ${escapeHtml(
+            answer || '–'
+          )}
         </p>
+
+      </div>
+
+      <div class="conversation-meta">
+
+        <span>
+          Forrás:
+          ${escapeHtml(source)}
+        </span>
+
+        <span>
+          Biztonsági pontszám:
+          ${escapeHtml(confidence)}
+        </span>
 
       </div>
     `;
@@ -272,6 +394,15 @@ function renderConversations(items) {
 ========================================================= */
 
 async function loadConversations() {
+  if (!ensureAdminToken()) {
+    if (statusMessage) {
+      statusMessage.textContent =
+        'Admin kulcs nélkül a beszélgetések nem tölthetők be.';
+    }
+
+    return;
+  }
+
   if (statusMessage) {
     statusMessage.textContent =
       'Beszélgetések betöltése...';
@@ -280,67 +411,61 @@ async function loadConversations() {
   try {
     const response =
       await fetch(
-        '/api/admin/conversations',
+        '/api/admin/conversations?limit=500',
         {
-          cache: 'no-store'
+          headers: {
+            'X-Admin-Token':
+              adminToken
+          },
+
+          cache:
+            'no-store'
         }
       );
-
-    const contentType =
-      response.headers.get(
-        'content-type'
-      ) || '';
-
-    if (
-      !contentType.includes(
-        'application/json'
-      )
-    ) {
-      throw new Error(
-        'A szerver nem JSON választ adott a beszélgetésekhez.'
-      );
-    }
 
     const data =
       await response.json();
 
-    if (!response.ok) {
+    if (
+      response.status === 401 ||
+      response.status === 403
+    ) {
+      clearAdminToken();
+
+      throw new Error(
+        'Hibás admin kulcs. Frissítsd az oldalt, és add meg újra.'
+      );
+    }
+
+    if (
+      !response.ok ||
+      data.ok === false
+    ) {
       throw new Error(
         data.error ||
         'A beszélgetések betöltése sikertelen.'
       );
     }
 
-    if (Array.isArray(data)) {
-      conversations = data;
-    } else if (
+    conversations =
       Array.isArray(
-        data.conversations
+        data.items
       )
-    ) {
-      conversations =
-        data.conversations;
-    } else if (
-      Array.isArray(data.items)
-    ) {
-      conversations =
-        data.items;
-    } else {
-      conversations = [];
-    }
+        ? data.items
+        : [];
 
     renderConversations(
       conversations
     );
 
     if (statusMessage) {
-      const source =
-        data.source ||
-        'szerver';
-
       statusMessage.textContent =
-        `Betöltve: ${conversations.length} beszélgetés. Forrás: ${source}.`;
+        `Betöltve: ${conversations.length} beszélgetés. Forrás: ${
+          data.storage ||
+          'ismeretlen'
+        }.`;
     }
+
   } catch (error) {
     console.error(
       'Beszélgetések betöltési hiba:',
@@ -383,8 +508,10 @@ function filterConversations() {
         const searchableText = [
           getQuestion(item),
           getAnswer(item),
-          getPageUrl(item)
+          getPageUrl(item),
+          item.source
         ]
+          .filter(Boolean)
           .join(' ')
           .toLowerCase();
 
@@ -401,53 +528,11 @@ function filterConversations() {
 
 
 /* =========================================================
-   ADMIN TOKEN
-========================================================= */
-
-function getAdminToken() {
-  let token =
-    sessionStorage.getItem(
-      'vitalis_admin_token'
-    );
-
-  if (token) {
-    return token;
-  }
-
-  token = window.prompt(
-    'Add meg a Vitalis AI admin kulcsot:'
-  );
-
-  token =
-    String(token || '').trim();
-
-  if (token) {
-    sessionStorage.setItem(
-      'vitalis_admin_token',
-      token
-    );
-  }
-
-  return token;
-}
-
-
-function clearAdminToken() {
-  sessionStorage.removeItem(
-    'vitalis_admin_token'
-  );
-}
-
-
-/* =========================================================
    UNAS KAPCSOLAT TESZTELÉSE
 ========================================================= */
 
 async function testUnasConnection() {
-  const token =
-    getAdminToken();
-
-  if (!token) {
+  if (!ensureAdminToken()) {
     if (unasStatusMessage) {
       unasStatusMessage.textContent =
         'Az UNAS teszt megszakadt: nincs megadva admin kulcs.';
@@ -462,7 +547,8 @@ async function testUnasConnection() {
   }
 
   if (unasTestButton) {
-    unasTestButton.disabled = true;
+    unasTestButton.disabled =
+      true;
   }
 
   if (unasTestButtonSecondary) {
@@ -478,40 +564,17 @@ async function testUnasConnection() {
           method: 'GET',
 
           headers: {
-            Authorization:
-              `Bearer ${token}`,
-
             'X-Admin-Token':
-              token
+              adminToken
           },
 
-          cache: 'no-store'
+          cache:
+            'no-store'
         }
       );
 
-    const contentType =
-      response.headers.get(
-        'content-type'
-      ) || '';
-
-    let data;
-
-    if (
-      contentType.includes(
-        'application/json'
-      )
-    ) {
-      data =
-        await response.json();
-    } else {
-      const text =
-        await response.text();
-
-      throw new Error(
-        text ||
-        'A szerver nem JSON választ adott.'
-      );
-    }
+    const data =
+      await response.json();
 
     if (
       response.status === 401 ||
@@ -520,11 +583,14 @@ async function testUnasConnection() {
       clearAdminToken();
 
       throw new Error(
-        'Hibás admin kulcs. A mentett kulcs törölve lett; kattints újra a gombra, és add meg a helyes ADMIN_TOKEN értéket.'
+        'Hibás admin kulcs. Frissítsd az oldalt, és add meg újra.'
       );
     }
 
-    if (!response.ok || data.ok === false) {
+    if (
+      !response.ok ||
+      data.ok === false
+    ) {
       throw new Error(
         data.error ||
         data.message ||
@@ -533,37 +599,17 @@ async function testUnasConnection() {
     }
 
     if (unasStatusMessage) {
-      const productCount =
-        data.products ??
-        data.productCount ??
-        null;
-
-      const responseMs =
-        data.responseMs ??
-        null;
-
-      let message =
-        data.message ||
-        'Az UNAS API kapcsolat működik.';
-
-      if (
-        productCount !== null &&
-        !String(message).includes(
-          String(productCount)
-        )
-      ) {
-        message +=
-          ` Lekért termékek: ${productCount}.`;
-      }
-
-      if (responseMs !== null) {
-        message +=
-          ` Válaszidő: ${responseMs} ms.`;
-      }
-
       unasStatusMessage.textContent =
-        message;
+        data.message ||
+        `Az UNAS API kapcsolat működik. Termékek: ${
+          data.products ?? '–'
+        }, kategóriák: ${
+          data.categories ?? '–'
+        }. Válaszidő: ${
+          data.responseMs ?? '–'
+        } ms.`;
     }
+
   } catch (error) {
     console.error(
       'UNAS kapcsolat tesztelési hiba:',
@@ -574,9 +620,11 @@ async function testUnasConnection() {
       unasStatusMessage.textContent =
         `UNAS kapcsolati hiba: ${error.message}`;
     }
+
   } finally {
     if (unasTestButton) {
-      unasTestButton.disabled = false;
+      unasTestButton.disabled =
+        false;
     }
 
     if (unasTestButtonSecondary) {
