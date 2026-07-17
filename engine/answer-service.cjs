@@ -4,6 +4,12 @@ const {
   './knowledge-fallback.cjs'
 );
 
+const {
+  normalize
+} = require(
+  './normalizer.cjs'
+);
+
 /* =========================================================
    SEGÉDFÜGGVÉNYEK
 ========================================================= */
@@ -16,7 +22,7 @@ function cleanText(value = '') {
 
 function shorten(
   value,
-  maxLength = 420
+  maxLength = 240
 ) {
   const text =
     cleanText(value);
@@ -43,7 +49,7 @@ function shorten(
 
   if (
     lastSentence >
-    120
+    80
   ) {
     return cut
       .slice(
@@ -64,9 +70,7 @@ function shorten(
   );
 }
 
-function getItemAnswer(
-  item
-) {
+function getItemAnswer(item) {
   return cleanText(
     item.shortAnswer ||
     item.fullAnswer ||
@@ -75,9 +79,7 @@ function getItemAnswer(
   );
 }
 
-function getItemTitle(
-  item
-) {
+function getItemTitle(item) {
   return cleanText(
     item.title ||
     item.name ||
@@ -86,54 +88,22 @@ function getItemTitle(
   );
 }
 
-function isProductItem(
-  item
-) {
+function isProductItem(item) {
   return (
-    item.source ===
-      'unas' ||
-    item.sourceType ===
-      'product' ||
-    item.type ===
-      'product'
+    item.source === 'unas' &&
+    (
+      item.sourceType === 'product' ||
+      item.type === 'product' ||
+      item.category === 'UNAS termék'
+    )
   );
 }
 
-function isCategoryItem(
-  item
-) {
-  return (
-    item.sourceType ===
-      'category' ||
-    item.type ===
-      'category'
-  );
-}
+/* =========================================================
+   TECHNIKAI ZAJ ELTÁVOLÍTÁSA
+========================================================= */
 
-function looksLikeListQuestion(
-  question
-) {
-  const q =
-    cleanText(
-      question
-    ).toLowerCase();
-
-  return (
-    /\bmilyen\b/.test(q) ||
-    /\bmik\b/.test(q) ||
-    /\bmelyik\b/.test(q) ||
-    /\btermékek\b/.test(q) ||
-    /\btermékeitek\b/.test(q) ||
-    /\bvan\b/.test(q) ||
-    /\bvannak\b/.test(q) ||
-    /\bajánlotok\b/.test(q) ||
-    /\bajánlasz\b/.test(q)
-  );
-}
-
-function removeTechnicalNoise(
-  value
-) {
+function removeTechnicalNoise(value) {
   let text =
     cleanText(value);
 
@@ -141,7 +111,9 @@ function removeTechnicalNoise(
     'Összetevők (INCI):',
     'Összetevők:',
     'INCI:',
-    'Ingredients:'
+    'Ingredients:',
+    'Mit tapasztalhatsz rendszeres használat mellett?',
+    'Használati javaslat'
   ];
 
   for (
@@ -155,7 +127,7 @@ function removeTechnicalNoise(
 
     if (
       index >
-      80
+      50
     ) {
       text =
         text.slice(
@@ -165,43 +137,333 @@ function removeTechnicalNoise(
     }
   }
 
-  text =
-    text
-      .replace(
-        /\bÁr:\s*[^.]{0,100}\.?/gi,
-        ''
-      )
-      .replace(
-        /\bKiszerelés vagy egység:\s*[^.]{0,100}\.?/gi,
-        ''
-      )
-      .replace(
-        /\s+/g,
-        ' '
-      )
-      .trim();
-
-  return text;
+  return text
+    .replace(
+      /\bÁr:\s*[^.]{0,120}\.?/gi,
+      ''
+    )
+    .replace(
+      /\bKiszerelés vagy egység:\s*[^.]{0,120}\.?/gi,
+      ''
+    )
+    .replace(
+      /\s+/g,
+      ' '
+    )
+    .trim();
 }
 
 /* =========================================================
-   EGY TERMÉK RÖVID VÁLASZA
+   TERMÉKKATALÓGUS-KÉRDÉS FELISMERÉSE
+========================================================= */
+
+function isCatalogQuestion(question) {
+  const q =
+    normalize(
+      question
+    );
+
+  return (
+    q.includes('termek') ||
+    q.includes('termekeitek') ||
+    q.includes('termeketek') ||
+    q.includes('milyen') ||
+    q.includes('mik vannak') ||
+    q.includes('mit ajanl') ||
+    q.includes('melyik')
+  );
+}
+
+/* =========================================================
+   KERESŐSZAVAK KINYERÉSE
+========================================================= */
+
+const GENERIC_WORDS =
+  new Set([
+    'milyen',
+    'mik',
+    'melyik',
+    'van',
+    'vannak',
+    'termek',
+    'termekek',
+    'termekeitek',
+    'termeketek',
+    'nalatok',
+    'keresek',
+    'szeretnek',
+    'ajanlasz',
+    'ajanlotok',
+    'lehet',
+    'kapni'
+  ]);
+
+function getMeaningfulTokens(
+  question
+) {
+  return normalize(
+    question
+  )
+    .split(' ')
+    .filter(
+      (token) =>
+        token.length >= 4 &&
+        !GENERIC_WORDS.has(
+          token
+        )
+    );
+}
+
+/* =========================================================
+   UNAS TERMÉKKERESÉS
+========================================================= */
+
+function findMatchingProducts(
+  knowledge,
+  question
+) {
+  const tokens =
+    getMeaningfulTokens(
+      question
+    );
+
+  if (
+    !tokens.length
+  ) {
+    return [];
+  }
+
+  const scored =
+    knowledge
+      .filter(
+        isProductItem
+      )
+      .map(
+        (item) => {
+
+          const title =
+            normalize(
+              getItemTitle(
+                item
+              )
+            );
+
+          const searchable =
+            normalize(
+              [
+                item.title,
+                item.name,
+                item.shortAnswer,
+                item.fullAnswer,
+                item.keywords?.join(' '),
+                item.products?.join(' '),
+                item.category,
+                item.subcategory
+              ]
+                .filter(Boolean)
+                .join(' ')
+            );
+
+          let score =
+            0;
+
+          for (
+            const token of
+            tokens
+          ) {
+
+            if (
+              title.includes(
+                token
+              )
+            ) {
+              score +=
+                100;
+            }
+
+            if (
+              searchable.includes(
+                token
+              )
+            ) {
+              score +=
+                25;
+            }
+          }
+
+          return {
+            item,
+            score
+          };
+        }
+      )
+      .filter(
+        (match) =>
+          match.score >
+          0
+      )
+      .sort(
+        (a, b) =>
+          b.score -
+          a.score
+      );
+
+  const unique =
+    [];
+
+  const seen =
+    new Set();
+
+  for (
+    const match of
+    scored
+  ) {
+
+    const title =
+      getItemTitle(
+        match.item
+      );
+
+    const key =
+      normalize(
+        title
+      );
+
+    if (
+      seen.has(
+        key
+      )
+    ) {
+      continue;
+    }
+
+    seen.add(
+      key
+    );
+
+    unique.push(
+      match
+    );
+
+    if (
+      unique.length >=
+      6
+    ) {
+      break;
+    }
+  }
+
+  return unique;
+}
+
+/* =========================================================
+   TERMÉKLISTA VÁLASZ
+========================================================= */
+
+function buildProductListAnswer(
+  matches
+) {
+  if (
+    !matches.length
+  ) {
+    return null;
+  }
+
+  const items =
+    matches.map(
+      (match) =>
+        match.item
+    );
+
+  const lines =
+    items.map(
+      (item) => {
+
+        const title =
+          getItemTitle(
+            item
+          );
+
+        const raw =
+          removeTechnicalNoise(
+            getItemAnswer(
+              item
+            )
+          );
+
+        const summary =
+          shorten(
+            raw,
+            120
+          );
+
+        return summary
+          ? `• ${title} – ${summary}`
+          : `• ${title}`;
+      }
+    );
+
+  return {
+    source:
+      'unas-list',
+
+    answer:
+      `Igen, több kapcsolódó termékünk is van:\n\n${lines.join(
+        '\n'
+      )}\n\nHa megírod, hogy melyik érdekel, szívesen segítek részletesebben is.`,
+
+    confidence:
+      matches[0]
+        .score,
+
+    links:
+      items
+        .filter(
+          (item) =>
+            item.url
+        )
+        .map(
+          (item) => ({
+            label:
+              getItemTitle(
+                item
+              ),
+
+            url:
+              item.url
+          })
+        ),
+
+    suggestions:
+      [],
+
+    ruleId:
+      null,
+
+    intent:
+      'product-list',
+
+    matchedKnowledgeIds:
+      items.map(
+        (item) =>
+          item.id
+      )
+  };
+}
+
+/* =========================================================
+   EGYEDI TUDÁSVÁLASZ
 ========================================================= */
 
 function buildSingleAnswer(
-  item
+  item,
+  score
 ) {
   const raw =
     removeTechnicalNoise(
       getItemAnswer(
         item
       )
-    );
-
-  const answer =
-    shorten(
-      raw,
-      520
     );
 
   return {
@@ -211,10 +473,14 @@ function buildSingleAnswer(
         ? 'unas-knowledge'
         : 'knowledge-fallback',
 
-    answer,
+    answer:
+      shorten(
+        raw,
+        480
+      ),
 
     confidence:
-      null,
+      score,
 
     links:
       item.url
@@ -249,155 +515,6 @@ function buildSingleAnswer(
 }
 
 /* =========================================================
-   TÖBB TERMÉK RÖVID FELSOROLÁSA
-========================================================= */
-
-function buildListAnswer(
-  matches
-) {
-  const unique = [];
-
-  const seen =
-    new Set();
-
-  for (
-    const match of
-    matches
-  ) {
-    const item =
-      match.item;
-
-    if (
-      !isProductItem(
-        item
-      )
-    ) {
-      continue;
-    }
-
-    const title =
-      getItemTitle(
-        item
-      );
-
-    const key =
-      title.toLowerCase();
-
-    if (
-      seen.has(
-        key
-      )
-    ) {
-      continue;
-    }
-
-    seen.add(
-      key
-    );
-
-    unique.push(
-      item
-    );
-
-    if (
-      unique.length >=
-      5
-    ) {
-      break;
-    }
-  }
-
-  if (
-    unique.length <
-    2
-  ) {
-    return null;
-  }
-
-  const lines =
-    unique.map(
-      (
-        item
-      ) => {
-
-        const raw =
-          removeTechnicalNoise(
-            getItemAnswer(
-              item
-            )
-          );
-
-        const summary =
-          shorten(
-            raw,
-            135
-          );
-
-        return (
-          `• ${getItemTitle(item)}` +
-          (
-            summary
-              ? ` – ${summary}`
-              : ''
-          )
-        );
-      }
-    );
-
-  return {
-    source:
-      'unas-list',
-
-    answer:
-      `Több kapcsolódó termékünk is van:\n\n${lines.join(
-        '\n'
-      )}\n\nHa megírod, melyik típus érdekel leginkább, segítek szűkíteni a választást.`,
-
-    confidence:
-      null,
-
-    links:
-      unique
-        .filter(
-          (
-            item
-          ) =>
-            item.url
-        )
-        .map(
-          (
-            item
-          ) => ({
-            label:
-              getItemTitle(
-                item
-              ),
-
-            url:
-              item.url
-          })
-        ),
-
-    suggestions:
-      [],
-
-    ruleId:
-      null,
-
-    intent:
-      'product-list',
-
-    matchedKnowledgeIds:
-      unique.map(
-        (
-          item
-        ) =>
-          item.id
-      )
-  };
-}
-
-/* =========================================================
    FŐ VÁLASZKÉPZÉS
 ========================================================= */
 
@@ -410,7 +527,47 @@ function createAnswer({
 }) {
 
   /*
-    1. Szakértői szabályok mindig elsőbbséget élveznek.
+    1. TERMÉKKATALÓGUS-KÉRDÉSEK
+
+    Ezeket a szabálymotor ELŐTT kezeljük,
+    mert különben egy túl általános expert rule
+    elviheti a kérdést rossz irányba.
+  */
+
+  if (
+    isCatalogQuestion(
+      question
+    )
+  ) {
+
+    const productMatches =
+      findMatchingProducts(
+        knowledge,
+        question
+      );
+
+    if (
+      productMatches.length
+    ) {
+
+      const listAnswer =
+        buildProductListAnswer(
+          productMatches
+        );
+
+      if (
+        listAnswer
+      ) {
+        return listAnswer;
+      }
+    }
+  }
+
+  /*
+    2. SZAKÉRTŐI SZABÁLYOK
+
+    Csak akkor futnak, ha nem sikerült
+    konkrét katalógustalálatot adni.
   */
 
   const expert =
@@ -426,7 +583,7 @@ function createAnswer({
   }
 
   /*
-    2. Tudásbázis keresés.
+    3. ÁLTALÁNOS TUDÁSBÁZIS-KERESÉS
   */
 
   const matches =
@@ -437,10 +594,6 @@ function createAnswer({
 
   const best =
     matches[0];
-
-  /*
-    3. Nincs megfelelő találat.
-  */
 
   if (
     !best ||
@@ -480,46 +633,10 @@ function createAnswer({
     };
   }
 
-  /*
-    4. Listázó kérdés:
-       több termék röviden.
-  */
-
-  if (
-    looksLikeListQuestion(
-      question
-    )
-  ) {
-
-    const listAnswer =
-      buildListAnswer(
-        matches
-      );
-
-    if (
-      listAnswer
-    ) {
-
-      listAnswer.confidence =
-        best.score;
-
-      return listAnswer;
-    }
-  }
-
-  /*
-    5. Konkrét termék vagy kategória.
-  */
-
-  const result =
-    buildSingleAnswer(
-      best.item
-    );
-
-  result.confidence =
-    best.score;
-
-  return result;
+  return buildSingleAnswer(
+    best.item,
+    best.score
+  );
 }
 
 module.exports = {
