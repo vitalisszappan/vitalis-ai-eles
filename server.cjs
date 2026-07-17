@@ -1,3 +1,5 @@
+'use strict';
+
 const http = require('http');
 const https = require('https');
 const fs = require('fs');
@@ -18,6 +20,11 @@ const LOG_DIR = path.join(DATA_DIR, 'logs');
 const KNOWLEDGE_PATH = path.join(
   DATA_DIR,
   'knowledge.json'
+);
+
+const UNAS_KNOWLEDGE_PATH = path.join(
+  DATA_DIR,
+  'unas-knowledge.json'
 );
 
 const RULE_PATH = path.join(
@@ -58,11 +65,12 @@ const SUPABASE_SERVICE_ROLE_KEY = String(
 ).trim();
 
 /* =========================================================
-   UNAS SZINKRON MODUL
+   UNAS MODUL
 ========================================================= */
 
 const {
-  testUnasConnection
+  testUnasConnection,
+  buildUnasKnowledge
 } = require('./unas-sync.cjs');
 
 /* =========================================================
@@ -76,62 +84,11 @@ for (const dir of [
 ]) {
   fs.mkdirSync(
     dir,
-    { recursive: true }
+    {
+      recursive: true
+    }
   );
 }
-
-/* =========================================================
-   TUDÁSBÁZIS
-========================================================= */
-
-let knowledge = [];
-let loadedAt = null;
-
-function loadKnowledge() {
-  if (!fs.existsSync(KNOWLEDGE_PATH)) {
-    throw new Error(
-      'A data/knowledge.json fájl nem található.'
-    );
-  }
-
-  const rawText =
-    fs.readFileSync(
-      KNOWLEDGE_PATH,
-      'utf8'
-    );
-
-  const raw =
-    JSON.parse(rawText);
-
-  const items =
-    Array.isArray(raw)
-      ? raw
-      : Array.isArray(raw.items)
-        ? raw.items
-        : null;
-
-  if (!items) {
-    throw new Error(
-      'A knowledge.json nem megfelelő formátumú.'
-    );
-  }
-
-  knowledge = items.filter(
-    (item) =>
-      item &&
-      typeof item === 'object' &&
-      item.id
-  );
-
-  loadedAt =
-    new Date().toISOString();
-
-  console.log(
-    `Tudásbázis betöltve: ${knowledge.length} elem`
-  );
-}
-
-loadKnowledge();
 
 /* =========================================================
    VÁLASZMOTOR
@@ -153,6 +110,347 @@ const ruleEngine =
   new ExpertRuleEngine(
     RULE_PATH
   );
+
+/* =========================================================
+   TUDÁSBÁZIS
+========================================================= */
+
+let knowledge = [];
+
+let knowledgeStats = {
+  base: 0,
+  unas: 0,
+  total: 0
+};
+
+let loadedAt = null;
+
+/* ---------------------------------------------------------
+   JSON OLVASÁS
+--------------------------------------------------------- */
+
+function readJsonFile(
+  filePath
+) {
+  if (
+    !fs.existsSync(
+      filePath
+    )
+  ) {
+    return null;
+  }
+
+  const raw =
+    fs.readFileSync(
+      filePath,
+      'utf8'
+    );
+
+  return JSON.parse(
+    raw
+  );
+}
+
+/* ---------------------------------------------------------
+   ALAP TUDÁSELEMEK
+--------------------------------------------------------- */
+
+function extractKnowledgeItems(
+  raw
+) {
+  if (
+    Array.isArray(
+      raw
+    )
+  ) {
+    return raw;
+  }
+
+  if (
+    raw &&
+    Array.isArray(
+      raw.items
+    )
+  ) {
+    return raw.items;
+  }
+
+  return [];
+}
+
+/* ---------------------------------------------------------
+   UNAS TUDÁSELEM ÁTALAKÍTÁSA
+--------------------------------------------------------- */
+
+function normalizeUnasKnowledgeItem(
+  item
+) {
+  if (
+    !item ||
+    typeof item !== 'object'
+  ) {
+    return null;
+  }
+
+  const title =
+    String(
+      item.title ||
+      item.name ||
+      ''
+    ).trim();
+
+  const answer =
+    String(
+      item.fullAnswer ||
+      item.shortAnswer ||
+      item.answer ||
+      ''
+    ).trim();
+
+  if (
+    !item.id ||
+    !title ||
+    !answer
+  ) {
+    return null;
+  }
+
+  const canonicalQuestion =
+    String(
+      item.canonicalQuestion ||
+      item.question ||
+      `${title} információ`
+    ).trim();
+
+  const questionVariants = [
+    canonicalQuestion,
+    `Mit kell tudni a ${title} termékről?`,
+    `Milyen a ${title}?`,
+    `${title} használata`,
+    `${title} információ`
+  ];
+
+  if (
+    item.type === 'category' ||
+    item.sourceType === 'category'
+  ) {
+    questionVariants.push(
+      `Milyen termékek vannak a ${title} kategóriában?`,
+      `Mit ajánlotok a ${title} kategóriából?`
+    );
+  }
+
+  const keywords = [
+    title,
+    item.name,
+    item.sku,
+    item.type,
+    item.sourceType
+  ]
+    .filter(Boolean)
+    .map(
+      (value) =>
+        String(value)
+    );
+
+  return {
+    id:
+      String(item.id),
+
+    title,
+
+    canonicalQuestion,
+
+    questionVariants:
+      [...new Set(
+        questionVariants
+          .filter(Boolean)
+      )],
+
+    shortAnswer:
+      answer,
+
+    fullAnswer:
+      answer,
+
+    category:
+      item.type === 'category'
+        ? title
+        : 'UNAS termék',
+
+    subcategory:
+      item.sourceType ||
+      item.type ||
+      '',
+
+    products:
+      item.type === 'product'
+        ? [title]
+        : [],
+
+    keywords:
+      [...new Set(
+        keywords
+      )],
+
+    intents: [
+      item.type === 'category'
+        ? 'category-information'
+        : 'product-information'
+    ],
+
+    source:
+      'unas',
+
+    sourceType:
+      item.sourceType ||
+      item.type ||
+      'unknown',
+
+    productId:
+      item.productId ||
+      '',
+
+    categoryId:
+      item.categoryId ||
+      '',
+
+    sku:
+      item.sku ||
+      '',
+
+    price:
+      item.price ||
+      '',
+
+    unit:
+      item.unit ||
+      '',
+
+    url:
+      item.url ||
+      '',
+
+    priority:
+      Number(
+        item.priority ||
+        70
+      ),
+
+    active:
+      item.active !== false,
+
+    updatedAt:
+      item.updatedAt ||
+      null
+  };
+}
+
+/* ---------------------------------------------------------
+   TUDÁSBÁZIS BETÖLTÉSE
+--------------------------------------------------------- */
+
+function loadKnowledge() {
+
+  if (
+    !fs.existsSync(
+      KNOWLEDGE_PATH
+    )
+  ) {
+    throw new Error(
+      'A data/knowledge.json fájl nem található.'
+    );
+  }
+
+  const baseRaw =
+    readJsonFile(
+      KNOWLEDGE_PATH
+    );
+
+  const baseItems =
+    extractKnowledgeItems(
+      baseRaw
+    )
+      .filter(
+        (item) =>
+          item &&
+          typeof item === 'object' &&
+          item.id
+      );
+
+  let unasItems = [];
+
+  if (
+    fs.existsSync(
+      UNAS_KNOWLEDGE_PATH
+    )
+  ) {
+    try {
+
+      const unasRaw =
+        readJsonFile(
+          UNAS_KNOWLEDGE_PATH
+        );
+
+      unasItems =
+        extractKnowledgeItems(
+          unasRaw
+        )
+          .map(
+            normalizeUnasKnowledgeItem
+          )
+          .filter(Boolean);
+
+    } catch (
+      error
+    ) {
+
+      console.error(
+        'UNAS tudásbázis betöltési hiba:',
+        error.message
+      );
+    }
+  }
+
+  /*
+    Az UNAS aktuális termékadatai kerülnek előre,
+    hogy aktuális webshopadat esetén ez legyen erősebb.
+  */
+
+  knowledge = [
+    ...unasItems,
+    ...baseItems
+  ];
+
+  knowledgeStats = {
+    base:
+      baseItems.length,
+
+    unas:
+      unasItems.length,
+
+    total:
+      knowledge.length
+  };
+
+  loadedAt =
+    new Date()
+      .toISOString();
+
+  console.log(
+    `Alap tudáselemek: ${knowledgeStats.base}`
+  );
+
+  console.log(
+    `UNAS tudáselemek: ${knowledgeStats.unas}`
+  );
+
+  console.log(
+    `Összes tudáselem: ${knowledgeStats.total}`
+  );
+}
+
+loadKnowledge();
 
 /* =========================================================
    SEGÉDFÜGGVÉNYEK
@@ -184,10 +482,15 @@ function normalizeMatchedIds(
     result?.ids ??
     [];
 
-  return Array.isArray(ids)
+  return Array.isArray(
+    ids
+  )
     ? ids
         .filter(Boolean)
-        .slice(0, 30)
+        .slice(
+          0,
+          30
+        )
     : [];
 }
 
@@ -199,9 +502,13 @@ function normalizeConfidence(
     result?.score;
 
   const number =
-    Number(value);
+    Number(
+      value
+    );
 
-  return Number.isFinite(number)
+  return Number.isFinite(
+    number
+  )
     ? number
     : null;
 }
@@ -213,17 +520,31 @@ function supabaseConfigured() {
   );
 }
 
+function unasConfigured() {
+  return Boolean(
+    String(
+      process.env.UNAS_API_KEY ||
+      ''
+    ).trim()
+  );
+}
+
 function getSupabaseKeyType() {
+
   if (
     SUPABASE_SERVICE_ROLE_KEY
-      .startsWith('sb_secret_')
+      .startsWith(
+        'sb_secret_'
+      )
   ) {
     return 'secret';
   }
 
   if (
     SUPABASE_SERVICE_ROLE_KEY
-      .startsWith('eyJ')
+      .startsWith(
+        'eyJ'
+      )
   ) {
     return 'legacy-service-role';
   }
@@ -238,13 +559,17 @@ function getSupabaseKeyType() {
 }
 
 function getSupabaseHost() {
+
   try {
+
     return SUPABASE_URL
       ? new URL(
           SUPABASE_URL
         ).hostname
       : null;
+
   } catch {
+
     return null;
   }
 }
@@ -273,12 +598,18 @@ function authorizeAdmin(
   res,
   url
 ) {
-  if (!ADMIN_TOKEN) {
+
+  if (
+    !ADMIN_TOKEN
+  ) {
+
     sendJson(
       res,
       503,
       {
-        ok: false,
+        ok:
+          false,
+
         error:
           'Az admin felület nincs engedélyezve.'
       }
@@ -297,11 +628,14 @@ function authorizeAdmin(
     supplied !==
     ADMIN_TOKEN
   ) {
+
     sendJson(
       res,
       401,
       {
-        ok: false,
+        ok:
+          false,
+
         error:
           'Hibás admin kulcs.'
       }
@@ -320,16 +654,22 @@ function authorizeAdmin(
 function getSupabaseHeaders(
   extra = {}
 ) {
+
   const headers = {
+
     apikey:
       SUPABASE_SERVICE_ROLE_KEY,
+
     ...extra
   };
 
   if (
     SUPABASE_SERVICE_ROLE_KEY
-      .startsWith('eyJ')
+      .startsWith(
+        'eyJ'
+      )
   ) {
+
     headers.Authorization =
       `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`;
   }
@@ -342,6 +682,7 @@ function supabaseRequest({
   pathname,
   body = null
 }) {
+
   return new Promise(
     (
       resolve,
@@ -351,6 +692,7 @@ function supabaseRequest({
       if (
         !supabaseConfigured()
       ) {
+
         reject(
           new Error(
             'SUPABASE_URL vagy SUPABASE_SERVICE_ROLE_KEY hiányzik.'
@@ -363,11 +705,16 @@ function supabaseRequest({
       let baseUrl;
 
       try {
+
         baseUrl =
           new URL(
             SUPABASE_URL
           );
-      } catch (error) {
+
+      } catch (
+        error
+      ) {
+
         reject(
           new Error(
             `Hibás SUPABASE_URL: ${error.message}`
@@ -393,6 +740,7 @@ function supabaseRequest({
       if (
         bodyText !== null
       ) {
+
         headers[
           'Content-Type'
         ] =
@@ -410,6 +758,7 @@ function supabaseRequest({
       }
 
       const options = {
+
         protocol:
           baseUrl.protocol,
 
@@ -445,9 +794,11 @@ function supabaseRequest({
       const request =
         transport.request(
           options,
+
           (
             response
           ) => {
+
             let responseBody =
               '';
 
@@ -457,9 +808,11 @@ function supabaseRequest({
 
             response.on(
               'data',
+
               (
                 chunk
               ) => {
+
                 responseBody +=
                   chunk;
               }
@@ -467,21 +820,25 @@ function supabaseRequest({
 
             response.on(
               'end',
+
               () => {
+
                 const status =
                   response
                     .statusCode ||
                   0;
 
                 if (
-                  status >=
-                    200 &&
-                  status <
-                    300
+                  status >= 200 &&
+                  status < 300
                 ) {
+
                   resolve({
-                    ok: true,
+                    ok:
+                      true,
+
                     status,
+
                     body:
                       responseBody
                   });
@@ -493,8 +850,7 @@ function supabaseRequest({
                   new Error(
                     `Supabase HTTP ${status}: ${
                       responseBody ||
-                      response
-                        .statusMessage ||
+                      response.statusMessage ||
                       'Ismeretlen hiba'
                     }`
                   )
@@ -506,7 +862,9 @@ function supabaseRequest({
 
       request.on(
         'timeout',
+
         () => {
+
           request.destroy(
             new Error(
               'Supabase kapcsolat időtúllépés.'
@@ -517,38 +875,13 @@ function supabaseRequest({
 
       request.on(
         'error',
-        (
-          error
-        ) => {
-          console.error(
-            'SUPABASE KAPCSOLATI HIBA'
-          );
-
-          console.error(
-            'Host:',
-            baseUrl.hostname
-          );
-
-          console.error(
-            'Hibakód:',
-            error.code ||
-              'nincs'
-          );
-
-          console.error(
-            'Hibaüzenet:',
-            error.message
-          );
-
-          reject(
-            error
-          );
-        }
+        reject
       );
 
       if (
         bodyText !== null
       ) {
+
         request.write(
           bodyText
         );
@@ -560,12 +893,13 @@ function supabaseRequest({
 }
 
 /* =========================================================
-   BESZÉLGETÉSEK MENTÉSE
+   BESZÉLGETÉS MENTÉSE
 ========================================================= */
 
 async function persistConversation(
   record
 ) {
+
   const safe = {
 
     created_at:
@@ -611,7 +945,10 @@ async function persistConversation(
         ? record
             .matched_knowledge_ids
             .filter(Boolean)
-            .slice(0, 30)
+            .slice(
+              0,
+              30
+            )
         : [],
 
     source:
@@ -645,16 +982,21 @@ async function persistConversation(
   };
 
   try {
+
     fs.appendFileSync(
       CONVERSATION_LOG,
+
       JSON.stringify(
         safe
       ) + '\n',
+
       'utf8'
     );
+
   } catch (
     error
   ) {
+
     console.error(
       'Helyi naplózási hiba:',
       error.message
@@ -664,15 +1006,14 @@ async function persistConversation(
   if (
     !supabaseConfigured()
   ) {
-    console.warn(
-      'Supabase naplózás kihagyva: beállítás hiányzik.'
-    );
 
     return;
   }
 
   try {
+
     await supabaseRequest({
+
       method:
         'POST',
 
@@ -697,22 +1038,9 @@ async function persistConversation(
   ) {
 
     console.error(
-      'SUPABASE MENTÉS SIKERTELEN'
-    );
-
-    console.error(
-      'Hiba:',
+      'SUPABASE MENTÉS SIKERTELEN:',
       error.message
     );
-
-    if (
-      error.code
-    ) {
-      console.error(
-        'Hibakód:',
-        error.code
-      );
-    }
   }
 }
 
@@ -723,6 +1051,7 @@ async function persistConversation(
 function readLocalConversations(
   limit = 200
 ) {
+
   if (
     !fs.existsSync(
       CONVERSATION_LOG
@@ -737,25 +1066,21 @@ function readLocalConversations(
       Math.min(
         Number(
           limit
-        ) || 200,
+        ) ||
+        200,
         1000
       )
     );
 
-  const lines =
-    fs
-      .readFileSync(
-        CONVERSATION_LOG,
-        'utf8'
-      )
-      .split(
-        /\r?\n/
-      )
-      .filter(
-        Boolean
-      );
-
-  return lines
+  return fs
+    .readFileSync(
+      CONVERSATION_LOG,
+      'utf8'
+    )
+    .split(
+      /\r?\n/
+    )
+    .filter(Boolean)
     .slice(
       -safeLimit
     )
@@ -764,26 +1089,30 @@ function readLocalConversations(
       (
         line
       ) => {
+
         try {
+
           return JSON.parse(
             line
           );
+
         } catch {
+
           return null;
         }
       }
     )
-    .filter(
-      Boolean
-    );
+    .filter(Boolean);
 }
 
 async function readSupabaseConversations(
   limit = 200
 ) {
+
   if (
     !supabaseConfigured()
   ) {
+
     return null;
   }
 
@@ -793,28 +1122,29 @@ async function readSupabaseConversations(
       Math.min(
         Number(
           limit
-        ) || 200,
+        ) ||
+        200,
         1000
       )
     );
 
-  const pathname =
-    '/rest/v1/chat_conversations' +
-    '?select=*' +
-    '&order=created_at.desc' +
-    `&limit=${safeLimit}`;
-
   const result =
     await supabaseRequest({
+
       method:
         'GET',
 
-      pathname
+      pathname:
+        '/rest/v1/chat_conversations' +
+        '?select=*' +
+        '&order=created_at.desc' +
+        `&limit=${safeLimit}`
     });
 
   if (
     !result.body
   ) {
+
     return [];
   }
 
@@ -824,7 +1154,7 @@ async function readSupabaseConversations(
 }
 
 /* =========================================================
-   TUDÁSHIÁNY NAPLÓ
+   TUDÁSHIÁNY
 ========================================================= */
 
 function logGap(
@@ -832,6 +1162,7 @@ function logGap(
   score,
   history
 ) {
+
   const entry = {
 
     at:
@@ -867,16 +1198,21 @@ function logGap(
   };
 
   try {
+
     fs.appendFileSync(
       KNOWLEDGE_GAP_LOG,
+
       JSON.stringify(
         entry
       ) + '\n',
+
       'utf8'
     );
+
   } catch (
     error
   ) {
+
     console.error(
       'Knowledge gap naplózási hiba:',
       error.message
@@ -893,6 +1229,7 @@ function sendJson(
   status,
   object
 ) {
+
   const body =
     JSON.stringify(
       object
@@ -901,6 +1238,7 @@ function sendJson(
   res.writeHead(
     status,
     {
+
       'Content-Type':
         'application/json; charset=utf-8',
 
@@ -926,11 +1264,12 @@ function serveFile(
   res,
   filePath,
   contentType,
-  cache =
-    'no-store'
+  cache = 'no-store'
 ) {
+
   fs.readFile(
     filePath,
+
     (
       error,
       data
@@ -939,6 +1278,7 @@ function serveFile(
       if (
         error
       ) {
+
         res.writeHead(
           404
         );
@@ -953,6 +1293,7 @@ function serveFile(
       res.writeHead(
         200,
         {
+
           'Content-Type':
             contentType,
 
@@ -973,9 +1314,9 @@ function serveFile(
 
 function parseBody(
   req,
-  limit =
-    5e6
+  limit = 5e6
 ) {
+
   return new Promise(
     (
       resolve,
@@ -987,6 +1328,7 @@ function parseBody(
 
       req.on(
         'data',
+
         (
           chunk
         ) => {
@@ -998,6 +1340,7 @@ function parseBody(
             body.length >
             limit
           ) {
+
             reject(
               new Error(
                 'Túl nagy kérés.'
@@ -1011,7 +1354,9 @@ function parseBody(
 
       req.on(
         'end',
+
         () => {
+
           resolve(
             body
           );
@@ -1034,6 +1379,7 @@ async function handleChat(
   req,
   res
 ) {
+
   const rawBody =
     await parseBody(
       req
@@ -1055,10 +1401,12 @@ async function handleChat(
   if (
     !question
   ) {
+
     sendJson(
       res,
       400,
       {
+
         success:
           false,
 
@@ -1082,10 +1430,15 @@ async function handleChat(
 
   const result =
     createAnswer({
+
       question,
+
       history,
+
       knowledge,
+
       ruleEngine,
+
       logGap
     });
 
@@ -1098,17 +1451,6 @@ async function handleChat(
     normalizeConfidence(
       result
     );
-
-  const responsePayload = {
-    success:
-      true,
-
-    ...result,
-
-    confidence,
-
-    matchedKnowledgeIds
-  };
 
   persistConversation({
 
@@ -1149,6 +1491,7 @@ async function handleChat(
     (
       error
     ) => {
+
       console.error(
         'Naplózási háttérhiba:',
         error.message
@@ -1159,7 +1502,17 @@ async function handleChat(
   sendJson(
     res,
     200,
-    responsePayload
+    {
+
+      success:
+        true,
+
+      ...result,
+
+      confidence,
+
+      matchedKnowledgeIds
+    }
   );
 }
 
@@ -1172,6 +1525,7 @@ async function handleAdminConversations(
   res,
   url
 ) {
+
   if (
     !authorizeAdmin(
       req,
@@ -1179,16 +1533,15 @@ async function handleAdminConversations(
       url
     )
   ) {
+
     return;
   }
 
   const limit =
     Number(
-      url
-        .searchParams
-        .get(
-          'limit'
-        ) ||
+      url.searchParams.get(
+        'limit'
+      ) ||
       200
     );
 
@@ -1209,6 +1562,7 @@ async function handleAdminConversations(
       res,
       200,
       {
+
         ok:
           true,
 
@@ -1225,11 +1579,6 @@ async function handleAdminConversations(
     error
   ) {
 
-    console.error(
-      'Admin Supabase olvasási hiba:',
-      error.message
-    );
-
     const items =
       readLocalConversations(
         limit
@@ -1239,6 +1588,7 @@ async function handleAdminConversations(
       res,
       200,
       {
+
         ok:
           true,
 
@@ -1263,6 +1613,7 @@ async function handleConversationExport(
   res,
   url
 ) {
+
   if (
     !authorizeAdmin(
       req,
@@ -1270,6 +1621,7 @@ async function handleConversationExport(
       url
     )
   ) {
+
     return;
   }
 
@@ -1292,7 +1644,8 @@ async function handleConversationExport(
 
   const body =
     JSON.stringify(
-      items || [],
+      items ||
+      [],
       null,
       2
     );
@@ -1300,6 +1653,7 @@ async function handleConversationExport(
   res.writeHead(
     200,
     {
+
       'Content-Type':
         'application/json; charset=utf-8',
 
@@ -1325,6 +1679,7 @@ async function handleKnowledgeImport(
   res,
   url
 ) {
+
   if (
     !authorizeAdmin(
       req,
@@ -1332,6 +1687,7 @@ async function handleKnowledgeImport(
       url
     )
   ) {
+
     return;
   }
 
@@ -1347,33 +1703,9 @@ async function handleKnowledgeImport(
     );
 
   const items =
-    Array.isArray(
+    extractKnowledgeItems(
       parsed
-    )
-      ? parsed
-      : Array.isArray(
-          parsed.items
-        )
-        ? parsed.items
-        : null;
-
-  if (
-    !items
-  ) {
-    sendJson(
-      res,
-      400,
-      {
-        ok:
-          false,
-
-        error:
-          'A fájl nem érvényes knowledge.json.'
-      }
     );
-
-    return;
-  }
 
   const valid =
     items.filter(
@@ -1382,7 +1714,7 @@ async function handleKnowledgeImport(
       ) =>
         item &&
         typeof item ===
-          'object' &&
+        'object' &&
         item.id &&
         (
           item.fullAnswer ||
@@ -1393,10 +1725,12 @@ async function handleKnowledgeImport(
   if (
     !valid.length
   ) {
+
     sendJson(
       res,
       400,
       {
+
         ok:
           false,
 
@@ -1421,8 +1755,8 @@ async function handleKnowledgeImport(
       KNOWLEDGE_PATH
     )
   ) {
-    fs.copyFileSync(
 
+    fs.copyFileSync(
       KNOWLEDGE_PATH,
 
       path.join(
@@ -1450,11 +1784,12 @@ async function handleKnowledgeImport(
     res,
     200,
     {
+
       ok:
         true,
 
-      items:
-        knowledge.length,
+      stats:
+        knowledgeStats,
 
       loadedAt
     }
@@ -1470,6 +1805,7 @@ async function handleUnasTest(
   res,
   url
 ) {
+
   if (
     !authorizeAdmin(
       req,
@@ -1477,6 +1813,7 @@ async function handleUnasTest(
       url
     )
   ) {
+
     return;
   }
 
@@ -1490,18 +1827,22 @@ async function handleUnasTest(
       await testUnasConnection();
 
     console.log(
-      `UNAS kapcsolat sikeres. Termékek: ${result.products}`
+      `UNAS kapcsolat sikeres. Termékek: ${result.products}, kategóriák: ${result.categories}`
     );
 
     sendJson(
       res,
       200,
       {
+
         ok:
           true,
 
         products:
           result.products,
+
+        categories:
+          result.categories,
 
         responseMs:
           result.responseMs,
@@ -1524,6 +1865,118 @@ async function handleUnasTest(
       res,
       500,
       {
+
+        ok:
+          false,
+
+        error:
+          error.message
+      }
+    );
+  }
+}
+
+/* =========================================================
+   UNAS TUDÁSSZINKRON
+========================================================= */
+
+async function handleUnasSync(
+  req,
+  res,
+  url
+) {
+
+  if (
+    !authorizeAdmin(
+      req,
+      res,
+      url
+    )
+  ) {
+
+    return;
+  }
+
+  try {
+
+    console.log(
+      '=========================================='
+    );
+
+    console.log(
+      'UNAS TUDÁSSZINKRON INDUL'
+    );
+
+    const result =
+      await buildUnasKnowledge();
+
+    /*
+      A frissen elkészült
+      unas-knowledge.json azonnali
+      betöltése a chatbot memóriájába.
+    */
+
+    loadKnowledge();
+
+    console.log(
+      `UNAS szinkron sikeres. Termékek: ${result.products}`
+    );
+
+    console.log(
+      `Kategóriák: ${result.categories}`
+    );
+
+    console.log(
+      `Aktív összes tudáselem: ${knowledge.length}`
+    );
+
+    console.log(
+      '=========================================='
+    );
+
+    sendJson(
+      res,
+      200,
+      {
+
+        ok:
+          true,
+
+        products:
+          result.products,
+
+        categories:
+          result.categories,
+
+        unasItems:
+          result.total,
+
+        knowledgeStats,
+
+        responseMs:
+          result.responseMs,
+
+        loadedAt,
+
+        message:
+          `UNAS tudásszinkron sikeres. ${result.products} termék és ${result.categories} kategória került feldolgozásra. A chatbot jelenleg összesen ${knowledge.length} tudáselemet használ.`
+      }
+    );
+
+  } catch (
+    error
+  ) {
+
+    console.error(
+      'UNAS TUDÁSSZINKRON SIKERTELEN:',
+      error
+    );
+
+    sendJson(
+      res,
+      500,
+      {
+
         ok:
           false,
 
@@ -1541,18 +1994,20 @@ async function handleUnasTest(
 function handleStatus(
   res
 ) {
+
   sendJson(
     res,
     200,
     {
+
       ok:
         true,
 
       version:
-        'Éles 2.1',
+        'Éles 2.2',
 
-      items:
-        knowledge.length,
+      knowledge:
+        knowledgeStats,
 
       loadedAt,
 
@@ -1577,12 +2032,7 @@ function handleStatus(
         getSupabaseKeyType(),
 
       unasConfigured:
-        Boolean(
-          String(
-            process.env.UNAS_API_KEY ||
-            ''
-          ).trim()
-        )
+        unasConfigured()
     }
   );
 }
@@ -1596,6 +2046,7 @@ const staticFiles = {
   '/embed.js': {
     file:
       'embed.js',
+
     type:
       'text/javascript; charset=utf-8'
   },
@@ -1603,6 +2054,7 @@ const staticFiles = {
   '/widget.js': {
     file:
       'widget.js',
+
     type:
       'text/javascript; charset=utf-8'
   },
@@ -1610,6 +2062,7 @@ const staticFiles = {
   '/admin.js': {
     file:
       'admin.js',
+
     type:
       'text/javascript; charset=utf-8'
   },
@@ -1617,6 +2070,7 @@ const staticFiles = {
   '/widget.css': {
     file:
       'widget.css',
+
     type:
       'text/css; charset=utf-8'
   },
@@ -1624,6 +2078,7 @@ const staticFiles = {
   '/admin.css': {
     file:
       'admin.css',
+
     type:
       'text/css; charset=utf-8'
   },
@@ -1631,6 +2086,7 @@ const staticFiles = {
   '/vitalis-logo.jpg': {
     file:
       'vitalis-logo.jpg',
+
     type:
       'image/jpeg'
   }
@@ -1642,6 +2098,7 @@ const staticFiles = {
 
 const server =
   http.createServer(
+
     async (
       req,
       res
@@ -1650,6 +2107,7 @@ const server =
       const url =
         new URL(
           req.url,
+
           `http://${
             req.headers.host ||
             'localhost'
@@ -1657,6 +2115,10 @@ const server =
         );
 
       try {
+
+        /* -------------------------
+           CORS
+        ------------------------- */
 
         if (
           req.method ===
@@ -1666,6 +2128,7 @@ const server =
           res.writeHead(
             204,
             {
+
               'Access-Control-Allow-Origin':
                 '*',
 
@@ -1682,12 +2145,17 @@ const server =
           return;
         }
 
+        /* -------------------------
+           CHAT
+        ------------------------- */
+
         if (
           req.method ===
-            'POST' &&
+          'POST' &&
           url.pathname ===
-            '/api/chat'
+          '/api/chat'
         ) {
+
           await handleChat(
             req,
             res
@@ -1696,12 +2164,17 @@ const server =
           return;
         }
 
+        /* -------------------------
+           ADMIN BESZÉLGETÉSEK
+        ------------------------- */
+
         if (
           req.method ===
-            'GET' &&
+          'GET' &&
           url.pathname ===
-            '/api/admin/conversations'
+          '/api/admin/conversations'
         ) {
+
           await handleAdminConversations(
             req,
             res,
@@ -1711,12 +2184,17 @@ const server =
           return;
         }
 
+        /* -------------------------
+           EXPORT
+        ------------------------- */
+
         if (
           req.method ===
-            'GET' &&
+          'GET' &&
           url.pathname ===
-            '/api/admin/conversations/export'
+          '/api/admin/conversations/export'
         ) {
+
           await handleConversationExport(
             req,
             res,
@@ -1726,12 +2204,17 @@ const server =
           return;
         }
 
+        /* -------------------------
+           TUDÁS IMPORT
+        ------------------------- */
+
         if (
           req.method ===
-            'POST' &&
+          'POST' &&
           url.pathname ===
-            '/api/admin/import'
+          '/api/admin/import'
         ) {
+
           await handleKnowledgeImport(
             req,
             res,
@@ -1741,12 +2224,17 @@ const server =
           return;
         }
 
+        /* -------------------------
+           UNAS TESZT
+        ------------------------- */
+
         if (
           req.method ===
-            'GET' &&
+          'GET' &&
           url.pathname ===
-            '/api/admin/unas/test'
+          '/api/admin/unas/test'
         ) {
+
           await handleUnasTest(
             req,
             res,
@@ -1756,12 +2244,37 @@ const server =
           return;
         }
 
+        /* -------------------------
+           UNAS SZINKRON
+        ------------------------- */
+
         if (
           req.method ===
-            'GET' &&
+          'POST' &&
           url.pathname ===
-            '/api/status'
+          '/api/admin/unas/sync'
         ) {
+
+          await handleUnasSync(
+            req,
+            res,
+            url
+          );
+
+          return;
+        }
+
+        /* -------------------------
+           STÁTUSZ
+        ------------------------- */
+
+        if (
+          req.method ===
+          'GET' &&
+          url.pathname ===
+          '/api/status'
+        ) {
+
           handleStatus(
             res
           );
@@ -1769,18 +2282,23 @@ const server =
           return;
         }
 
+        /* -------------------------
+           CHAT OLDAL
+        ------------------------- */
+
         if (
           req.method ===
-            'GET' &&
+          'GET' &&
           (
             url.pathname ===
-              '/' ||
+            '/' ||
             url.pathname ===
-              '/index.html' ||
+            '/index.html' ||
             url.pathname ===
-              '/widget'
+            '/widget'
           )
         ) {
+
           serveFile(
             res,
 
@@ -1795,12 +2313,17 @@ const server =
           return;
         }
 
+        /* -------------------------
+           DEMO
+        ------------------------- */
+
         if (
           req.method ===
-            'GET' &&
+          'GET' &&
           url.pathname ===
-            '/demo'
+          '/demo'
         ) {
+
           serveFile(
             res,
 
@@ -1815,12 +2338,17 @@ const server =
           return;
         }
 
+        /* -------------------------
+           ADMIN
+        ------------------------- */
+
         if (
           req.method ===
-            'GET' &&
+          'GET' &&
           url.pathname ===
-            '/admin'
+          '/admin'
         ) {
+
           serveFile(
             res,
 
@@ -1835,9 +2363,13 @@ const server =
           return;
         }
 
+        /* -------------------------
+           STATIKUS FÁJLOK
+        ------------------------- */
+
         if (
           req.method ===
-            'GET' &&
+          'GET' &&
           staticFiles[
             url.pathname
           ]
@@ -1882,10 +2414,12 @@ const server =
         if (
           !res.headersSent
         ) {
+
           sendJson(
             res,
             500,
             {
+
               ok:
                 false,
 
@@ -1905,11 +2439,12 @@ const server =
   );
 
 /* =========================================================
-   SZERVER INDÍTÁS
+   SZERVERHIBA
 ========================================================= */
 
 server.on(
   'error',
+
   (
     error
   ) => {
@@ -1925,9 +2460,14 @@ server.on(
   }
 );
 
+/* =========================================================
+   INDÍTÁS
+========================================================= */
+
 server.listen(
   PORT,
   HOST,
+
   () => {
 
     try {
@@ -1950,11 +2490,19 @@ server.listen(
     );
 
     console.log(
-      ' Kérdezd a készítőt! – Éles 2.1 elindult'
+      ' Kérdezd a készítőt! – Éles 2.2 elindult'
     );
 
     console.log(
-      ` Tudáselemek: ${knowledge.length}`
+      ` Alap tudáselemek: ${knowledgeStats.base}`
+    );
+
+    console.log(
+      ` UNAS tudáselemek: ${knowledgeStats.unas}`
+    );
+
+    console.log(
+      ` Összes tudáselem: ${knowledgeStats.total}`
     );
 
     console.log(
@@ -1975,10 +2523,7 @@ server.listen(
 
     console.log(
       ` UNAS API: ${
-        String(
-          process.env.UNAS_API_KEY ||
-          ''
-        ).trim()
+        unasConfigured()
           ? 'BEKAPCSOLVA'
           : 'KIKAPCSOLVA'
       }`
@@ -1995,6 +2540,7 @@ server.listen(
 ========================================================= */
 
 function cleanupPid() {
+
   try {
 
     const pidPath =
@@ -2008,6 +2554,7 @@ function cleanupPid() {
         pidPath
       )
     ) {
+
       fs.unlinkSync(
         pidPath
       );
@@ -2023,16 +2570,26 @@ process.on(
 
 process.on(
   'SIGINT',
+
   () => {
+
     cleanupPid();
-    process.exit(0);
+
+    process.exit(
+      0
+    );
   }
 );
 
 process.on(
   'SIGTERM',
+
   () => {
+
     cleanupPid();
-    process.exit(0);
+
+    process.exit(
+      0
+    );
   }
 );
