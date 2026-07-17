@@ -58,7 +58,15 @@ const SUPABASE_SERVICE_ROLE_KEY = String(
 ).trim();
 
 /* =========================================================
-   MAPPÁK LÉTREHOZÁSA
+   UNAS SZINKRON MODUL
+========================================================= */
+
+const {
+  testUnasConnection
+} = require('./unas-sync.cjs');
+
+/* =========================================================
+   MAPPÁK
 ========================================================= */
 
 for (const dir of [
@@ -80,11 +88,7 @@ let knowledge = [];
 let loadedAt = null;
 
 function loadKnowledge() {
-  if (
-    !fs.existsSync(
-      KNOWLEDGE_PATH
-    )
-  ) {
+  if (!fs.existsSync(KNOWLEDGE_PATH)) {
     throw new Error(
       'A data/knowledge.json fájl nem található.'
     );
@@ -151,7 +155,7 @@ const ruleEngine =
   );
 
 /* =========================================================
-   ÁLTALÁNOS SEGÉDFÜGGVÉNYEK
+   SEGÉDFÜGGVÉNYEK
 ========================================================= */
 
 function cleanText(
@@ -212,18 +216,14 @@ function supabaseConfigured() {
 function getSupabaseKeyType() {
   if (
     SUPABASE_SERVICE_ROLE_KEY
-      .startsWith(
-        'sb_secret_'
-      )
+      .startsWith('sb_secret_')
   ) {
     return 'secret';
   }
 
   if (
     SUPABASE_SERVICE_ROLE_KEY
-      .startsWith(
-        'eyJ'
-      )
+      .startsWith('eyJ')
   ) {
     return 'legacy-service-role';
   }
@@ -314,7 +314,7 @@ function authorizeAdmin(
 }
 
 /* =========================================================
-   SUPABASE FEJLÉCEK
+   SUPABASE
 ========================================================= */
 
 function getSupabaseHeaders(
@@ -326,15 +326,9 @@ function getSupabaseHeaders(
     ...extra
   };
 
-  /*
-    Régi JWT-alapú service_role
-    kulcs esetén Bearer fejléc is kell.
-  */
   if (
     SUPABASE_SERVICE_ROLE_KEY
-      .startsWith(
-        'eyJ'
-      )
+      .startsWith('eyJ')
   ) {
     headers.Authorization =
       `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`;
@@ -342,10 +336,6 @@ function getSupabaseHeaders(
 
   return headers;
 }
-
-/* =========================================================
-   SUPABASE HTTP KÉRÉS
-========================================================= */
 
 function supabaseRequest({
   method = 'GET',
@@ -377,9 +367,7 @@ function supabaseRequest({
           new URL(
             SUPABASE_URL
           );
-      } catch (
-        error
-      ) {
+      } catch (error) {
         reject(
           new Error(
             `Hibás SUPABASE_URL: ${error.message}`
@@ -572,7 +560,7 @@ function supabaseRequest({
 }
 
 /* =========================================================
-   BESZÉLGETÉS MENTÉSE
+   BESZÉLGETÉSEK MENTÉSE
 ========================================================= */
 
 async function persistConversation(
@@ -622,13 +610,8 @@ async function persistConversation(
       )
         ? record
             .matched_knowledge_ids
-            .filter(
-              Boolean
-            )
-            .slice(
-              0,
-              30
-            )
+            .filter(Boolean)
+            .slice(0, 30)
         : [],
 
     source:
@@ -661,9 +644,6 @@ async function persistConversation(
       )
   };
 
-  /*
-    Helyi biztonsági mentés.
-  */
   try {
     fs.appendFileSync(
       CONVERSATION_LOG,
@@ -681,10 +661,6 @@ async function persistConversation(
     );
   }
 
-  /*
-    Ha nincs Supabase kapcsolat,
-    a helyi mentés akkor is megmarad.
-  */
   if (
     !supabaseConfigured()
   ) {
@@ -741,7 +717,7 @@ async function persistConversation(
 }
 
 /* =========================================================
-   HELYI BESZÉLGETÉSEK OLVASÁSA
+   BESZÉLGETÉSEK OLVASÁSA
 ========================================================= */
 
 function readLocalConversations(
@@ -801,10 +777,6 @@ function readLocalConversations(
       Boolean
     );
 }
-
-/* =========================================================
-   SUPABASE BESZÉLGETÉSEK OLVASÁSA
-========================================================= */
 
 async function readSupabaseConversations(
   limit = 200
@@ -913,7 +885,7 @@ function logGap(
 }
 
 /* =========================================================
-   HTTP SEGÉDFÜGGVÉNYEK
+   HTTP SEGÉDEK
 ========================================================= */
 
 function sendJson(
@@ -1055,7 +1027,7 @@ function parseBody(
 }
 
 /* =========================================================
-   CHAT KEZELÉSE
+   CHAT
 ========================================================= */
 
 async function handleChat(
@@ -1138,10 +1110,6 @@ async function handleChat(
     matchedKnowledgeIds
   };
 
-  /*
-    A naplózás háttérben történik.
-    A vásárlónak nem kell megvárnia.
-  */
   persistConversation({
 
     created_at:
@@ -1196,7 +1164,7 @@ async function handleChat(
 }
 
 /* =========================================================
-   ADMIN BESZÉLGETÉSLISTA
+   ADMIN BESZÉLGETÉSEK
 ========================================================= */
 
 async function handleAdminConversations(
@@ -1287,7 +1255,7 @@ async function handleAdminConversations(
 }
 
 /* =========================================================
-   BESZÉLGETÉSEK EXPORTÁLÁSA
+   EXPORT
 ========================================================= */
 
 async function handleConversationExport(
@@ -1448,10 +1416,6 @@ async function handleKnowledgeImport(
         '-'
       );
 
-  /*
-    Biztonsági mentés
-    az előző tudásbázisról.
-  */
   if (
     fs.existsSync(
       KNOWLEDGE_PATH
@@ -1498,6 +1462,79 @@ async function handleKnowledgeImport(
 }
 
 /* =========================================================
+   UNAS KAPCSOLATTESZT
+========================================================= */
+
+async function handleUnasTest(
+  req,
+  res,
+  url
+) {
+  if (
+    !authorizeAdmin(
+      req,
+      res,
+      url
+    )
+  ) {
+    return;
+  }
+
+  try {
+
+    console.log(
+      'UNAS kapcsolat teszt indul...'
+    );
+
+    const result =
+      await testUnasConnection();
+
+    console.log(
+      `UNAS kapcsolat sikeres. Termékek: ${result.products}`
+    );
+
+    sendJson(
+      res,
+      200,
+      {
+        ok:
+          true,
+
+        products:
+          result.products,
+
+        responseMs:
+          result.responseMs,
+
+        message:
+          result.message
+      }
+    );
+
+  } catch (
+    error
+  ) {
+
+    console.error(
+      'UNAS kapcsolat teszt sikertelen:',
+      error.message
+    );
+
+    sendJson(
+      res,
+      500,
+      {
+        ok:
+          false,
+
+        error:
+          error.message
+      }
+    );
+  }
+}
+
+/* =========================================================
    RENDSZERÁLLAPOT
 ========================================================= */
 
@@ -1512,7 +1549,7 @@ function handleStatus(
         true,
 
       version:
-        'Éles 2.0',
+        'Éles 2.1',
 
       items:
         knowledge.length,
@@ -1537,7 +1574,15 @@ function handleStatus(
         getSupabaseHost(),
 
       supabaseKeyType:
-        getSupabaseKeyType()
+        getSupabaseKeyType(),
+
+      unasConfigured:
+        Boolean(
+          String(
+            process.env.UNAS_API_KEY ||
+            ''
+          ).trim()
+        )
     }
   );
 }
@@ -1613,10 +1658,6 @@ const server =
 
       try {
 
-        /* -------------------------
-           CORS
-        ------------------------- */
-
         if (
           req.method ===
           'OPTIONS'
@@ -1641,10 +1682,6 @@ const server =
           return;
         }
 
-        /* -------------------------
-           CHAT
-        ------------------------- */
-
         if (
           req.method ===
             'POST' &&
@@ -1658,10 +1695,6 @@ const server =
 
           return;
         }
-
-        /* -------------------------
-           ADMIN BESZÉLGETÉSEK
-        ------------------------- */
 
         if (
           req.method ===
@@ -1678,10 +1711,6 @@ const server =
           return;
         }
 
-        /* -------------------------
-           EXPORT
-        ------------------------- */
-
         if (
           req.method ===
             'GET' &&
@@ -1696,10 +1725,6 @@ const server =
 
           return;
         }
-
-        /* -------------------------
-           TUDÁSBÁZIS IMPORT
-        ------------------------- */
 
         if (
           req.method ===
@@ -1716,9 +1741,20 @@ const server =
           return;
         }
 
-        /* -------------------------
-           ÁLLAPOT
-        ------------------------- */
+        if (
+          req.method ===
+            'GET' &&
+          url.pathname ===
+            '/api/admin/unas/test'
+        ) {
+          await handleUnasTest(
+            req,
+            res,
+            url
+          );
+
+          return;
+        }
 
         if (
           req.method ===
@@ -1732,10 +1768,6 @@ const server =
 
           return;
         }
-
-        /* -------------------------
-           CHAT OLDAL
-        ------------------------- */
 
         if (
           req.method ===
@@ -1763,10 +1795,6 @@ const server =
           return;
         }
 
-        /* -------------------------
-           DEMO
-        ------------------------- */
-
         if (
           req.method ===
             'GET' &&
@@ -1787,10 +1815,6 @@ const server =
           return;
         }
 
-        /* -------------------------
-           ADMIN
-        ------------------------- */
-
         if (
           req.method ===
             'GET' &&
@@ -1810,10 +1834,6 @@ const server =
 
           return;
         }
-
-        /* -------------------------
-           STATIKUS FÁJLOK
-        ------------------------- */
 
         if (
           req.method ===
@@ -1841,10 +1861,6 @@ const server =
 
           return;
         }
-
-        /* -------------------------
-           404
-        ------------------------- */
 
         res.writeHead(
           404
@@ -1889,7 +1905,7 @@ const server =
   );
 
 /* =========================================================
-   SZERVERHIBA
+   SZERVER INDÍTÁS
 ========================================================= */
 
 server.on(
@@ -1908,10 +1924,6 @@ server.on(
     );
   }
 );
-
-/* =========================================================
-   SZERVER INDÍTÁSA
-========================================================= */
 
 server.listen(
   PORT,
@@ -1938,19 +1950,7 @@ server.listen(
     );
 
     console.log(
-      ' Kérdezd a készítőt! – Éles 2.0 elindult'
-    );
-
-    console.log(
-      ` Chat: http://localhost:${PORT}/widget`
-    );
-
-    console.log(
-      ` Demo: http://localhost:${PORT}/demo`
-    );
-
-    console.log(
-      ` Admin: http://localhost:${PORT}/admin`
+      ' Kérdezd a készítőt! – Éles 2.1 elindult'
     );
 
     console.log(
@@ -1974,14 +1974,14 @@ server.listen(
     );
 
     console.log(
-      ` Supabase host: ${
-        getSupabaseHost() ||
-        'nincs'
+      ` UNAS API: ${
+        String(
+          process.env.UNAS_API_KEY ||
+          ''
+        ).trim()
+          ? 'BEKAPCSOLVA'
+          : 'KIKAPCSOLVA'
       }`
-    );
-
-    console.log(
-      ` Supabase kulcs típusa: ${getSupabaseKeyType()}`
     );
 
     console.log(
@@ -1991,7 +1991,7 @@ server.listen(
 );
 
 /* =========================================================
-   SZABÁLYOS LEÁLLÍTÁS
+   LEÁLLÍTÁS
 ========================================================= */
 
 function cleanupPid() {
