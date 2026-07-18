@@ -443,6 +443,44 @@ function setStatus(
 }
 
 /* =========================================================
+   TUDÁSHIÁNY SEGÉDFÜGGVÉNYEK
+========================================================= */
+
+function getKnowledgeGapQuestion(
+  item
+) {
+  const question =
+    String(
+      item?.question ||
+      item?.user_message ||
+      item?.userMessage ||
+      item?.message ||
+      ''
+    ).trim();
+
+  if (
+    !question ||
+    /^(undefined|null)$/i.test(
+      question
+    )
+  ) {
+    return '';
+  }
+
+  return question;
+}
+
+function isValidKnowledgeGap(
+  item
+) {
+  return Boolean(
+    getKnowledgeGapQuestion(
+      item
+    )
+  );
+}
+
+/* =========================================================
    STATISZTIKÁK
 ========================================================= */
 
@@ -795,26 +833,39 @@ function createKnowledgeGapCard(
     'conversation-card knowledge-gap-card';
 
   const question =
-    String(
-      gap.question ||
-      ''
-    ).trim();
+    getKnowledgeGapQuestion(
+      gap
+    );
+
+  if (
+    !question
+  ) {
+    return document.createDocumentFragment();
+  }
 
   const chatbotAnswer =
     String(
       gap.answer ||
+      gap.bot_answer ||
+      gap.botAnswer ||
+      gap.response ||
       ''
     ).trim();
 
   const pageUrl =
     String(
       gap.page_url ||
+      gap.pageUrl ||
+      gap.url ||
       ''
     ).trim();
 
   const date =
     formatDate(
-      gap.created_at
+      gap.created_at ||
+      gap.createdAt ||
+      gap.timestamp ||
+      gap.date
     );
 
   const score =
@@ -1184,11 +1235,14 @@ function renderKnowledgeGaps() {
       index
     ) => {
 
-      knowledgeGapList.appendChild(
+      const card =
         createKnowledgeGapCard(
           gap,
           index
-        )
+        );
+
+      knowledgeGapList.appendChild(
+        card
       );
     }
   );
@@ -1228,7 +1282,9 @@ async function loadKnowledgeGaps() {
       Array.isArray(
         data.items
       )
-        ? data.items
+        ? data.items.filter(
+            isValidKnowledgeGap
+          )
         : [];
 
     renderKnowledgeGaps();
