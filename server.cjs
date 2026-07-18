@@ -1277,19 +1277,120 @@ function buildApprovedKnowledgeItem(row) {
   };
 }
 
-async function readApprovedKnowledgeRows(limit = 1000) {
-  if (!supabaseConfigured()) return [];
+async function getOpenKnowledgeGaps(limit = 500) {
+  let gaps;
 
-  const safeLimit = Math.max(1, Math.min(Number(limit) || 1000, 5000));
-  const result = await supabaseRequest({
-    method: 'GET',
-    pathname:
-      '/rest/v1/chat_conversations' +
-      '?select=created_at,question,answer,matched_knowledge_ids,source' +
-      '&source=eq.approved-knowledge' +
-      '&order=created_at.asc' +
-      `&limit=${safeLimit}`
-  });
+  try {
+    gaps = await readSupabaseKnowledgeGaps(limit);
+  } catch (error) {
+    console.error(
+      'Supabase gap olvasási hiba:',
+      error.message
+    );
+
+    gaps = null;
+  }
+
+  if (gaps === null) {
+    gaps = readLocalKnowledgeGaps(limit);
+  }
+
+  let approvedRows = [];
+  let dismissedRows = [];
+
+  if (supabaseConfigured()) {
+    try {
+      approvedRows =
+        await readApprovedKnowledgeRows();
+
+      dismissedRows =
+        await readSupabaseDismissedGaps();
+
+    } catch (error) {
+      console.error(
+        'Gap státusz olvasási hiba:',
+        error.message
+      );
+    }
+  }
+
+  const resolvedKeys =
+    new Set([
+      ...approvedRows.map(
+        (row) =>
+          normalizeGapKey(
+            row.question
+          )
+      ),
+
+      ...dismissedRows.map(
+        (row) =>
+          normalizeGapKey(
+            row.question
+          )
+      )
+    ]);
+
+  const unique =
+    new Map();
+
+  for (const gap of gaps) {
+
+    const question =
+      String(
+        gap?.question ||
+        ''
+      ).trim();
+
+    /*
+      Hibás technikai bejegyzések
+      nem kerülhetnek a Tudáshiányok közé.
+    */
+
+    if (
+      !question ||
+      /^(undefined|null)$/i.test(
+        question
+      )
+    ) {
+      continue;
+    }
+
+    const key =
+      normalizeGapKey(
+        question
+      );
+
+    if (
+      !key ||
+      key === 'undefined' ||
+      key === 'null' ||
+      resolvedKeys.has(
+        key
+      ) ||
+      unique.has(
+        key
+      )
+    ) {
+      continue;
+    }
+
+    unique.set(
+      key,
+      {
+        ...gap,
+
+        question,
+
+        key
+      }
+    );
+  }
+
+  return Array.from(
+    unique.values()
+  );
+}
 
   return result.body ? JSON.parse(result.body) : [];
 }
