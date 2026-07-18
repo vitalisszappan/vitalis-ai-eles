@@ -14,6 +14,7 @@ const {
 
 const {
   buildConversationContext,
+  detectProblem,
   looksLikeEmail,
   isFollowUpMessage
 } = require(
@@ -80,7 +81,9 @@ function shorten(
   );
 }
 
-function getItemAnswer(item) {
+function getItemAnswer(
+  item
+) {
   return cleanText(
     item.shortAnswer ||
     item.fullAnswer ||
@@ -89,7 +92,9 @@ function getItemAnswer(item) {
   );
 }
 
-function getItemTitle(item) {
+function getItemTitle(
+  item
+) {
   return cleanText(
     item.title ||
     item.name ||
@@ -98,17 +103,16 @@ function getItemTitle(item) {
   );
 }
 
-function isProductItem(item) {
+function isProductItem(
+  item
+) {
   return (
-    item.source ===
-      'unas' &&
+    item &&
+    item.source === 'unas' &&
     (
-      item.sourceType ===
-        'product' ||
-      item.type ===
-        'product' ||
-      item.category ===
-        'UNAS termék'
+      item.sourceType === 'product' ||
+      item.type === 'product' ||
+      item.category === 'UNAS termék'
     )
   );
 }
@@ -121,7 +125,9 @@ function removeTechnicalNoise(
   value
 ) {
   let text =
-    cleanText(value);
+    cleanText(
+      value
+    );
 
   const cutMarkers = [
     'Összetevők (INCI):',
@@ -155,11 +161,11 @@ function removeTechnicalNoise(
 
   return text
     .replace(
-      /\bÁr:\s*[^.]{0,120}\.?/gi,
+      /\bÁr:\s*[^.]{0,160}\.?/gi,
       ''
     )
     .replace(
-      /\bKiszerelés vagy egység:\s*[^.]{0,120}\.?/gi,
+      /\bKiszerelés vagy egység:\s*[^.]{0,160}\.?/gi,
       ''
     )
     .replace(
@@ -181,7 +187,7 @@ function removeTechnicalNoise(
    SLS / SLES
 ========================================================= */
 
-function asksAboutSlsOrSles(
+function answerSlsSlesQuestion(
   question
 ) {
   const q =
@@ -189,7 +195,7 @@ function asksAboutSlsOrSles(
       question
     );
 
-  return (
+  const asksAboutSls =
     /\bsls\b/.test(q) ||
     /\bsles\b/.test(q) ||
     q.includes(
@@ -197,11 +203,14 @@ function asksAboutSlsOrSles(
     ) ||
     q.includes(
       'sodium laureth sulfate'
-    )
-  );
-}
+    );
 
-function buildSlsAnswer() {
+  if (
+    !asksAboutSls
+  ) {
+    return null;
+  }
+
   return {
     source:
       'expert-sls-sles',
@@ -230,7 +239,284 @@ function buildSlsAnswer() {
 }
 
 /* =========================================================
-   TERMÉKKATALÓGUS-KÉRDÉS
+   PROBLÉMAKÖRÖK ELSŐBBSÉGI AJÁNLÁSA
+========================================================= */
+
+function buildProblemAnswer(
+  problem
+) {
+  if (
+    problem ===
+    'psoriasis'
+  ) {
+    return {
+      source:
+        'expert-problem',
+
+      answer:
+        'Pikkelysömörre hajlamos, száraz és hámló bőr mindennapi kozmetikai ápolására elsősorban a PsoriVital csomagot ajánlom. A csomag Holt-tengeri só balzsamot, shea vajas szappant és Holt-tengeri iszapos szappant tartalmaz. A balzsam rendszeresen használható az érintett bőrfelületek ápolására. A termékek kozmetikumok, nem helyettesítik az orvosi kezelést.',
+
+      confidence:
+        100,
+
+      links:
+        [],
+
+      suggestions:
+        [
+          'PsoriVital csomag',
+          'Holt-tengeri só balzsam'
+        ],
+
+      ruleId:
+        'problem-psoriasis',
+
+      intent:
+        'problem-recommendation',
+
+      matchedKnowledgeIds:
+        []
+    };
+  }
+
+  if (
+    problem ===
+    'eczema'
+  ) {
+    return {
+      source:
+        'expert-problem',
+
+      answer:
+        'Ekcémára vagy atópiára hajlamos, érzékeny bőr kozmetikai ápolására elsősorban a Dermavital termékcsaládot ajánlom. A kíméletes tisztítás és az illatmentes bőrápolás lehet a legjobb kiindulás. Ha megírod, hogy arcra, testre vagy fejbőrre keresel megoldást, pontosabban is tudok ajánlani.',
+
+      confidence:
+        100,
+
+      links:
+        [],
+
+      suggestions:
+        [
+          'Dermavital szappan',
+          'Dermavital krém',
+          'Dermavital sampon'
+        ],
+
+      ruleId:
+        'problem-eczema',
+
+      intent:
+        'problem-recommendation',
+
+      matchedKnowledgeIds:
+        []
+    };
+  }
+
+  if (
+    problem ===
+    'rosacea'
+  ) {
+    return {
+      source:
+        'expert-problem',
+
+      answer:
+        'Rosaceára, kipirosodásra hajlamos érzékeny arcbőrnél kíméletes, illatmentes bőrápolást javaslok. A Dermavital nyugtató bőrápoló krém lehet jó választás, mert érzékeny, irritált és kipirosodásra hajlamos bőr mindennapi ápolására készült. Erős illóolajos vagy intenzíven hámlasztó termékeket ilyen bőrnél érdemes kerülni.',
+
+      confidence:
+        100,
+
+      links:
+        [],
+
+      suggestions:
+        [
+          'Dermavital nyugtató bőrápoló krém'
+        ],
+
+      ruleId:
+        'problem-rosacea',
+
+      intent:
+        'problem-recommendation',
+
+      matchedKnowledgeIds:
+        []
+    };
+  }
+
+  if (
+    problem ===
+    'couperose'
+  ) {
+    return {
+      source:
+        'expert-problem',
+
+      answer:
+        'Hajszálértágulatra vagy couperose-ra hajlamos arcbőrnél különösen fontos a kíméletes, nyugtató és lehetőleg illatmentes ápolás. Ilyen esetben a Dermavital nyugtató bőrápoló krém lehet jó kiindulás. A látható hajszálereket kozmetikum nem tünteti el, de az érzékeny bőr komfortérzetének támogatásában segíthet.',
+
+      confidence:
+        100,
+
+      links:
+        [],
+
+      suggestions:
+        [
+          'Dermavital nyugtató bőrápoló krém'
+        ],
+
+      ruleId:
+        'problem-couperose',
+
+      intent:
+        'problem-recommendation',
+
+      matchedKnowledgeIds:
+        []
+    };
+  }
+
+  if (
+    problem ===
+    'acne'
+  ) {
+    return {
+      source:
+        'expert-problem',
+
+      answer:
+        'Pattanásos, aknéra hajlamos bőrnél a kíméletes tisztítás és a bőr túlzott kiszárításának kerülése fontos. Ha megírod, hogy arcbőrre vagy testre keresel terméket, segítek a megfelelő Vitalis termék kiválasztásában.',
+
+      confidence:
+        100,
+
+      links:
+        [],
+
+      suggestions:
+        [],
+
+      ruleId:
+        'problem-acne',
+
+      intent:
+        'problem-recommendation',
+
+      matchedKnowledgeIds:
+        []
+    };
+  }
+
+  if (
+    problem ===
+    'dry_skin'
+  ) {
+    return {
+      source:
+        'expert-problem',
+
+      answer:
+        'Száraz, húzódó bőr ápolására kíméletes tisztítást és zsírosabb, tápláló bőrápolást javaslok. A shea vajat tartalmazó Vitalis szappanok és krémes bőrápolók jó kiindulást jelenthetnek. Ha megírod, hogy arcra, kézre vagy testre keresel terméket, pontosabban is ajánlok.',
+
+      confidence:
+        100,
+
+      links:
+        [],
+
+      suggestions:
+        [],
+
+      ruleId:
+        'problem-dry-skin',
+
+      intent:
+        'problem-recommendation',
+
+      matchedKnowledgeIds:
+        []
+    };
+  }
+
+  if (
+    problem ===
+    'scalp'
+  ) {
+    return {
+      source:
+        'expert-problem',
+
+      answer:
+        'Problémás, viszkető vagy korpás fejbőrre elsőként a Dermavital sampont ajánlom. Ha megírod, hogy inkább száraz, zsíros, hámló vagy irritált a fejbőröd, segítek pontosítani az ajánlást.',
+
+      confidence:
+        100,
+
+      links:
+        [],
+
+      suggestions:
+        [
+          'Dermavital sampon'
+        ],
+
+      ruleId:
+        'problem-scalp',
+
+      intent:
+        'problem-recommendation',
+
+      matchedKnowledgeIds:
+        []
+    };
+  }
+
+  return null;
+}
+
+/* =========================================================
+   BESZÉLGETÉSI FOLYTATÁS
+========================================================= */
+
+function resolveProblemFromContext({
+  question,
+  history
+}) {
+  const directProblem =
+    detectProblem(
+      question
+    );
+
+  if (
+    directProblem
+  ) {
+    return directProblem;
+  }
+
+  const context =
+    buildConversationContext(
+      history,
+      normalize
+    );
+
+  if (
+    isFollowUpMessage(
+      question
+    ) &&
+    context.lastProblem
+  ) {
+    return context.lastProblem;
+  }
+
+  return null;
+}
+
+/* =========================================================
+   KATALÓGUSKÉRDÉS
 ========================================================= */
 
 function isCatalogQuestion(
@@ -287,8 +573,7 @@ const GENERIC_WORDS =
     'ajanlasz',
     'ajanlotok',
     'lehet',
-    'kapni',
-    'tovabbi'
+    'kapni'
   ]);
 
 function getMeaningfulTokens(
@@ -301,7 +586,9 @@ function getMeaningfulTokens(
       ' '
     )
     .filter(
-      (token) =>
+      (
+        token
+      ) =>
         token.length >=
           4 &&
         !GENERIC_WORDS.has(
@@ -335,7 +622,9 @@ function findMatchingProducts(
         isProductItem
       )
       .map(
-        (item) => {
+        (
+          item
+        ) => {
 
           const title =
             normalize(
@@ -351,14 +640,12 @@ function findMatchingProducts(
                 item.name,
                 item.shortAnswer,
                 item.fullAnswer,
-                item.keywords
-                  ?.join(
-                    ' '
-                  ),
-                item.products
-                  ?.join(
-                    ' '
-                  ),
+                item.keywords?.join(
+                  ' '
+                ),
+                item.products?.join(
+                  ' '
+                ),
                 item.category,
                 item.subcategory
               ]
@@ -373,17 +660,10 @@ function findMatchingProducts(
           let score =
             0;
 
-          let matchedTokens =
-            0;
-
           for (
             const token of
             tokens
           ) {
-
-            let matched =
-              false;
-
             if (
               title.includes(
                 token
@@ -391,9 +671,6 @@ function findMatchingProducts(
             ) {
               score +=
                 100;
-
-              matched =
-                true;
             }
 
             if (
@@ -403,30 +680,7 @@ function findMatchingProducts(
             ) {
               score +=
                 25;
-
-              matched =
-                true;
             }
-
-            if (
-              matched
-            ) {
-              matchedTokens +=
-                1;
-            }
-          }
-
-          /*
-            Több keresőszó együttes
-            egyezése extra pontot kap.
-          */
-
-          if (
-            matchedTokens >=
-            2
-          ) {
-            score +=
-              50;
           }
 
           return {
@@ -436,12 +690,17 @@ function findMatchingProducts(
         }
       )
       .filter(
-        (match) =>
+        (
+          match
+        ) =>
           match.score >
           0
       )
       .sort(
-        (a, b) =>
+        (
+          a,
+          b
+        ) =>
           b.score -
           a.score
       );
@@ -456,7 +715,6 @@ function findMatchingProducts(
     const match of
     scored
   ) {
-
     const title =
       getItemTitle(
         match.item
@@ -495,7 +753,7 @@ function findMatchingProducts(
 }
 
 /* =========================================================
-   TERMÉKLISTA VÁLASZ
+   TERMÉKLISTA
 ========================================================= */
 
 function buildProductListAnswer(
@@ -510,7 +768,9 @@ function buildProductListAnswer(
   const items =
     matches
       .map(
-        (match) =>
+        (
+          match
+        ) =>
           match.item
       )
       .slice(
@@ -520,7 +780,9 @@ function buildProductListAnswer(
 
   const lines =
     items.map(
-      (item) => {
+      (
+        item
+      ) => {
 
         const title =
           getItemTitle(
@@ -537,7 +799,7 @@ function buildProductListAnswer(
         const summary =
           shorten(
             raw,
-            105
+            110
           );
 
         return summary
@@ -562,11 +824,15 @@ function buildProductListAnswer(
     links:
       items
         .filter(
-          (item) =>
+          (
+            item
+          ) =>
             item.url
         )
         .map(
-          (item) => ({
+          (
+            item
+          ) => ({
             label:
               getItemTitle(
                 item
@@ -588,7 +854,9 @@ function buildProductListAnswer(
 
     matchedKnowledgeIds:
       items.map(
-        (item) =>
+        (
+          item
+        ) =>
           item.id
       )
   };
@@ -658,25 +926,24 @@ function buildSingleAnswer(
 }
 
 /* =========================================================
-   EMAIL FOLLOW-UP
+   FŐ VÁLASZKÉPZÉS
 ========================================================= */
 
-function buildEmailFollowUpAnswer(
-  context
-) {
-  const previous =
-    context.lastAssistantMessage ||
-    '';
+function createAnswer({
+  question,
+  history,
+  knowledge,
+  ruleEngine,
+  logGap
+}) {
+
+  /*
+    1. E-MAIL-CÍM
+  */
 
   if (
-    previous.includes(
-      'kod'
-    ) ||
-    previous.includes(
-      'email'
-    ) ||
-    previous.includes(
-      'e-mail'
+    looksLikeEmail(
+      question
     )
   ) {
     return {
@@ -684,7 +951,7 @@ function buildEmailFollowUpAnswer(
         'conversation-context',
 
       answer:
-        'Köszönöm, megkaptam az e-mail-címet. Az ügyintézéshez ezt az adatot továbbítani kell a Vitalis ügyfélszolgálatnak. Itt a chatbotban nem tudok kedvezménykódot kiküldeni vagy a feliratkozást ellenőrizni.',
+        'Köszönöm, megkaptam az e-mail-címet. Ha egy korábbi kérdésedhez vagy kuponkódhoz kapcsolódik, kérlek írd meg röviden azt is, miben segíthetek tovább.',
 
       confidence:
         100,
@@ -699,200 +966,71 @@ function buildEmailFollowUpAnswer(
         'email-followup',
 
       intent:
-        'customer-service-followup',
+        'conversation-followup',
 
       matchedKnowledgeIds:
         []
     };
   }
 
-  return {
-    source:
-      'conversation-context',
+  /*
+    2. SLS / SLES
+  */
 
-    answer:
-      'Köszönöm, megkaptam az e-mail-címet. Kérlek, írd meg röviden azt is, milyen ügyben küldted, hogy megfelelően tudjak segíteni.',
-
-    confidence:
-      100,
-
-    links:
-      [],
-
-    suggestions:
-      [],
-
-    ruleId:
-      'email-followup',
-
-    intent:
-      'conversation-followup',
-
-    matchedKnowledgeIds:
-      []
-  };
-}
-
-/* =========================================================
-   FOLYTATÓ KÉRDÉS KIBŐVÍTÉSE
-========================================================= */
-
-function expandFollowUpQuestion(
-  question,
-  context
-) {
-  const normalizedQuestion =
-    normalize(
+  const slsAnswer =
+    answerSlsSlesQuestion(
       question
     );
 
   if (
-    !isFollowUpMessage(
-      normalizedQuestion
-    )
+    slsAnswer
   ) {
-    return question;
-  }
-
-  const problemMap = {
-
-    psoriasis:
-      'Milyen további Vitalis termékeket ajánlotok pikkelysömörre hajlamos bőr kozmetikai ápolására?',
-
-    eczema:
-      'Milyen további Vitalis termékeket ajánlotok ekcémára vagy atópiára hajlamos bőr kozmetikai ápolására?',
-
-    rosacea:
-      'Milyen Vitalis termékeket ajánlotok rosaceára és kipirosodásra hajlamos érzékeny arcbőr kozmetikai ápolására?',
-
-    acne:
-      'Milyen Vitalis termékeket ajánlotok pattanásos és aknéra hajlamos bőr kozmetikai ápolására?',
-
-    dry_skin:
-      'Milyen további Vitalis termékeket ajánlotok száraz bőr mindennapi kozmetikai ápolására?',
-
-    scalp:
-      'Milyen további Vitalis termékeket ajánlotok problémás, viszkető vagy korpás fejbőr kozmetikai ápolására?'
-  };
-
-  if (
-    context.lastProblem &&
-    problemMap[
-      context.lastProblem
-    ]
-  ) {
-    return problemMap[
-      context.lastProblem
-    ];
+    return slsAnswer;
   }
 
   /*
-    Ha nincs problémakör,
-    de volt konkrét termék,
-    a folytatást ahhoz kötjük.
+    3. PROBLÉMAKÖR ELSŐBBSÉGI FELISMERÉS
   */
 
-  if (
-    context.lastProduct
-  ) {
-    return (
-      `${context.lastProduct} termékkel kapcsolatban: ${question}`
-    );
-  }
-
-  return question;
-}
-
-/* =========================================================
-   FŐ VÁLASZKÉPZÉS
-========================================================= */
-
-function createAnswer({
-  question,
-  history,
-  knowledge,
-  ruleEngine,
-  logGap
-}) {
-
-  /*
-    1. BESZÉLGETÉSI KONTEXTUS
-  */
-
-  const context =
-    buildConversationContext(
-      history,
-      normalize
-    );
-
-  /*
-    2. EMAIL-CÍM
-
-    Puszta e-mail-címet soha nem küldünk
-    a tudásbázis-keresőbe.
-  */
-
-  if (
-    looksLikeEmail(
-      question
-    )
-  ) {
-    return buildEmailFollowUpAnswer(
-      context
-    );
-  }
-
-  /*
-    3. SLS / SLES
-
-    Ez biztos, elsőbbségi Vitalis tudás.
-  */
-
-  if (
-    asksAboutSlsOrSles(
-      question
-    )
-  ) {
-    return buildSlsAnswer();
-  }
-
-  /*
-    4. RÖVID FOLYTATÁS KIBŐVÍTÉSE
-
-    Például:
-    "Más is van még?"
-    -> az előző problémával együtt értelmezzük.
-  */
-
-  const effectiveQuestion =
-    expandFollowUpQuestion(
+  const problem =
+    resolveProblemFromContext({
       question,
-      context
-    );
+      history
+    });
+
+  if (
+    problem
+  ) {
+    const problemAnswer =
+      buildProblemAnswer(
+        problem
+      );
+
+    if (
+      problemAnswer
+    ) {
+      return problemAnswer;
+    }
+  }
 
   /*
-    5. TERMÉKKATALÓGUS-KÉRDÉSEK
-
-    Az UNAS katalógus keresése
-    megelőzi a szabálymotort.
+    4. KATALÓGUSKERESÉS
   */
 
   if (
     isCatalogQuestion(
-      effectiveQuestion
+      question
     )
   ) {
-
     const productMatches =
       findMatchingProducts(
         knowledge,
-        effectiveQuestion
+        question
       );
 
     if (
       productMatches.length
     ) {
-
       const listAnswer =
         buildProductListAnswer(
           productMatches
@@ -907,12 +1045,12 @@ function createAnswer({
   }
 
   /*
-    6. SZAKÉRTŐI SZABÁLYOK
+    5. SZAKÉRTŐI SZABÁLYOK
   */
 
   const expert =
     ruleEngine.resolve(
-      effectiveQuestion,
+      question,
       history
     );
 
@@ -923,13 +1061,13 @@ function createAnswer({
   }
 
   /*
-    7. ÁLTALÁNOS TUDÁSBÁZIS
+    6. TUDÁSBÁZIS
   */
 
   const matches =
     searchKnowledge(
       knowledge,
-      effectiveQuestion
+      question
     );
 
   const best =
@@ -940,9 +1078,8 @@ function createAnswer({
     best.score <
     60
   ) {
-
     logGap(
-      effectiveQuestion,
+      question,
       best?.score ||
       0,
       history
@@ -975,10 +1112,6 @@ function createAnswer({
         []
     };
   }
-
-  /*
-    8. LEGJOBB EGYEDI TALÁLAT
-  */
 
   return buildSingleAnswer(
     best.item,
