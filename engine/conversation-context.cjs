@@ -1,3 +1,5 @@
+'use strict';
+
 const {
   findProductInText
 } = require(
@@ -5,69 +7,125 @@ const {
 );
 
 /* =========================================================
+   SEGÉDFÜGGVÉNYEK
+========================================================= */
+
+function normalizeLoose(
+  value = ''
+) {
+  return String(
+    value
+  )
+    .toLowerCase()
+    .normalize(
+      'NFD'
+    )
+    .replace(
+      /[\u0300-\u036f]/g,
+      ''
+    )
+    .replace(
+      /[^a-z0-9\s]/g,
+      ' '
+    )
+    .replace(
+      /\s+/g,
+      ' '
+    )
+    .trim();
+}
+
+function compact(
+  value = ''
+) {
+  return normalizeLoose(
+    value
+  )
+    .replace(
+      /\s+/g,
+      ''
+    );
+}
+
+/* =========================================================
    PROBLÉMAFELISMERÉS
 ========================================================= */
 
-const PROBLEM_PATTERNS = [
+const PROBLEM_PATTERNS = {
 
-  [
-    'eczema',
-    [
-      'ekcema',
-      'atopias',
-      'dermatitisz'
-    ]
+  eczema: [
+    'ekcema',
+    'ekcemas',
+    'atopias',
+    'atopia',
+    'dermatitisz'
   ],
 
-  [
-    'scalp',
-    [
-      'fejbor',
-      'korpa',
-      'korpas',
-      'hajlas',
-      'viszket a fejbor'
-    ]
+  scalp: [
+    'fejbor',
+    'korpa',
+    'korpas',
+    'hajlas',
+    'viszketafejbor',
+    'viszketofejbor'
   ],
 
-  [
-    'psoriasis',
-    [
-      'pikkelysomor',
-      'pszoriazis'
-    ]
+  psoriasis: [
+    'pikkelysomor',
+    'pikkelysomoros',
+    'pikkelysomorom',
+    'pikkelysomorrel',
+    'pikkelysomorrol',
+    'pszoriazis',
+    'pszoriazisos',
+
+    /*
+      Gyakori elírások és fonetikus alakok
+    */
+
+    'pikeisomor',
+    'pikejsomor',
+    'pikejsomor',
+    'pikelisomor',
+    'pikkelisomor',
+    'pikkelysomor'
   ],
 
-  [
-    'acne',
-    [
-      'akne',
-      'pattanas',
-      'pattanasos',
-      'mitesszer'
-    ]
+  acne: [
+    'akne',
+    'aknes',
+    'pattanas',
+    'pattanasos',
+    'mitesszer'
   ],
 
-  [
-    'dry_skin',
-    [
-      'szaraz bor',
-      'kiszaradt bor',
-      'huzodik a borom'
-    ]
+  dry_skin: [
+    'szarazbor',
+    'kiszaradtbor',
+    'huzodikaborom',
+    'huzodikabor'
   ],
 
-  [
+  rosacea: [
     'rosacea',
-    [
-      'rosacea',
-      'rozacea',
-      'rozsacea',
-      'kipirosodas',
-      'pirosodo arcbor'
-    ]
+    'rozacea',
+    'rozsacea',
+    'kipirosodas',
+    'pirosodoarcbor',
+    'pirosarc',
+    'erzekenyarcbor'
+  ],
+
+  couperose: [
+    'hajszaler',
+    'hajszalerek',
+    'hajszaleres',
+    'ertagulat',
+    'ertagulatok',
+    'kuperoz',
+    'couperose'
   ]
-];
+};
 
 /* =========================================================
    PROBLÉMA AZONOSÍTÁSA
@@ -76,25 +134,85 @@ const PROBLEM_PATTERNS = [
 function detectProblem(
   text
 ) {
+  const normalized =
+    normalizeLoose(
+      text
+    );
+
+  const compactText =
+    compact(
+      normalized
+    );
+
   for (
     const [
       id,
-      phrases
-    ] of PROBLEM_PATTERNS
+      patterns
+    ] of Object.entries(
+      PROBLEM_PATTERNS
+    )
   ) {
 
-    if (
-      phrases.some(
-        (
-          phrase
-        ) =>
-          text.includes(
-            phrase
-          )
-      )
+    for (
+      const pattern of
+      patterns
     ) {
-      return id;
+
+      const normalizedPattern =
+        compact(
+          pattern
+        );
+
+      if (
+        compactText.includes(
+          normalizedPattern
+        )
+      ) {
+        return id;
+      }
     }
+  }
+
+  /*
+    Külön laza felismerés a pikkelysömör
+    gyakori, erősen elírt változataira.
+  */
+
+  const words =
+    normalized
+      .split(
+        ' '
+      )
+      .filter(Boolean);
+
+  const looksLikePsoriasis =
+    words.some(
+      (
+        word
+      ) =>
+        word.startsWith(
+          'pikk'
+        ) ||
+        word.startsWith(
+          'pike'
+        ) ||
+        word.startsWith(
+          'pikej'
+        )
+    ) &&
+    words.some(
+      (
+        word
+      ) =>
+        word.includes(
+          'somor'
+        )
+    );
+
+  if (
+    looksLikePsoriasis
+  ) {
+    return 'psoriasis';
   }
 
   return null;
@@ -124,10 +242,9 @@ function isFollowUpMessage(
   text
 ) {
   const value =
-    String(
-      text ||
-      ''
-    ).trim();
+    normalizeLoose(
+      text
+    );
 
   if (
     !value
@@ -139,23 +256,38 @@ function isFollowUpMessage(
 
     'mas is van',
     'mas is van meg',
+    'van meg mas',
     'es meg',
     'van mas',
+
     'melyik',
     'melyiket',
     'melyiket ajanlod',
     'mit ajanlasz',
+
     'es krem',
     'krem is van',
+    'van krem is',
+
     'es szappan',
     'szappan is van',
+    'van szappan is',
+
+    'es balzsam',
+    'balzsam is van',
+
     'igen',
     'nem',
     'oke',
     'rendben',
+
     'nem kaptam kodot',
     'nem kaptam meg',
-    'es akkor'
+    'es akkor',
+
+    'ez jo lehet',
+    'ezt ajanlod',
+    'mit hasznaljak meg'
   ];
 
   return followUps.some(
@@ -225,9 +357,13 @@ function buildConversationContext(
       ).trim();
 
     const text =
-      normalize(
-        originalText
-      );
+      normalize
+        ? normalize(
+            originalText
+          )
+        : normalizeLoose(
+            originalText
+          );
 
     /* -------------------------
        UTOLSÓ ÜZENETEK
@@ -319,7 +455,7 @@ function buildConversationContext(
 
     const problem =
       detectProblem(
-        text
+        originalText
       );
 
     if (
@@ -330,11 +466,6 @@ function buildConversationContext(
         problem;
     }
   }
-
-  /*
-    Konkrét felhasználói terméknév elsőbbséget kap.
-    Ha nincs, az utolsó ajánlott terméket használjuk.
-  */
 
   context.lastProduct =
     context.lastUserProduct ||
