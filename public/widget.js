@@ -130,14 +130,114 @@ function add(text, role, options = {}) {
 
 function setSuggestions(items) {
   suggestionsEl.replaceChildren();
-  if (!Array.isArray(items) || !items.length) return;
-  for (const item of items.slice(0, 7)) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.textContent = item.label || item.question;
-    button.dataset.question = item.question || item.label;
-    button.addEventListener('click', () => ask(button.dataset.question));
-    suggestionsEl.append(button);
+
+  if (
+    !Array.isArray(items) ||
+    !items.length
+  ) {
+    return;
+  }
+
+  for (
+    const item of
+    items.slice(0, 7)
+  ) {
+
+    let label = '';
+    let question = '';
+
+    /*
+      Egyszerű szöveges javaslat:
+      "PsoriVital csomag"
+    */
+
+    if (
+      typeof item === 'string'
+    ) {
+      label =
+        safeText(item);
+
+      question =
+        label;
+    }
+
+    /*
+      Objektum formátum:
+      {
+        label: "...",
+        question: "..."
+      }
+    */
+
+    if (
+      item &&
+      typeof item === 'object'
+    ) {
+      label =
+        safeText(
+          item.label
+        ) ||
+        safeText(
+          item.question
+        );
+
+      question =
+        safeText(
+          item.question
+        ) ||
+        safeText(
+          item.label
+        );
+    }
+
+    /*
+      Hibás vagy üres javaslatot
+      nem jelenítünk meg.
+    */
+
+    if (
+      !label ||
+      !question
+    ) {
+      continue;
+    }
+
+    const button =
+      document.createElement(
+        'button'
+      );
+
+    button.type =
+      'button';
+
+    button.textContent =
+      label;
+
+    button.dataset.question =
+      question;
+
+    button.addEventListener(
+      'click',
+      () => {
+
+        const value =
+          safeText(
+            button.dataset.question
+          );
+
+        if (
+          value
+        ) {
+          ask(
+            value
+          );
+        }
+      }
+    );
+
+    suggestionsEl.append(
+      button
+    );
   }
 }
 
