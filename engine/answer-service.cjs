@@ -1,3 +1,5 @@
+'use strict';
+
 const {
   searchKnowledge
 } = require(
@@ -8,6 +10,15 @@ const {
   normalize
 } = require(
   './normalizer.cjs'
+);
+
+const {
+  buildConversationContext,
+  detectProblem,
+  looksLikeEmail,
+  isFollowUpMessage
+} = require(
+  './conversation-context.cjs'
 );
 
 /* =========================================================
@@ -90,6 +101,7 @@ function getItemTitle(item) {
 
 function isProductItem(item) {
   return (
+    item &&
     item.source === 'unas' &&
     (
       item.sourceType === 'product' ||
@@ -139,11 +151,19 @@ function removeTechnicalNoise(value) {
 
   return text
     .replace(
-      /\bÁr:\s*[^.]{0,120}\.?/gi,
+      /\bÁr:\s*[^.]{0,160}\.?/gi,
       ''
     )
     .replace(
-      /\bKiszerelés vagy egység:\s*[^.]{0,120}\.?/gi,
+      /\bKiszerelés vagy egység:\s*[^.]{0,160}\.?/gi,
+      ''
+    )
+    .replace(
+      /\bnormal\b/gi,
+      ''
+    )
+    .replace(
+      /\b\d{3,6}\s+\d{3,6}\s*Ft\b/gi,
       ''
     )
     .replace(
@@ -154,491 +174,83 @@ function removeTechnicalNoise(value) {
 }
 
 /* =========================================================
-   TERMÉKKATALÓGUS-KÉRDÉS FELISMERÉSE
+   SLS / SLES
 ========================================================= */
 
-function isCatalogQuestion(question) {
+function answerSlsSlesQuestion(
+  question
+) {
   const q =
     normalize(
       question
     );
 
-  return (
-    q.includes('termek') ||
-    q.includes('termekeitek') ||
-    q.includes('termeketek') ||
-    q.includes('milyen') ||
-    q.includes('mik vannak') ||
-    q.includes('mit ajanl') ||
-    q.includes('melyik')
-  );
-}
-
-/* =========================================================
-   KERESŐSZAVAK KINYERÉSE
-========================================================= */
-
-const GENERIC_WORDS =
-  new Set([
-    'milyen',
-    'mik',
-    'melyik',
-    'van',
-    'vannak',
-    'termek',
-    'termekek',
-    'termekeitek',
-    'termeketek',
-    'nalatok',
-    'keresek',
-    'szeretnek',
-    'ajanlasz',
-    'ajanlotok',
-    'lehet',
-    'kapni'
-  ]);
-
-function getMeaningfulTokens(
-  question
-) {
-  return normalize(
-    question
-  )
-    .split(' ')
-    .filter(
-      (token) =>
-        token.length >= 4 &&
-        !GENERIC_WORDS.has(
-          token
-        )
-    );
-}
-
-/* =========================================================
-   UNAS TERMÉKKERESÉS
-========================================================= */
-
-function findMatchingProducts(
-  knowledge,
-  question
-) {
-  const tokens =
-    getMeaningfulTokens(
-      question
+  const asksAboutSls =
+    /\bsls\b/.test(q) ||
+    /\bsles\b/.test(q) ||
+    q.includes(
+      'sodium lauryl sulfate'
+    ) ||
+    q.includes(
+      'sodium laureth sulfate'
     );
 
   if (
-    !tokens.length
-  ) {
-    return [];
-  }
-
-  const scored =
-    knowledge
-      .filter(
-        isProductItem
-      )
-      .map(
-        (item) => {
-
-          const title =
-            normalize(
-              getItemTitle(
-                item
-              )
-            );
-
-          const searchable =
-            normalize(
-              [
-                item.title,
-                item.name,
-                item.shortAnswer,
-                item.fullAnswer,
-                item.keywords?.join(' '),
-                item.products?.join(' '),
-                item.category,
-                item.subcategory
-              ]
-                .filter(Boolean)
-                .join(' ')
-            );
-
-          let score =
-            0;
-
-          for (
-            const token of
-            tokens
-          ) {
-
-            if (
-              title.includes(
-                token
-              )
-            ) {
-              score +=
-                100;
-            }
-
-            if (
-              searchable.includes(
-                token
-              )
-            ) {
-              score +=
-                25;
-            }
-          }
-
-          return {
-            item,
-            score
-          };
-        }
-      )
-      .filter(
-        (match) =>
-          match.score >
-          0
-      )
-      .sort(
-        (a, b) =>
-          b.score -
-          a.score
-      );
-
-  const unique =
-    [];
-
-  const seen =
-    new Set();
-
-  for (
-    const match of
-    scored
-  ) {
-
-    const title =
-      getItemTitle(
-        match.item
-      );
-
-    const key =
-      normalize(
-        title
-      );
-
-    if (
-      seen.has(
-        key
-      )
-    ) {
-      continue;
-    }
-
-    seen.add(
-      key
-    );
-
-    unique.push(
-      match
-    );
-
-    if (
-      unique.length >=
-      6
-    ) {
-      break;
-    }
-  }
-
-  return unique;
-}
-
-/* =========================================================
-   TERMÉKLISTA VÁLASZ
-========================================================= */
-
-function buildProductListAnswer(
-  matches
-) {
-  if (
-    !matches.length
+    !asksAboutSls
   ) {
     return null;
   }
 
-  const items =
-    matches.map(
-      (match) =>
-        match.item
-    );
-
-  const lines =
-    items.map(
-      (item) => {
-
-        const title =
-          getItemTitle(
-            item
-          );
-
-        const raw =
-          removeTechnicalNoise(
-            getItemAnswer(
-              item
-            )
-          );
-
-        const summary =
-          shorten(
-            raw,
-            120
-          );
-
-        return summary
-          ? `• ${title} – ${summary}`
-          : `• ${title}`;
-      }
-    );
-
   return {
     source:
-      'unas-list',
+      'expert-sls-sles',
 
     answer:
-      `Igen, több kapcsolódó termékünk is van:\n\n${lines.join(
-        '\n'
-      )}\n\nHa megírod, hogy melyik érdekel, szívesen segítek részletesebben is.`,
+      'Szia! Nem, a Vitalis termékeink nem tartalmaznak SLS-t vagy SLES-t. Ha megírod, melyik konkrét terméket nézed, szívesen segítek az összetevőivel kapcsolatban is.',
 
     confidence:
-      matches[0]
-        .score,
+      100,
 
     links:
-      items
-        .filter(
-          (item) =>
-            item.url
-        )
-        .map(
-          (item) => ({
-            label:
-              getItemTitle(
-                item
-              ),
-
-            url:
-              item.url
-          })
-        ),
+      [],
 
     suggestions:
       [],
 
     ruleId:
-      null,
+      'sls-sles-free',
 
     intent:
-      'product-list',
+      'ingredient-question',
 
     matchedKnowledgeIds:
-      items.map(
-        (item) =>
-          item.id
-      )
+      []
   };
 }
 
 /* =========================================================
-   EGYEDI TUDÁSVÁLASZ
+   BESZÉLGETÉSI FOLYTATÁSOK
 ========================================================= */
 
-function buildSingleAnswer(
-  item,
-  score
-) {
-  const raw =
-    removeTechnicalNoise(
-      getItemAnswer(
-        item
-      )
-    );
+const PROBLEM_FOLLOW_UPS = {
 
-  return {
-    source:
-      item.source ===
-      'unas'
-        ? 'unas-knowledge'
-        : 'knowledge-fallback',
+  psoriasis:
+    'Milyen további Vitalis termékek vannak pikkelysömörre hajlamos bőr kozmetikai ápolására?',
 
-    answer:
-      shorten(
-        raw,
-        480
-      ),
+  eczema:
+    'Milyen további Vitalis termékek vannak ekcémára vagy atópiára hajlamos bőr kozmetikai ápolására?',
 
-    confidence:
-      score,
+  rosacea:
+    'Milyen Vitalis termékek vannak rosaceára és kipirosodásra hajlamos érzékeny arcbőr kozmetikai ápolására?',
 
-    links:
-      item.url
-        ? [
-            {
-              label:
-                getItemTitle(
-                  item
-                ),
+  acne:
+    'Milyen Vitalis termékek vannak pattanásos vagy aknéra hajlamos bőr kozmetikai ápolására?',
 
-              url:
-                item.url
-            }
-          ]
-        : [],
+  dry_skin:
+    'Milyen Vitalis termékek vannak száraz bőr mindennapi kozmetikai ápolására?',
 
-    suggestions:
-      [],
-
-    ruleId:
-      null,
-
-    intent:
-      item.intents?.[0] ||
-      null,
-
-    matchedKnowledgeIds:
-      [
-        item.id
-      ]
-  };
-}
-
-/* =========================================================
-   FŐ VÁLASZKÉPZÉS
-========================================================= */
-
-function createAnswer({
-  question,
-  history,
-  knowledge,
-  ruleEngine,
-  logGap
-}) {
-
-  /*
-    1. TERMÉKKATALÓGUS-KÉRDÉSEK
-
-    Ezeket a szabálymotor ELŐTT kezeljük,
-    mert különben egy túl általános expert rule
-    elviheti a kérdést rossz irányba.
-  */
-
-  if (
-    isCatalogQuestion(
-      question
-    )
-  ) {
-
-    const productMatches =
-      findMatchingProducts(
-        knowledge,
-        question
-      );
-
-    if (
-      productMatches.length
-    ) {
-
-      const listAnswer =
-        buildProductListAnswer(
-          productMatches
-        );
-
-      if (
-        listAnswer
-      ) {
-        return listAnswer;
-      }
-    }
-  }
-
-  /*
-    2. SZAKÉRTŐI SZABÁLYOK
-
-    Csak akkor futnak, ha nem sikerült
-    konkrét katalógustalálatot adni.
-  */
-
-  const expert =
-    ruleEngine.resolve(
-      question,
-      history
-    );
-
-  if (
-    expert
-  ) {
-    return expert;
-  }
-
-  /*
-    3. ÁLTALÁNOS TUDÁSBÁZIS-KERESÉS
-  */
-
-  const matches =
-    searchKnowledge(
-      knowledge,
-      question
-    );
-
-  const best =
-    matches[0];
-
-  if (
-    !best ||
-    best.score <
-    60
-  ) {
-
-    logGap(
-      question,
-      best?.score ||
-      0,
-      history
-    );
-
-    return {
-      source:
-        'gap',
-
-      answer:
-        'Erre még nem találtam elég pontos, jóváhagyott Vitalis-információt. Írd meg kérlek részletesebben, melyik termékről vagy problémáról van szó.',
-
-      confidence:
-        best?.score ||
-        0,
-
-      links:
-        [],
-
-      suggestions:
-        [],
-
-      ruleId:
-        null,
-
-      intent:
-        null
-    };
-  }
-
-  return buildSingleAnswer(
-    best.item,
-    best.score
-  );
-}
-
-module.exports = {
-  createAnswer
+  scalp:
+    'Milyen Vitalis termékek vannak problémás, viszkető vagy korpás fejbőr kozmetikai ápolására?'
 };
+
+function expandQuestionFromContext
