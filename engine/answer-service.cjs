@@ -239,6 +239,193 @@ function answerSlsSlesQuestion(
 }
 
 /* =========================================================
+   AJÁNLOTT TERMÉKEK AUTOMATIKUS UNAS LINKELÉSE
+========================================================= */
+
+function findUnasProductBySuggestion(
+  knowledge,
+  suggestion
+) {
+  const wanted =
+    normalize(
+      suggestion
+    );
+
+  if (
+    !wanted
+  ) {
+    return null;
+  }
+
+  const wantedTokens =
+    wanted
+      .split(
+        ' '
+      )
+      .filter(
+        (
+          token
+        ) =>
+          token.length >=
+          3
+      );
+
+  const candidates =
+    knowledge
+      .filter(
+        isProductItem
+      )
+      .map(
+        (
+          item
+        ) => {
+
+          const title =
+            normalize(
+              getItemTitle(
+                item
+              )
+            );
+
+          let score =
+            0;
+
+          if (
+            title ===
+            wanted
+          ) {
+            score +=
+              1000;
+          }
+
+          if (
+            title.includes(
+              wanted
+            ) ||
+            wanted.includes(
+              title
+            )
+          ) {
+            score +=
+              500;
+          }
+
+          for (
+            const token of
+            wantedTokens
+          ) {
+            if (
+              title.includes(
+                token
+              )
+            ) {
+              score +=
+                100;
+            }
+          }
+
+          return {
+            item,
+            score
+          };
+        }
+      )
+      .filter(
+        (
+          candidate
+        ) =>
+          candidate.score >
+          0
+      )
+      .sort(
+        (
+          a,
+          b
+        ) =>
+          b.score -
+          a.score
+      );
+
+  return candidates[0]?.item ||
+    null;
+}
+
+function attachProductLinks(
+  answer,
+  knowledge
+) {
+  if (
+    !answer ||
+    !Array.isArray(
+      answer.suggestions
+    ) ||
+    !answer.suggestions.length
+  ) {
+    return answer;
+  }
+
+  const links =
+    [];
+
+  const matchedKnowledgeIds =
+    [];
+
+  const seenUrls =
+    new Set();
+
+  for (
+    const suggestion of
+    answer.suggestions
+  ) {
+    const item =
+      findUnasProductBySuggestion(
+        knowledge,
+        suggestion
+      );
+
+    if (
+      !item ||
+      !item.url ||
+      seenUrls.has(
+        item.url
+      )
+    ) {
+      continue;
+    }
+
+    seenUrls.add(
+      item.url
+    );
+
+    links.push({
+      label:
+        getItemTitle(
+          item
+        ),
+
+      url:
+        item.url
+    });
+
+    if (
+      item.id
+    ) {
+      matchedKnowledgeIds.push(
+        item.id
+      );
+    }
+  }
+
+  return {
+    ...answer,
+
+    links,
+
+    matchedKnowledgeIds
+  };
+}
+
+/* =========================================================
    PROBLÉMAKÖRÖK ELSŐBBSÉGI AJÁNLÁSA
 ========================================================= */
 
@@ -1009,7 +1196,10 @@ function createAnswer({
     if (
       problemAnswer
     ) {
-      return problemAnswer;
+      return attachProductLinks(
+        problemAnswer,
+        knowledge
+      );
     }
   }
 
