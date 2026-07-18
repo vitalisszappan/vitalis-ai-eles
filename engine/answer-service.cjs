@@ -519,11 +519,13 @@ function buildProblemAnswer(
         [],
 
       suggestions:
-  [
-    'Dermavital nyugtató bőrápoló krém',
-    'Natúr kecsketejes szappan',
-    'Natúr olíva szappan'
-  ],
+        [
+          'Dermavital nyugtató bőrápoló krém',
+          'Kecsketejes natúr szappan',
+          'Olíva szappan'
+        ],
+
+      ruleId:
         'problem-rosacea',
 
       intent:
