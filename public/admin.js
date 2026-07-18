@@ -4,29 +4,82 @@
    VITALIS AI KÖZPONT – ADMIN.JS
 ========================================================= */
 
+/* =========================================================
+   DOM ELEMEK
+========================================================= */
+
 const totalCountElement =
-  document.getElementById('totalCount');
+  document.getElementById(
+    'totalCount'
+  );
 
 const todayCountElement =
-  document.getElementById('todayCount');
+  document.getElementById(
+    'todayCount'
+  );
 
 const visibleCountElement =
-  document.getElementById('visibleCount');
+  document.getElementById(
+    'visibleCount'
+  );
+
+const knowledgeGapCountElement =
+  document.getElementById(
+    'knowledgeGapCount'
+  );
 
 const searchInput =
-  document.getElementById('searchInput');
+  document.getElementById(
+    'searchInput'
+  );
 
 const statusMessage =
-  document.getElementById('statusMessage');
+  document.getElementById(
+    'statusMessage'
+  );
 
 const conversationList =
-  document.getElementById('conversationList');
+  document.getElementById(
+    'conversationList'
+  );
 
 const refreshButton =
-  document.getElementById('refreshButton');
+  document.getElementById(
+    'refreshButton'
+  );
+
+/* -------------------------
+   TUDÁSHIÁNYOK
+------------------------- */
+
+const loadKnowledgeGapsButton =
+  document.getElementById(
+    'loadKnowledgeGapsButton'
+  );
+
+const loadKnowledgeGapsButtonSecondary =
+  document.getElementById(
+    'loadKnowledgeGapsButtonSecondary'
+  );
+
+const knowledgeGapStatusMessage =
+  document.getElementById(
+    'knowledgeGapStatusMessage'
+  );
+
+const knowledgeGapList =
+  document.getElementById(
+    'knowledgeGapList'
+  );
+
+/* -------------------------
+   UNAS
+------------------------- */
 
 const unasTestButton =
-  document.getElementById('unasTestButton');
+  document.getElementById(
+    'unasTestButton'
+  );
 
 const unasTestButtonSecondary =
   document.getElementById(
@@ -58,6 +111,9 @@ const unasSyncStatusMessage =
 ========================================================= */
 
 let conversations = [];
+
+let knowledgeGaps = [];
+
 let adminToken = '';
 
 /* =========================================================
@@ -72,10 +128,14 @@ function getStoredAdminToken() {
   ).trim();
 }
 
-function saveAdminToken(token) {
+function saveAdminToken(
+  token
+) {
   localStorage.setItem(
     'vitalisAdminToken',
-    String(token || '').trim()
+    String(
+      token || ''
+    ).trim()
   );
 }
 
@@ -91,7 +151,9 @@ function ensureAdminToken() {
   adminToken =
     getStoredAdminToken();
 
-  if (adminToken) {
+  if (
+    adminToken
+  ) {
     return true;
   }
 
@@ -100,15 +162,20 @@ function ensureAdminToken() {
       'Add meg a Vitalis AI admin kulcsot:'
     );
 
-  if (!entered) {
+  if (
+    !entered
+  ) {
     return false;
   }
 
   adminToken =
-    String(entered)
-      .trim();
+    String(
+      entered
+    ).trim();
 
-  if (!adminToken) {
+  if (
+    !adminToken
+  ) {
     return false;
   }
 
@@ -120,53 +187,168 @@ function ensureAdminToken() {
 }
 
 /* =========================================================
+   KÖZÖS API KEZELÉS
+========================================================= */
+
+async function adminFetch(
+  url,
+  options = {}
+) {
+  if (
+    !ensureAdminToken()
+  ) {
+    throw new Error(
+      'Admin kulcs szükséges.'
+    );
+  }
+
+  const headers = {
+    ...(options.headers || {}),
+
+    'X-Admin-Token':
+      adminToken
+  };
+
+  const response =
+    await fetch(
+      url,
+      {
+        ...options,
+
+        headers,
+
+        cache:
+          'no-store'
+      }
+    );
+
+  let data;
+
+  try {
+    data =
+      await response.json();
+
+  } catch {
+    throw new Error(
+      'A szerver nem érvényes JSON választ adott.'
+    );
+  }
+
+  if (
+    response.status === 401 ||
+    response.status === 403
+  ) {
+    clearAdminToken();
+
+    throw new Error(
+      'Hibás admin kulcs. Frissítsd az oldalt, és add meg újra.'
+    );
+  }
+
+  if (
+    !response.ok ||
+    data.ok === false
+  ) {
+    throw new Error(
+      data.error ||
+      data.message ||
+      'A kérés sikertelen.'
+    );
+  }
+
+  return data;
+}
+
+/* =========================================================
    SEGÉDFÜGGVÉNYEK
 ========================================================= */
 
-function escapeHtml(value = '') {
-  return String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+function escapeHtml(
+  value = ''
+) {
+  return String(
+    value
+  )
+    .replace(
+      /&/g,
+      '&amp;'
+    )
+    .replace(
+      /</g,
+      '&lt;'
+    )
+    .replace(
+      />/g,
+      '&gt;'
+    )
+    .replace(
+      /"/g,
+      '&quot;'
+    )
+    .replace(
+      /'/g,
+      '&#039;'
+    );
 }
 
-function formatDate(value) {
-  if (!value) {
+function formatDate(
+  value
+) {
+  if (
+    !value
+  ) {
     return '';
   }
 
   const date =
-    new Date(value);
+    new Date(
+      value
+    );
 
   if (
     Number.isNaN(
       date.getTime()
     )
   ) {
-    return String(value);
+    return String(
+      value
+    );
   }
 
   return date.toLocaleString(
     'hu-HU',
     {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
+      year:
+        'numeric',
+
+      month:
+        '2-digit',
+
+      day:
+        '2-digit',
+
+      hour:
+        '2-digit',
+
+      minute:
+        '2-digit'
     }
   );
 }
 
-function isToday(value) {
-  if (!value) {
+function isToday(
+  value
+) {
+  if (
+    !value
+  ) {
     return false;
   }
 
   const date =
-    new Date(value);
+    new Date(
+      value
+    );
 
   if (
     Number.isNaN(
@@ -182,14 +364,18 @@ function isToday(value) {
   return (
     date.getFullYear() ===
       now.getFullYear() &&
+
     date.getMonth() ===
       now.getMonth() &&
+
     date.getDate() ===
       now.getDate()
   );
 }
 
-function getQuestion(item) {
+function getQuestion(
+  item
+) {
   return String(
     item.question ||
     item.user_message ||
@@ -199,7 +385,9 @@ function getQuestion(item) {
   ).trim();
 }
 
-function getAnswer(item) {
+function getAnswer(
+  item
+) {
   return String(
     item.answer ||
     item.bot_answer ||
@@ -209,7 +397,9 @@ function getAnswer(item) {
   ).trim();
 }
 
-function getCreatedAt(item) {
+function getCreatedAt(
+  item
+) {
   return (
     item.created_at ||
     item.createdAt ||
@@ -219,7 +409,9 @@ function getCreatedAt(item) {
   );
 }
 
-function getPageUrl(item) {
+function getPageUrl(
+  item
+) {
   return String(
     item.page_url ||
     item.pageUrl ||
@@ -228,37 +420,82 @@ function getPageUrl(item) {
   ).trim();
 }
 
+function setStatus(
+  element,
+  message,
+  isError = false
+) {
+  if (
+    !element
+  ) {
+    return;
+  }
+
+  element.textContent =
+    message;
+
+  element.classList.toggle(
+    'error',
+    Boolean(
+      isError
+    )
+  );
+}
+
 /* =========================================================
    STATISZTIKÁK
 ========================================================= */
 
-function updateStatistics(
+function updateConversationStatistics(
   visibleItems
 ) {
   const todayCount =
     conversations.filter(
-      (item) =>
+      (
+        item
+      ) =>
         isToday(
-          getCreatedAt(item)
+          getCreatedAt(
+            item
+          )
         )
     ).length;
 
-  if (totalCountElement) {
+  if (
+    totalCountElement
+  ) {
     totalCountElement.textContent =
       String(
         conversations.length
       );
   }
 
-  if (todayCountElement) {
+  if (
+    todayCountElement
+  ) {
     todayCountElement.textContent =
-      String(todayCount);
+      String(
+        todayCount
+      );
   }
 
-  if (visibleCountElement) {
+  if (
+    visibleCountElement
+  ) {
     visibleCountElement.textContent =
       String(
         visibleItems.length
+      );
+  }
+}
+
+function updateKnowledgeGapCount() {
+  if (
+    knowledgeGapCountElement
+  ) {
+    knowledgeGapCountElement.textContent =
+      String(
+        knowledgeGaps.length
       );
   }
 }
@@ -267,16 +504,25 @@ function updateStatistics(
    BESZÉLGETÉSEK MEGJELENÍTÉSE
 ========================================================= */
 
-function renderConversations(items) {
-  if (!conversationList) {
+function renderConversations(
+  items
+) {
+  if (
+    !conversationList
+  ) {
     return;
   }
 
-  conversationList.innerHTML = '';
+  conversationList.innerHTML =
+    '';
 
-  updateStatistics(items);
+  updateConversationStatistics(
+    items
+  );
 
-  if (!items.length) {
+  if (
+    !items.length
+  ) {
     conversationList.innerHTML = `
       <div class="empty-state">
         Nincs megjeleníthető beszélgetés.
@@ -286,18 +532,29 @@ function renderConversations(items) {
     return;
   }
 
-  for (const item of items) {
+  for (
+    const item of
+    items
+  ) {
     const question =
-      getQuestion(item);
+      getQuestion(
+        item
+      );
 
     const answer =
-      getAnswer(item);
+      getAnswer(
+        item
+      );
 
     const createdAt =
-      getCreatedAt(item);
+      getCreatedAt(
+        item
+      );
 
     const pageUrl =
-      getPageUrl(item);
+      getPageUrl(
+        item
+      );
 
     const source =
       String(
@@ -306,8 +563,10 @@ function renderConversations(items) {
       );
 
     const confidence =
-      item.confidence !== null &&
-      item.confidence !== undefined
+      item.confidence !==
+        null &&
+      item.confidence !==
+        undefined
         ? String(
             item.confidence
           )
@@ -336,7 +595,9 @@ function renderConversations(items) {
           pageUrl
             ? `
               <span>
-                ${escapeHtml(pageUrl)}
+                ${escapeHtml(
+                  pageUrl
+                )}
               </span>
             `
             : ''
@@ -352,7 +613,8 @@ function renderConversations(items) {
 
         <p>
           ${escapeHtml(
-            question || '–'
+            question ||
+            '–'
           )}
         </p>
 
@@ -366,7 +628,8 @@ function renderConversations(items) {
 
         <p>
           ${escapeHtml(
-            answer || '–'
+            answer ||
+            '–'
           )}
         </p>
 
@@ -376,12 +639,16 @@ function renderConversations(items) {
 
         <span>
           Forrás:
-          ${escapeHtml(source)}
+          ${escapeHtml(
+            source
+          )}
         </span>
 
         <span>
           Biztonsági pontszám:
-          ${escapeHtml(confidence)}
+          ${escapeHtml(
+            confidence
+          )}
         </span>
 
       </div>
@@ -398,58 +665,16 @@ function renderConversations(items) {
 ========================================================= */
 
 async function loadConversations() {
-  if (!ensureAdminToken()) {
-    if (statusMessage) {
-      statusMessage.textContent =
-        'Admin kulcs nélkül a beszélgetések nem tölthetők be.';
-    }
-
-    return;
-  }
-
-  if (statusMessage) {
-    statusMessage.textContent =
-      'Beszélgetések betöltése...';
-  }
+  setStatus(
+    statusMessage,
+    'Beszélgetések betöltése...'
+  );
 
   try {
-    const response =
-      await fetch(
-        '/api/admin/conversations?limit=500',
-        {
-          headers: {
-            'X-Admin-Token':
-              adminToken
-          },
-
-          cache:
-            'no-store'
-        }
-      );
-
     const data =
-      await response.json();
-
-    if (
-      response.status === 401 ||
-      response.status === 403
-    ) {
-      clearAdminToken();
-
-      throw new Error(
-        'Hibás admin kulcs. Frissítsd az oldalt, és add meg újra.'
+      await adminFetch(
+        '/api/admin/conversations?limit=500'
       );
-    }
-
-    if (
-      !response.ok ||
-      data.ok === false
-    ) {
-      throw new Error(
-        data.error ||
-        'A beszélgetések betöltése sikertelen.'
-      );
-    }
 
     conversations =
       Array.isArray(
@@ -462,42 +687,50 @@ async function loadConversations() {
       conversations
     );
 
-    if (statusMessage) {
-      statusMessage.textContent =
-        `Betöltve: ${conversations.length} beszélgetés. Forrás: ${
-          data.storage ||
-          'ismeretlen'
-        }.`;
-    }
+    setStatus(
+      statusMessage,
+      `Betöltve: ${conversations.length} beszélgetés. Forrás: ${
+        data.storage ||
+        'ismeretlen'
+      }.`
+    );
 
-  } catch (error) {
+  } catch (
+    error
+  ) {
     console.error(
       'Beszélgetések betöltési hiba:',
       error
     );
 
-    if (statusMessage) {
-      statusMessage.textContent =
-        `Hiba a beszélgetések betöltésekor: ${error.message}`;
-    }
+    setStatus(
+      statusMessage,
+      `Hiba a beszélgetések betöltésekor: ${error.message}`,
+      true
+    );
 
-    updateStatistics([]);
+    updateConversationStatistics(
+      []
+    );
   }
 }
 
 /* =========================================================
-   KERESÉS
+   BESZÉLGETÉSKERESÉS
 ========================================================= */
 
 function filterConversations() {
   const query =
     String(
-      searchInput?.value || ''
+      searchInput?.value ||
+      ''
     )
       .trim()
       .toLowerCase();
 
-  if (!query) {
+  if (
+    !query
+  ) {
     renderConversations(
       conversations
     );
@@ -507,15 +740,31 @@ function filterConversations() {
 
   const filtered =
     conversations.filter(
-      (item) => {
+      (
+        item
+      ) => {
+
         const searchableText = [
-          getQuestion(item),
-          getAnswer(item),
-          getPageUrl(item),
+          getQuestion(
+            item
+          ),
+
+          getAnswer(
+            item
+          ),
+
+          getPageUrl(
+            item
+          ),
+
           item.source
         ]
-          .filter(Boolean)
-          .join(' ')
+          .filter(
+            Boolean
+          )
+          .join(
+            ' '
+          )
           .toLowerCase();
 
         return searchableText.includes(
@@ -530,99 +779,566 @@ function filterConversations() {
 }
 
 /* =========================================================
+   TUDÁSHIÁNY KÁRTYA
+========================================================= */
+
+function createKnowledgeGapCard(
+  gap,
+  index
+) {
+  const wrapper =
+    document.createElement(
+      'article'
+    );
+
+  wrapper.className =
+    'conversation-card knowledge-gap-card';
+
+  const question =
+    String(
+      gap.question ||
+      ''
+    ).trim();
+
+  const chatbotAnswer =
+    String(
+      gap.answer ||
+      ''
+    ).trim();
+
+  const pageUrl =
+    String(
+      gap.page_url ||
+      ''
+    ).trim();
+
+  const date =
+    formatDate(
+      gap.created_at
+    );
+
+  const score =
+    gap.confidence ??
+    gap.score ??
+    '–';
+
+  wrapper.innerHTML = `
+    <div class="conversation-meta">
+
+      <span>
+        ${escapeHtml(
+          date ||
+          'Ismeretlen időpont'
+        )}
+      </span>
+
+      <span>
+        Pontszám:
+        ${escapeHtml(
+          score
+        )}
+      </span>
+
+    </div>
+
+    <div class="conversation-question">
+
+      <strong>
+        VÁSÁRLÓ KÉRDÉSE
+      </strong>
+
+      <p>
+        ${escapeHtml(
+          question
+        )}
+      </p>
+
+    </div>
+
+    ${
+      chatbotAnswer
+        ? `
+          <div class="conversation-answer">
+
+            <strong>
+              JELENLEGI CHATBOT VÁLASZ
+            </strong>
+
+            <p>
+              ${escapeHtml(
+                chatbotAnswer
+              )}
+            </p>
+
+          </div>
+        `
+        : ''
+    }
+
+    ${
+      pageUrl
+        ? `
+          <div class="conversation-meta">
+            <span>
+              Oldal:
+              ${escapeHtml(
+                pageUrl
+              )}
+            </span>
+          </div>
+        `
+        : ''
+    }
+
+    <div class="knowledge-gap-editor">
+
+      <label
+        for="knowledgeGapAnswer-${index}"
+      >
+        <strong>
+          Jóváhagyott Vitalis válasz
+        </strong>
+      </label>
+
+      <textarea
+        id="knowledgeGapAnswer-${index}"
+        class="knowledge-gap-answer"
+        rows="6"
+        placeholder="Írd ide azt a választ, amelyet a chatbotnak a jövőben használnia kell..."
+      ></textarea>
+
+      <div class="knowledge-gap-actions">
+
+        <button
+          type="button"
+          class="approve-knowledge-gap-button"
+        >
+          Jóváhagyás és aktiválás
+        </button>
+
+        <button
+          type="button"
+          class="dismiss-knowledge-gap-button"
+        >
+          Lezárás tudáselem nélkül
+        </button>
+
+      </div>
+
+      <div
+        class="knowledge-gap-item-status"
+      >
+      </div>
+
+    </div>
+  `;
+
+  const approveButton =
+    wrapper.querySelector(
+      '.approve-knowledge-gap-button'
+    );
+
+  const dismissButton =
+    wrapper.querySelector(
+      '.dismiss-knowledge-gap-button'
+    );
+
+  const textarea =
+    wrapper.querySelector(
+      '.knowledge-gap-answer'
+    );
+
+  const itemStatus =
+    wrapper.querySelector(
+      '.knowledge-gap-item-status'
+    );
+
+  approveButton.addEventListener(
+    'click',
+    async () => {
+
+      const answer =
+        String(
+          textarea.value ||
+          ''
+        ).trim();
+
+      if (
+        !answer
+      ) {
+        itemStatus.textContent =
+          'Írd be előbb a jóváhagyott választ.';
+
+        return;
+      }
+
+      const confirmed =
+        window.confirm(
+          'Biztosan jóváhagyod és azonnal aktiválod ezt a tudáselemet?'
+        );
+
+      if (
+        !confirmed
+      ) {
+        return;
+      }
+
+      approveButton.disabled =
+        true;
+
+      dismissButton.disabled =
+        true;
+
+      textarea.disabled =
+        true;
+
+      itemStatus.textContent =
+        'Mentés és aktiválás folyamatban...';
+
+      try {
+        const data =
+          await adminFetch(
+            '/api/admin/knowledge-gaps/approve',
+            {
+              method:
+                'POST',
+
+              headers: {
+                'Content-Type':
+                  'application/json'
+              },
+
+              body:
+                JSON.stringify({
+                  question,
+
+                  answer
+                })
+            }
+          );
+
+        itemStatus.textContent =
+          data.message ||
+          'A tudáselem jóváhagyva és aktiválva.';
+
+        wrapper.remove();
+
+        knowledgeGaps =
+          knowledgeGaps.filter(
+            (
+              item
+            ) =>
+              item !==
+              gap
+          );
+
+        updateKnowledgeGapCount();
+
+      } catch (
+        error
+      ) {
+        console.error(
+          'Tudáselem jóváhagyási hiba:',
+          error
+        );
+
+        itemStatus.textContent =
+          `Hiba: ${error.message}`;
+
+        approveButton.disabled =
+          false;
+
+        dismissButton.disabled =
+          false;
+
+        textarea.disabled =
+          false;
+      }
+    }
+  );
+
+  dismissButton.addEventListener(
+    'click',
+    async () => {
+
+      const confirmed =
+        window.confirm(
+          'Biztosan lezárod ezt a kérdést új tudáselem létrehozása nélkül?'
+        );
+
+      if (
+        !confirmed
+      ) {
+        return;
+      }
+
+      approveButton.disabled =
+        true;
+
+      dismissButton.disabled =
+        true;
+
+      textarea.disabled =
+        true;
+
+      itemStatus.textContent =
+        'Lezárás folyamatban...';
+
+      try {
+        const data =
+          await adminFetch(
+            '/api/admin/knowledge-gaps/dismiss',
+            {
+              method:
+                'POST',
+
+              headers: {
+                'Content-Type':
+                  'application/json'
+              },
+
+              body:
+                JSON.stringify({
+                  question,
+
+                  reason:
+                    'Admin felületen lezárva.'
+                })
+            }
+          );
+
+        itemStatus.textContent =
+          data.message ||
+          'A tudáshiány lezárva.';
+
+        wrapper.remove();
+
+        knowledgeGaps =
+          knowledgeGaps.filter(
+            (
+              item
+            ) =>
+              item !==
+              gap
+          );
+
+        updateKnowledgeGapCount();
+
+      } catch (
+        error
+      ) {
+        console.error(
+          'Tudáshiány lezárási hiba:',
+          error
+        );
+
+        itemStatus.textContent =
+          `Hiba: ${error.message}`;
+
+        approveButton.disabled =
+          false;
+
+        dismissButton.disabled =
+          false;
+
+        textarea.disabled =
+          false;
+      }
+    }
+  );
+
+  return wrapper;
+}
+
+/* =========================================================
+   TUDÁSHIÁNYOK MEGJELENÍTÉSE
+========================================================= */
+
+function renderKnowledgeGaps() {
+  if (
+    !knowledgeGapList
+  ) {
+    return;
+  }
+
+  knowledgeGapList.innerHTML =
+    '';
+
+  updateKnowledgeGapCount();
+
+  if (
+    !knowledgeGaps.length
+  ) {
+    knowledgeGapList.innerHTML = `
+      <div class="empty-state">
+        Jelenleg nincs nyitott tudáshiány.
+      </div>
+    `;
+
+    return;
+  }
+
+  knowledgeGaps.forEach(
+    (
+      gap,
+      index
+    ) => {
+
+      knowledgeGapList.appendChild(
+        createKnowledgeGapCard(
+          gap,
+          index
+        )
+      );
+    }
+  );
+}
+
+/* =========================================================
+   TUDÁSHIÁNYOK BETÖLTÉSE
+========================================================= */
+
+async function loadKnowledgeGaps() {
+  setStatus(
+    knowledgeGapStatusMessage,
+    'Tudáshiányok betöltése...'
+  );
+
+  if (
+    loadKnowledgeGapsButton
+  ) {
+    loadKnowledgeGapsButton.disabled =
+      true;
+  }
+
+  if (
+    loadKnowledgeGapsButtonSecondary
+  ) {
+    loadKnowledgeGapsButtonSecondary.disabled =
+      true;
+  }
+
+  try {
+    const data =
+      await adminFetch(
+        '/api/admin/knowledge-gaps?limit=500'
+      );
+
+    knowledgeGaps =
+      Array.isArray(
+        data.items
+      )
+        ? data.items
+        : [];
+
+    renderKnowledgeGaps();
+
+    setStatus(
+      knowledgeGapStatusMessage,
+      `Nyitott tudáshiányok: ${knowledgeGaps.length}. Forrás: ${
+        data.storage ||
+        'ismeretlen'
+      }.`
+    );
+
+  } catch (
+    error
+  ) {
+    console.error(
+      'Tudáshiányok betöltési hiba:',
+      error
+    );
+
+    setStatus(
+      knowledgeGapStatusMessage,
+      `Hiba a tudáshiányok betöltésekor: ${error.message}`,
+      true
+    );
+
+  } finally {
+    if (
+      loadKnowledgeGapsButton
+    ) {
+      loadKnowledgeGapsButton.disabled =
+        false;
+    }
+
+    if (
+      loadKnowledgeGapsButtonSecondary
+    ) {
+      loadKnowledgeGapsButtonSecondary.disabled =
+        false;
+    }
+  }
+}
+
+/* =========================================================
    UNAS KAPCSOLAT TESZTELÉSE
 ========================================================= */
 
 async function testUnasConnection() {
-  if (!ensureAdminToken()) {
-    return;
-  }
+  setStatus(
+    unasStatusMessage,
+    'UNAS kapcsolat ellenőrzése folyamatban...'
+  );
 
-  if (unasStatusMessage) {
-    unasStatusMessage.textContent =
-      'UNAS kapcsolat ellenőrzése folyamatban...';
-  }
-
-  if (unasTestButton) {
+  if (
+    unasTestButton
+  ) {
     unasTestButton.disabled =
       true;
   }
 
-  if (unasTestButtonSecondary) {
+  if (
+    unasTestButtonSecondary
+  ) {
     unasTestButtonSecondary.disabled =
       true;
   }
 
   try {
-    const response =
-      await fetch(
-        '/api/admin/unas/test',
-        {
-          method:
-            'GET',
-
-          headers: {
-            'X-Admin-Token':
-              adminToken
-          },
-
-          cache:
-            'no-store'
-        }
-      );
-
     const data =
-      await response.json();
-
-    if (
-      response.status === 401 ||
-      response.status === 403
-    ) {
-      clearAdminToken();
-
-      throw new Error(
-        'Hibás admin kulcs. Frissítsd az oldalt, és add meg újra.'
+      await adminFetch(
+        '/api/admin/unas/test'
       );
-    }
 
-    if (
-      !response.ok ||
-      data.ok === false
-    ) {
-      throw new Error(
-        data.error ||
-        'Az UNAS kapcsolat tesztelése sikertelen.'
-      );
-    }
+    setStatus(
+      unasStatusMessage,
+      data.message ||
+      `Az UNAS API kapcsolat működik. Termékek: ${
+        data.products ??
+        '–'
+      }, kategóriák: ${
+        data.categories ??
+        '–'
+      }.`
+    );
 
-    if (unasStatusMessage) {
-      unasStatusMessage.textContent =
-        data.message ||
-        `Az UNAS API kapcsolat működik. Termékek: ${
-          data.products ?? '–'
-        }, kategóriák: ${
-          data.categories ?? '–'
-        }.`;
-    }
-
-  } catch (error) {
+  } catch (
+    error
+  ) {
     console.error(
       'UNAS kapcsolat tesztelési hiba:',
       error
     );
 
-    if (unasStatusMessage) {
-      unasStatusMessage.textContent =
-        `UNAS kapcsolati hiba: ${error.message}`;
-    }
+    setStatus(
+      unasStatusMessage,
+      `UNAS kapcsolati hiba: ${error.message}`,
+      true
+    );
 
   } finally {
-    if (unasTestButton) {
+    if (
+      unasTestButton
+    ) {
       unasTestButton.disabled =
         false;
     }
 
-    if (unasTestButtonSecondary) {
+    if (
+      unasTestButtonSecondary
+    ) {
       unasTestButtonSecondary.disabled =
         false;
     }
@@ -634,7 +1350,9 @@ async function testUnasConnection() {
 ========================================================= */
 
 async function syncUnasKnowledge() {
-  if (!ensureAdminToken()) {
+  if (
+    !ensureAdminToken()
+  ) {
     return;
   }
 
@@ -643,66 +1361,40 @@ async function syncUnasKnowledge() {
       'Elindítsuk az UNAS termék- és kategóriaadatok szinkronizálását a Vitalis AI tudásbázisába?'
     );
 
-  if (!confirmed) {
+  if (
+    !confirmed
+  ) {
     return;
   }
 
-  if (unasSyncStatusMessage) {
-    unasSyncStatusMessage.textContent =
-      'UNAS tudásszinkron folyamatban... Ez néhány másodpercig tarthat.';
-  }
+  setStatus(
+    unasSyncStatusMessage,
+    'UNAS tudásszinkron folyamatban... Ez néhány másodpercig tarthat.'
+  );
 
-  if (unasSyncButton) {
+  if (
+    unasSyncButton
+  ) {
     unasSyncButton.disabled =
       true;
   }
 
-  if (unasSyncButtonSecondary) {
+  if (
+    unasSyncButtonSecondary
+  ) {
     unasSyncButtonSecondary.disabled =
       true;
   }
 
   try {
-    const response =
-      await fetch(
+    const data =
+      await adminFetch(
         '/api/admin/unas/sync',
         {
           method:
-            'POST',
-
-          headers: {
-            'X-Admin-Token':
-              adminToken
-          },
-
-          cache:
-            'no-store'
+            'POST'
         }
       );
-
-    const data =
-      await response.json();
-
-    if (
-      response.status === 401 ||
-      response.status === 403
-    ) {
-      clearAdminToken();
-
-      throw new Error(
-        'Hibás admin kulcs. Frissítsd az oldalt, és add meg újra.'
-      );
-    }
-
-    if (
-      !response.ok ||
-      data.ok === false
-    ) {
-      throw new Error(
-        data.error ||
-        'Az UNAS tudásszinkron sikertelen.'
-      );
-    }
 
     const baseItems =
       data.knowledgeStats?.base ??
@@ -713,34 +1405,73 @@ async function syncUnasKnowledge() {
       data.unasItems ??
       '–';
 
+    const approvedItems =
+      data.knowledgeStats?.approved ??
+      0;
+
     const totalItems =
       data.knowledgeStats?.total ??
       '–';
 
-    if (unasSyncStatusMessage) {
-      unasSyncStatusMessage.textContent =
-        `Szinkron sikeres. Alap tudáselemek: ${baseItems}. UNAS tudáselemek: ${unasItems}. Összes aktív tudáselem: ${totalItems}.`;
-    }
+    setStatus(
+      unasSyncStatusMessage,
+      `Szinkron sikeres. Alap tudáselemek: ${baseItems}. UNAS tudáselemek: ${unasItems}. Jóváhagyott tudáselemek: ${approvedItems}. Összes aktív tudáselem: ${totalItems}.`
+    );
 
-  } catch (error) {
+  } catch (
+    error
+  ) {
     console.error(
       'UNAS tudásszinkron hiba:',
       error
     );
 
-    if (unasSyncStatusMessage) {
-      unasSyncStatusMessage.textContent =
-        `UNAS tudásszinkron hiba: ${error.message}`;
-    }
+    setStatus(
+      unasSyncStatusMessage,
+      `UNAS tudásszinkron hiba: ${error.message}`,
+      true
+    );
 
   } finally {
-    if (unasSyncButton) {
+    if (
+      unasSyncButton
+    ) {
       unasSyncButton.disabled =
         false;
     }
 
-    if (unasSyncButtonSecondary) {
+    if (
+      unasSyncButtonSecondary
+    ) {
       unasSyncButtonSecondary.disabled =
+        false;
+    }
+  }
+}
+
+/* =========================================================
+   TELJES FRISSÍTÉS
+========================================================= */
+
+async function refreshEverything() {
+  if (
+    refreshButton
+  ) {
+    refreshButton.disabled =
+      true;
+  }
+
+  try {
+    await Promise.all([
+      loadConversations(),
+      loadKnowledgeGaps()
+    ]);
+
+  } finally {
+    if (
+      refreshButton
+    ) {
+      refreshButton.disabled =
         false;
     }
   }
@@ -750,42 +1481,72 @@ async function syncUnasKnowledge() {
    ESEMÉNYKEZELŐK
 ========================================================= */
 
-if (searchInput) {
+if (
+  searchInput
+) {
   searchInput.addEventListener(
     'input',
     filterConversations
   );
 }
 
-if (refreshButton) {
+if (
+  refreshButton
+) {
   refreshButton.addEventListener(
     'click',
-    loadConversations
+    refreshEverything
   );
 }
 
-if (unasTestButton) {
+if (
+  loadKnowledgeGapsButton
+) {
+  loadKnowledgeGapsButton.addEventListener(
+    'click',
+    loadKnowledgeGaps
+  );
+}
+
+if (
+  loadKnowledgeGapsButtonSecondary
+) {
+  loadKnowledgeGapsButtonSecondary.addEventListener(
+    'click',
+    loadKnowledgeGaps
+  );
+}
+
+if (
+  unasTestButton
+) {
   unasTestButton.addEventListener(
     'click',
     testUnasConnection
   );
 }
 
-if (unasTestButtonSecondary) {
+if (
+  unasTestButtonSecondary
+) {
   unasTestButtonSecondary.addEventListener(
     'click',
     testUnasConnection
   );
 }
 
-if (unasSyncButton) {
+if (
+  unasSyncButton
+) {
   unasSyncButton.addEventListener(
     'click',
     syncUnasKnowledge
   );
 }
 
-if (unasSyncButtonSecondary) {
+if (
+  unasSyncButtonSecondary
+) {
   unasSyncButtonSecondary.addEventListener(
     'click',
     syncUnasKnowledge
@@ -796,4 +1557,4 @@ if (unasSyncButtonSecondary) {
    INDÍTÁS
 ========================================================= */
 
-loadConversations();
+refreshEverything();
