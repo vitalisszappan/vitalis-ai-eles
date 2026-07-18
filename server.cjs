@@ -1392,9 +1392,6 @@ async function getOpenKnowledgeGaps(limit = 500) {
   );
 }
 
-  return result.body ? JSON.parse(result.body) : [];
-}
-
 async function hydrateApprovedKnowledge() {
   if (!supabaseConfigured()) {
     approvedKnowledge = [];
