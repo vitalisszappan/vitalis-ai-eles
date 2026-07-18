@@ -125,6 +125,9 @@ let knowledgeStats = {
 
 let loadedAt = null;
 
+/* Az admin felületen jóváhagyott tudás tartósan Supabase-ben tárolódik. */
+let approvedKnowledge = [];
+
 /* ---------------------------------------------------------
    JSON OLVASÁS
 --------------------------------------------------------- */
@@ -418,6 +421,7 @@ function loadKnowledge() {
   */
 
   knowledge = [
+    ...approvedKnowledge,
     ...unasItems,
     ...baseItems
   ];
@@ -428,6 +432,9 @@ function loadKnowledge() {
 
     unas:
       unasItems.length,
+
+    approved:
+      approvedKnowledge.length,
 
     total:
       knowledge.length
@@ -1221,6 +1228,305 @@ function logGap(
 }
 
 /* =========================================================
+   JÓVÁHAGYOTT TUDÁS / TUDÁSHIÁNY KEZELÉS
+========================================================= */
+
+function normalizeGapKey(value) {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function slugifyKnowledgeId(value) {
+  return normalizeGapKey(value)
+    .replace(/\s+/g, '-')
+    .slice(0, 60) || 'tudaselem';
+}
+
+function buildApprovedKnowledgeItem(row) {
+  if (!row || !row.question || !row.answer) return null;
+
+  const id = Array.isArray(row.matched_knowledge_ids) && row.matched_knowledge_ids[0]
+    ? String(row.matched_knowledge_ids[0])
+    : `approved-${slugifyKnowledgeId(row.question)}`;
+
+  const question = cleanText(row.question, 4000);
+  const answer = cleanText(row.answer, 12000);
+
+  return {
+    id,
+    title: cleanText(row.question, 180),
+    canonicalQuestion: question,
+    questionVariants: [question],
+    shortAnswer: answer,
+    fullAnswer: answer,
+    category: 'Jóváhagyott Vitalis tudás',
+    subcategory: 'admin',
+    products: [],
+    keywords: normalizeGapKey(question).split(' ').filter((token) => token.length >= 3),
+    intents: ['approved-knowledge'],
+    source: 'approved-knowledge',
+    sourceType: 'admin',
+    priority: 200,
+    active: true,
+    updatedAt: row.created_at || new Date().toISOString()
+  };
+}
+
+async function readApprovedKnowledgeRows(limit = 1000) {
+  if (!supabaseConfigured()) return [];
+
+  const safeLimit = Math.max(1, Math.min(Number(limit) || 1000, 5000));
+  const result = await supabaseRequest({
+    method: 'GET',
+    pathname:
+      '/rest/v1/chat_conversations' +
+      '?select=created_at,question,answer,matched_knowledge_ids,source' +
+      '&source=eq.approved-knowledge' +
+      '&order=created_at.asc' +
+      `&limit=${safeLimit}`
+  });
+
+  return result.body ? JSON.parse(result.body) : [];
+}
+
+async function hydrateApprovedKnowledge() {
+  if (!supabaseConfigured()) {
+    approvedKnowledge = [];
+    loadKnowledge();
+    return;
+  }
+
+  try {
+    const rows = await readApprovedKnowledgeRows();
+    const byQuestion = new Map();
+
+    for (const row of rows) {
+      const item = buildApprovedKnowledgeItem(row);
+      if (!item) continue;
+      byQuestion.set(normalizeGapKey(item.canonicalQuestion), item);
+    }
+
+    approvedKnowledge = Array.from(byQuestion.values());
+    loadKnowledge();
+    console.log(`Jóváhagyott admin tudáselemek: ${approvedKnowledge.length}`);
+  } catch (error) {
+    console.error('Jóváhagyott tudás visszatöltési hiba:', error.message);
+  }
+}
+
+function readLocalKnowledgeGaps(limit = 200) {
+  if (!fs.existsSync(KNOWLEDGE_GAP_LOG)) return [];
+  const safeLimit = Math.max(1, Math.min(Number(limit) || 200, 2000));
+
+  return fs.readFileSync(KNOWLEDGE_GAP_LOG, 'utf8')
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .reverse()
+    .map((line) => {
+      try { return JSON.parse(line); } catch { return null; }
+    })
+    .filter(Boolean)
+    .slice(0, safeLimit)
+    .map((item) => ({
+      created_at: item.at || null,
+      question: item.question || '',
+      answer: '',
+      score: Number(item.score || 0),
+      history: Array.isArray(item.history) ? item.history : [],
+      source: 'gap'
+    }));
+}
+
+async function readSupabaseKnowledgeGaps(limit = 500) {
+  if (!supabaseConfigured()) return null;
+
+  const safeLimit = Math.max(1, Math.min(Number(limit) || 500, 2000));
+  const result = await supabaseRequest({
+    method: 'GET',
+    pathname:
+      '/rest/v1/chat_conversations' +
+      '?select=created_at,session_id,question,answer,confidence,page_url,source' +
+      '&source=eq.gap' +
+      '&order=created_at.desc' +
+      `&limit=${safeLimit}`
+  });
+
+  return result.body ? JSON.parse(result.body) : [];
+}
+
+async function readSupabaseDismissedGaps(limit = 2000) {
+  if (!supabaseConfigured()) return [];
+
+  const safeLimit = Math.max(1, Math.min(Number(limit) || 2000, 5000));
+  const result = await supabaseRequest({
+    method: 'GET',
+    pathname:
+      '/rest/v1/chat_conversations' +
+      '?select=question,source' +
+      '&source=eq.dismissed-gap' +
+      `&limit=${safeLimit}`
+  });
+
+  return result.body ? JSON.parse(result.body) : [];
+}
+
+async function getOpenKnowledgeGaps(limit = 500) {
+  let gaps;
+
+  try {
+    gaps = await readSupabaseKnowledgeGaps(limit);
+  } catch (error) {
+    console.error('Supabase gap olvasási hiba:', error.message);
+    gaps = null;
+  }
+
+  if (gaps === null) gaps = readLocalKnowledgeGaps(limit);
+
+  let approvedRows = [];
+  let dismissedRows = [];
+
+  if (supabaseConfigured()) {
+    try {
+      approvedRows = await readApprovedKnowledgeRows();
+      dismissedRows = await readSupabaseDismissedGaps();
+    } catch (error) {
+      console.error('Gap státusz olvasási hiba:', error.message);
+    }
+  }
+
+  const resolvedKeys = new Set([
+    ...approvedRows.map((row) => normalizeGapKey(row.question)),
+    ...dismissedRows.map((row) => normalizeGapKey(row.question))
+  ]);
+
+  const unique = new Map();
+  for (const gap of gaps) {
+    const key = normalizeGapKey(gap.question);
+    if (!key || resolvedKeys.has(key) || unique.has(key)) continue;
+    unique.set(key, { ...gap, key });
+  }
+
+  return Array.from(unique.values());
+}
+
+async function handleAdminKnowledgeGaps(req, res, url) {
+  if (!authorizeAdmin(req, res, url)) return;
+
+  const limit = Number(url.searchParams.get('limit') || 500);
+
+  try {
+    const items = await getOpenKnowledgeGaps(limit);
+    sendJson(res, 200, {
+      ok: true,
+      items,
+      count: items.length,
+      storage: supabaseConfigured() ? 'supabase' : 'local'
+    });
+  } catch (error) {
+    sendJson(res, 500, { ok: false, error: error.message });
+  }
+}
+
+async function handleApproveKnowledgeGap(req, res, url) {
+  if (!authorizeAdmin(req, res, url)) return;
+
+  const rawBody = await parseBody(req);
+  const parsed = JSON.parse(rawBody || '{}');
+  const question = cleanText(parsed.question, 4000);
+  const answer = cleanText(parsed.answer, 12000);
+
+  if (!question || !answer) {
+    sendJson(res, 400, {
+      ok: false,
+      error: 'A kérdés és a jóváhagyott válasz is kötelező.'
+    });
+    return;
+  }
+
+  const knowledgeId = `approved-${Date.now()}-${slugifyKnowledgeId(question)}`;
+  const row = {
+    created_at: new Date().toISOString(),
+    session_id: 'admin-knowledge-builder',
+    question,
+    answer,
+    confidence: 100,
+    matched_knowledge_ids: [knowledgeId],
+    source: 'approved-knowledge',
+    response_ms: 0,
+    user_agent: 'Vitalis AI Központ',
+    page_url: ''
+  };
+
+  if (supabaseConfigured()) {
+    await supabaseRequest({
+      method: 'POST',
+      pathname: '/rest/v1/chat_conversations',
+      body: row
+    });
+  } else {
+    fs.appendFileSync(CONVERSATION_LOG, JSON.stringify(row) + '\n', 'utf8');
+  }
+
+  const item = buildApprovedKnowledgeItem(row);
+  approvedKnowledge = approvedKnowledge.filter(
+    (existing) => normalizeGapKey(existing.canonicalQuestion) !== normalizeGapKey(question)
+  );
+  approvedKnowledge.unshift(item);
+  loadKnowledge();
+
+  sendJson(res, 200, {
+    ok: true,
+    item,
+    knowledgeStats,
+    loadedAt,
+    message: 'A tudáselem jóváhagyva és azonnal aktiválva.'
+  });
+}
+
+async function handleDismissKnowledgeGap(req, res, url) {
+  if (!authorizeAdmin(req, res, url)) return;
+
+  const rawBody = await parseBody(req);
+  const parsed = JSON.parse(rawBody || '{}');
+  const question = cleanText(parsed.question, 4000);
+
+  if (!question) {
+    sendJson(res, 400, { ok: false, error: 'A lezárandó kérdés hiányzik.' });
+    return;
+  }
+
+  const row = {
+    created_at: new Date().toISOString(),
+    session_id: 'admin-knowledge-builder',
+    question,
+    answer: cleanText(parsed.reason || 'Lezárva tudáselem létrehozása nélkül.', 1000),
+    confidence: 100,
+    matched_knowledge_ids: [],
+    source: 'dismissed-gap',
+    response_ms: 0,
+    user_agent: 'Vitalis AI Központ',
+    page_url: ''
+  };
+
+  if (supabaseConfigured()) {
+    await supabaseRequest({
+      method: 'POST',
+      pathname: '/rest/v1/chat_conversations',
+      body: row
+    });
+  } else {
+    fs.appendFileSync(CONVERSATION_LOG, JSON.stringify(row) + '\n', 'utf8');
+  }
+
+  sendJson(res, 200, { ok: true, message: 'A tudáshiány lezárva.' });
+}
+
+/* =========================================================
    HTTP SEGÉDEK
 ========================================================= */
 
@@ -2004,7 +2310,7 @@ function handleStatus(
         true,
 
       version:
-        'Éles 2.2',
+        'Éles 2.3',
 
       knowledge:
         knowledgeStats,
@@ -2196,6 +2502,58 @@ const server =
         ) {
 
           await handleConversationExport(
+            req,
+            res,
+            url
+          );
+
+          return;
+        }
+
+        /* -------------------------
+           TUDÁSHIÁNYOK
+        ------------------------- */
+
+        if (
+          req.method ===
+          'GET' &&
+          url.pathname ===
+          '/api/admin/knowledge-gaps'
+        ) {
+
+          await handleAdminKnowledgeGaps(
+            req,
+            res,
+            url
+          );
+
+          return;
+        }
+
+        if (
+          req.method ===
+          'POST' &&
+          url.pathname ===
+          '/api/admin/knowledge-gaps/approve'
+        ) {
+
+          await handleApproveKnowledgeGap(
+            req,
+            res,
+            url
+          );
+
+          return;
+        }
+
+        if (
+          req.method ===
+          'POST' &&
+          url.pathname ===
+          '/api/admin/knowledge-gaps/dismiss'
+        ) {
+
+          await handleDismissKnowledgeGap(
             req,
             res,
             url
@@ -2464,76 +2822,102 @@ server.on(
    INDÍTÁS
 ========================================================= */
 
-server.listen(
-  PORT,
-  HOST,
+async function startServer() {
 
-  () => {
+  await hydrateApprovedKnowledge();
 
-    try {
+  server.listen(
+    PORT,
+    HOST,
 
-      fs.writeFileSync(
-        path.join(
-          ROOT,
-          'chatbot.pid'
-        ),
+    () => {
 
-        String(
-          process.pid
-        )
+      try {
+
+        fs.writeFileSync(
+          path.join(
+            ROOT,
+            'chatbot.pid'
+          ),
+
+          String(
+            process.pid
+          )
+        );
+
+      } catch {}
+
+      console.log(
+        '=========================================='
       );
 
-    } catch {}
+      console.log(
+        ' Kérdezd a készítőt! – Éles 2.3 elindult'
+      );
 
-    console.log(
-      '=========================================='
-    );
+      console.log(
+        ` Alap tudáselemek: ${knowledgeStats.base}`
+      );
 
-    console.log(
-      ' Kérdezd a készítőt! – Éles 2.2 elindult'
-    );
+      console.log(
+        ` UNAS tudáselemek: ${knowledgeStats.unas}`
+      );
 
-    console.log(
-      ` Alap tudáselemek: ${knowledgeStats.base}`
-    );
+      console.log(
+        ` Jóváhagyott admin tudáselemek: ${knowledgeStats.approved || 0}`
+      );
 
-    console.log(
-      ` UNAS tudáselemek: ${knowledgeStats.unas}`
-    );
+      console.log(
+        ` Összes tudáselem: ${knowledgeStats.total}`
+      );
 
-    console.log(
-      ` Összes tudáselem: ${knowledgeStats.total}`
-    );
+      console.log(
+        ` Admin: ${
+          ADMIN_TOKEN
+            ? 'BEKAPCSOLVA'
+            : 'KIKAPCSOLVA'
+        }`
+      );
 
-    console.log(
-      ` Admin: ${
-        ADMIN_TOKEN
-          ? 'BEKAPCSOLVA'
-          : 'KIKAPCSOLVA'
-      }`
-    );
+      console.log(
+        ` Supabase naplózás: ${
+          supabaseConfigured()
+            ? 'BEKAPCSOLVA'
+            : 'KIKAPCSOLVA'
+        }`
+      );
 
-    console.log(
-      ` Supabase naplózás: ${
-        supabaseConfigured()
-          ? 'BEKAPCSOLVA'
-          : 'KIKAPCSOLVA'
-      }`
-    );
+      console.log(
+        ` UNAS API: ${
+          unasConfigured()
+            ? 'BEKAPCSOLVA'
+            : 'KIKAPCSOLVA'
+        }`
+      );
 
-    console.log(
-      ` UNAS API: ${
-        unasConfigured()
-          ? 'BEKAPCSOLVA'
-          : 'KIKAPCSOLVA'
-      }`
-    );
+      console.log(
+        '=========================================='
+      );
+    }
+  );
+}
 
-    console.log(
-      '=========================================='
-    );
-  }
-);
+startServer()
+  .catch(
+    (
+      error
+    ) => {
+
+      console.error(
+        'Indítási hiba:',
+        error
+      );
+
+      process.exit(
+        1
+      );
+    }
+  );
 
 /* =========================================================
    LEÁLLÍTÁS
