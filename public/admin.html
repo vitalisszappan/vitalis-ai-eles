@@ -47,6 +47,13 @@
     <div class="topbar-actions">
 
       <button
+        id="loadKnowledgeGapsButton"
+        type="button"
+      >
+        Tudáshiányok
+      </button>
+
+      <button
         id="unasTestButton"
         type="button"
       >
@@ -106,15 +113,56 @@
       <div class="stat-card">
 
         <span>
-          Megjelenített találatok
+          Nyitott tudáshiányok
         </span>
 
-        <strong id="visibleCount">
+        <strong id="knowledgeGapCount">
           –
         </strong>
 
       </div>
 
+    </section>
+
+    <!-- =====================================================
+         TUDÁSHIÁNYOK
+    ====================================================== -->
+
+    <section class="toolbar">
+
+      <div>
+
+        <h2>
+          Tudáshiányok
+        </h2>
+
+        <p>
+          Itt jelennek meg azok a valós vásárlói kérdések,
+          amelyekre a chatbot még nem talált elég biztos választ.
+        </p>
+
+      </div>
+
+      <button
+        id="loadKnowledgeGapsButtonSecondary"
+        type="button"
+      >
+        Tudáshiányok frissítése
+      </button>
+
+    </section>
+
+    <section
+      id="knowledgeGapStatusMessage"
+      class="status"
+    >
+      A tudáshiányok még nincsenek betöltve.
+    </section>
+
+    <section
+      id="knowledgeGapList"
+      class="knowledge-gap-list"
+    >
     </section>
 
     <!-- =====================================================
