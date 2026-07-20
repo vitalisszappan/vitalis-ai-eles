@@ -16,10 +16,20 @@ const {
   buildConversationContext,
   detectProblem,
   looksLikeEmail,
-  isFollowUpMessage
+  isFollowUpMessage,
+  resolveProductReference
 } = require(
   './conversation-context.cjs'
 );
+
+const {
+  PRODUCTS,
+  productCards
+} = require('./product-catalog.cjs');
+
+const {
+  findProductInText
+} = require('./product-faq.cjs');
 
 /* =========================================================
    SEGÉDFÜGGVÉNYEK
@@ -1114,6 +1124,77 @@ function buildSingleAnswer(
   };
 }
 
+function productName(productId) {
+  return PRODUCTS[productId]?.name || null;
+}
+
+function buildProductReferenceAnswer(productId, knowledge) {
+  const product = PRODUCTS[productId];
+  if (!product) return null;
+
+  const matches = searchKnowledge(knowledge, product.name)
+    .filter(({ item }) => {
+      const haystack = normalize([
+        item.title,
+        item.canonicalQuestion,
+        ...(Array.isArray(item.products) ? item.products : [])
+      ].filter(Boolean).join(' '));
+      return findProductInText(haystack) === productId &&
+        (item.source === 'approved-knowledge' || isProductItem(item));
+    })
+    .sort((a, b) => {
+      const approvedA = a.item.source === 'approved-knowledge' ? 1 : 0;
+      const approvedB = b.item.source === 'approved-knowledge' ? 1 : 0;
+      return approvedB - approvedA || b.score - a.score;
+    });
+
+  if (matches[0]) return buildSingleAnswer(matches[0].item, matches[0].score);
+
+  return {
+    source: 'product-context',
+    answer: `${product.name}: ${product.description}`,
+    confidence: 100,
+    links: productCards([productId]),
+    suggestions: [],
+    ruleId: `product_context_${productId}`,
+    intent: 'product-detail',
+    matchedKnowledgeIds: []
+  };
+}
+
+function resolveTypedProductFollowUp(question, context) {
+  const q = normalize(question);
+  const type = /\bszappan/.test(q) ? 'szappan'
+    : /\b(krem|balzsam)/.test(q) ? 'balzsam'
+      : /\bsampon/.test(q) ? 'sampon' : null;
+
+  if (!type || !/^(es\b|szappant?\b|kremet?\b|balzsamot?\b|sampont?\b)/.test(q)) return null;
+
+  const candidates = context.lastRecommendedProducts.filter((id) =>
+    normalize(productName(id) || '').includes(type)
+  );
+
+  if (candidates.length === 1) return { productId: candidates[0] };
+  if (candidates.length > 1) return { ambiguous: true, candidates };
+  return null;
+}
+
+function clarificationAnswer(context, candidates = []) {
+  const ids = candidates.length ? candidates : context.lastRecommendedProducts;
+  const names = ids.map(productName).filter(Boolean);
+  const choices = names.length ? ` Ezekre gondolhatsz: ${names.join(', ')}.` : '';
+  return {
+    source: 'conversation-context',
+    answer: `Nem egyértelmű, melyik termékre gondolsz.${choices} Írd meg kérlek a nevét vagy a sorszámát.`,
+    confidence: 100,
+    links: productCards(ids),
+    suggestions: names.map((name) => ({ label: name, question: name })),
+    ruleId: 'clarify-product-reference',
+    intent: 'conversation-clarification',
+    matchedKnowledgeIds: []
+  };
+}
+
 /* =========================================================
    FŐ VÁLASZKÉPZÉS
 ========================================================= */
@@ -1125,6 +1206,28 @@ function createAnswer({
   ruleEngine,
   logGap
 }) {
+
+  const context = buildConversationContext(history, normalize);
+
+  const reference = resolveProductReference(question, context);
+  if (reference?.ambiguous) return clarificationAnswer(context);
+  if (reference?.productId) {
+    return buildProductReferenceAnswer(reference.productId, knowledge);
+  }
+
+  const typedFollowUp = resolveTypedProductFollowUp(question, context);
+  if (typedFollowUp?.ambiguous) {
+    return clarificationAnswer(context, typedFollowUp.candidates);
+  }
+  if (typedFollowUp?.productId) {
+    return buildProductReferenceAnswer(typedFollowUp.productId, knowledge);
+  }
+
+  const directProductId = findProductInText(normalize(question));
+  const isBareProductName = directProductId && normalize(question).split(' ').length <= 6;
+  if (isBareProductName) {
+    return buildProductReferenceAnswer(directProductId, knowledge);
+  }
 
   /*
     1. E-MAIL-CÍM

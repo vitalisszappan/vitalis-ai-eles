@@ -29,10 +29,33 @@ const PRODUCT_ALIASES = [
   ['aktiv_szenes_szappan', ['aktiv szenes szappan']],
   ['shea_vajas_szappan', ['shea vajas szappan']],
   ['psorivital_csomag', ['psorivital csomag', 'psorivital']],
+  ['holt_tengeri_so_balzsam', ['holt tengeri so balzsam', 'holt tengeri balzsam']],
+  ['holt_tengeri_iszapos_szappan', ['holt tengeri iszapos szappan', 'iszapos szappan']],
   ['rozmaringos_samponszappan', ['rozmaringos samponszappan']]
 ];
 
+function findProductsInText(normalizedText) {
+  normalizedText = String(normalizedText || '').replace(/-/g, ' ');
+  const matches = [];
+
+  for (const [id, aliases] of PRODUCT_ALIASES) {
+    let index = Number.POSITIVE_INFINITY;
+
+    for (const alias of aliases) {
+      const found = normalizedText.indexOf(alias);
+      if (found >= 0 && found < index) index = found;
+    }
+
+    if (Number.isFinite(index)) matches.push({ id, index });
+  }
+
+  return matches
+    .sort((a, b) => a.index - b.index)
+    .map((match) => match.id);
+}
+
 function findProductInText(normalizedText, preferFirst = true) {
+  normalizedText = String(normalizedText || '').replace(/-/g, ' ');
   let best = null;
   let bestIndex = preferFirst ? Number.POSITIVE_INFINITY : -1;
   for (const [id, aliases] of PRODUCT_ALIASES) {
@@ -68,4 +91,4 @@ function childAnswer(productId) {
   return PRODUCT_FAQ[productId]?.child || null;
 }
 
-module.exports = { PRODUCT_FAQ, PRODUCT_ALIASES, findProductInText, findRecentProductFromHistory, childAnswer };
+module.exports = { PRODUCT_FAQ, PRODUCT_ALIASES, findProductInText, findProductsInText, findRecentProductFromHistory, childAnswer };

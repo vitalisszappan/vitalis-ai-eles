@@ -41,6 +41,13 @@ const PRODUCTS = {
     url: 'https://www.vitalis-szappan.hu/termek/holt-tengeri-so-balzsam',
     image: null
   },
+  holt_tengeri_iszapos_szappan: {
+    id: 'holt_tengeri_iszapos_szappan',
+    name: 'Holt-tengeri iszapos szappan',
+    description: 'Problémás, száraz és hámló bőr kíméletes tisztítására.',
+    url: null,
+    image: null
+  },
   aktiv_szenes_szappan: {
     id: 'aktiv_szenes_szappan',
     name: 'Aktív szenes szappan',

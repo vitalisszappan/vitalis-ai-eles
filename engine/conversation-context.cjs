@@ -1,7 +1,8 @@
 'use strict';
 
 const {
-  findProductInText
+  findProductInText,
+  findProductsInText
 } = require(
   './product-faq.cjs'
 );
@@ -287,7 +288,18 @@ function isFollowUpMessage(
 
     'ez jo lehet',
     'ezt ajanlod',
-    'mit hasznaljak meg'
+    'mit hasznaljak meg',
+
+    'az elsot',
+    'az elso',
+    'a masodikat',
+    'a masodik',
+    'a masikat',
+    'masikat',
+    'ebbol',
+    'belole',
+    'ezt',
+    'azt'
   ];
 
   return followUps.some(
@@ -299,6 +311,46 @@ function isFollowUpMessage(
         `${phrase} `
       )
   );
+}
+
+function resolveProductReference(text, context) {
+  const value = normalizeLoose(text);
+  const products = context?.lastRecommendedProducts || [];
+  let index = null;
+
+  if (/\b(az )?elsot?\b/.test(value)) index = 0;
+  if (/\b(a )?masodikat?\b/.test(value)) index = 1;
+
+  if (index !== null) {
+    return products[index]
+      ? { productId: products[index], ambiguous: false }
+      : { productId: null, ambiguous: true };
+  }
+
+  if (/\b(a )?masikat\b/.test(value)) {
+    if (products.length === 2 && context.lastProduct) {
+      return {
+        productId: products.find((id) => id !== context.lastProduct) || null,
+        ambiguous: false
+      };
+    }
+    return { productId: null, ambiguous: true };
+  }
+
+  if (/\b(ebbol|belole|ezt|azt)\b/.test(value)) {
+    if (context.lastSelectedProduct) {
+      return { productId: context.lastSelectedProduct, ambiguous: false };
+    }
+    if (context.lastUserProduct) {
+      return { productId: context.lastUserProduct, ambiguous: false };
+    }
+    if (products.length === 1) {
+      return { productId: products[0], ambiguous: false };
+    }
+    return { productId: null, ambiguous: products.length > 1 };
+  }
+
+  return null;
 }
 
 /* =========================================================
@@ -318,6 +370,9 @@ function buildConversationContext(
     lastAssistantProduct:
       null,
 
+    lastSelectedProduct:
+      null,
+
     lastProduct:
       null,
 
@@ -332,6 +387,9 @@ function buildConversationContext(
 
     lastUserEmail:
       null,
+
+    lastRecommendedProducts:
+      [],
 
     mentionedProducts:
       []
@@ -377,6 +435,11 @@ function buildConversationContext(
       context.lastUserMessage =
         text;
 
+      const reference = resolveProductReference(originalText, context);
+      if (reference?.productId) {
+        context.lastSelectedProduct = reference.productId;
+      }
+
       if (
         looksLikeEmail(
           originalText
@@ -401,12 +464,10 @@ function buildConversationContext(
        TERMÉK
     ------------------------- */
 
-    const product =
-      findProductInText(
-        text,
-        message.role ===
-          'assistant'
-      );
+    const products = findProductsInText(text);
+    const product = message.role === 'assistant'
+      ? products[0]
+      : findProductInText(text, false);
 
     if (
       product
@@ -434,6 +495,9 @@ function buildConversationContext(
 
         context.lastUserProduct =
           product;
+
+        context.lastSelectedProduct =
+          product;
       }
 
       if (
@@ -443,6 +507,9 @@ function buildConversationContext(
 
         context.lastAssistantProduct =
           product;
+
+        context.lastRecommendedProducts =
+          products;
       }
 
       context.lastProduct =
@@ -483,5 +550,7 @@ module.exports = {
 
   looksLikeEmail,
 
-  isFollowUpMessage
+  isFollowUpMessage,
+
+  resolveProductReference
 };
