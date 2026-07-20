@@ -31,7 +31,7 @@ const PRODUCTS = {
     id: 'psorivital_csomag',
     name: 'PsoriVital csomag',
     description: 'Száraz, hámló és pikkelysömörre hajlamos bőr kozmetikai ápolására.',
-    url: null,
+    url: 'https://www.vitalis-szappan.hu/psorivital-csomag-ekcemas-borre',
     image: null
   },
   holt_tengeri_so_balzsam: {
@@ -78,6 +78,18 @@ function cleanText(value, fallback = '') {
   return text;
 }
 
+function validProductUrl(value) {
+  const text = cleanText(value);
+  if (!text) return '';
+
+  try {
+    const url = new URL(text);
+    return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : '';
+  } catch {
+    return '';
+  }
+}
+
 function productCards(ids = []) {
   return ids
     .map((id, index) => {
@@ -90,7 +102,7 @@ function productCards(ids = []) {
         title: name,
         label: name,
         description: cleanText(product.description),
-        url: cleanText(product.url),
+        url: validProductUrl(product.url),
         image: cleanText(product.image),
         rank: index + 1,
         recommendationType: index === 0 ? 'primary' : 'secondary'
@@ -99,4 +111,4 @@ function productCards(ids = []) {
     .filter(Boolean);
 }
 
-module.exports = { PRODUCTS, productCards };
+module.exports = { PRODUCTS, productCards, validProductUrl };

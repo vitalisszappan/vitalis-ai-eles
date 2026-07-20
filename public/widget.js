@@ -48,6 +48,18 @@ function safeText(value, fallback = '') {
   return text;
 }
 
+function safeProductUrl(value) {
+  const text = safeText(value);
+  if (!text) return '';
+
+  try {
+    const url = new URL(text, window.location.href);
+    return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : '';
+  } catch {
+    return '';
+  }
+}
+
 function normalizeProduct(item, index) {
   if (!item || typeof item !== 'object') return null;
   const name = safeText(item.name) || safeText(item.title) || safeText(item.label) || 'Vitalis termék';
@@ -55,7 +67,7 @@ function normalizeProduct(item, index) {
     id: safeText(item.id, `product-${index + 1}`),
     name,
     description: safeText(item.description),
-    url: safeText(item.url),
+    url: safeProductUrl(item.url),
     image: safeText(item.image),
     recommendationType: item.recommendationType === 'secondary' ? 'secondary' : (index === 0 ? 'primary' : 'secondary')
   };

@@ -24,7 +24,8 @@ const {
 
 const {
   PRODUCTS,
-  productCards
+  productCards,
+  validProductUrl
 } = require('./product-catalog.cjs');
 
 const {
@@ -393,32 +394,46 @@ function attachProductLinks(
         suggestion
       );
 
+    const localProductId = findProductInText(normalize(suggestion));
+    const localCard = localProductId
+      ? productCards([localProductId])[0]
+      : null;
+    const unasUrl = validProductUrl(item?.url);
+    const card = item && unasUrl
+      ? {
+          id: item.productId || item.id || localCard?.id || '',
+          name: getItemTitle(item),
+          title: getItemTitle(item),
+          label: getItemTitle(item),
+          description: removeTechnicalNoise(getItemAnswer(item)),
+          url: unasUrl,
+          image: item.image || '',
+          rank: links.length + 1,
+          recommendationType: links.length === 0 ? 'primary' : 'secondary'
+        }
+      : localCard;
+
     if (
-      !item ||
-      !item.url ||
+      !card ||
       seenUrls.has(
-        item.url
+        card.url || card.id || card.name
       )
     ) {
       continue;
     }
 
     seenUrls.add(
-      item.url
+      card.url || card.id || card.name
     );
 
     links.push({
-      label:
-        getItemTitle(
-          item
-        ),
-
-      url:
-        item.url
+      ...card,
+      rank: links.length + 1,
+      recommendationType: links.length === 0 ? 'primary' : 'secondary'
     });
 
     if (
-      item.id
+      item?.id
     ) {
       matchedKnowledgeIds.push(
         item.id
