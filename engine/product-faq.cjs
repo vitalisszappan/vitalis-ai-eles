@@ -23,14 +23,30 @@ const PRODUCT_FAQ = {
 };
 
 const PRODUCT_ALIASES = [
-  ['dermavital_krem', ['dermavital krem', 'dermavital balzsam']],
+  ['dermavital_krem', [
+    'dermavital nyugtato borapolo krem',
+    'dermavital nyugtato krem',
+    'dermavital krem',
+    'dermavital balzsam'
+  ]],
   ['dermavital_szappan', ['dermavital szappan']],
   ['dermavital_sampon', ['dermavital sampon']],
   ['aktiv_szenes_szappan', ['aktiv szenes szappan']],
   ['shea_vajas_szappan', ['shea vajas szappan']],
   ['psorivital_csomag', ['psorivital csomag', 'psorivital']],
   ['holt_tengeri_so_balzsam', ['holt tengeri so balzsam', 'holt tengeri balzsam']],
-  ['holt_tengeri_iszapos_szappan', ['holt tengeri iszapos szappan', 'iszapos szappan']],
+  ['holt_tengeri_iszapos_szappan', [
+    'holt tengeri iszapos szappan',
+    'holt tengeri iszap szappan',
+    'iszapos szappan',
+    'iszap szappan'
+  ]],
+  ['katrany_szappan', [
+    'gyogyaszati katrany szappan',
+    'gyogyaszati katranyszappan',
+    'katrany szappan',
+    'katranyszappan'
+  ]],
   ['rozmaringos_samponszappan', ['rozmaringos samponszappan']]
 ];
 

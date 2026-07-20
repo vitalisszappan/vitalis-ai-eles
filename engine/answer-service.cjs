@@ -535,7 +535,7 @@ function buildProblemAnswer(
         'expert-problem',
 
       answer:
-        'Rosaceára, kipirosodásra hajlamos érzékeny arcbőrnél kíméletes, illatmentes bőrápolást javaslok. A Dermavital nyugtató bőrápoló krém lehet jó választás, mert érzékeny, irritált és kipirosodásra hajlamos bőr mindennapi ápolására készült. Erős illóolajos vagy intenzíven hámlasztó termékeket ilyen bőrnél érdemes kerülni.',
+        'Rosaceára, kipirosodásra hajlamos érzékeny arcbőrnél kíméletes bőrápolást javaslok. A Dermavital krém lehet jó kiindulás az érzékeny, irritált és kipirosodásra hajlamos bőr mindennapi kozmetikai ápolására. Erős illóolajos vagy intenzíven hámlasztó termékeket ilyen bőrnél érdemes kerülni.',
 
       confidence:
         100,
@@ -545,9 +545,7 @@ function buildProblemAnswer(
 
       suggestions:
         [
-          'Dermavital nyugtató bőrápoló krém',
-          'Kecsketejes natúr szappan',
-          'Olíva szappan'
+          'Dermavital krém'
         ],
 
       ruleId:
@@ -570,7 +568,7 @@ function buildProblemAnswer(
         'expert-problem',
 
       answer:
-        'Hajszálértágulatra vagy couperose-ra hajlamos arcbőrnél különösen fontos a kíméletes, nyugtató és lehetőleg illatmentes ápolás. Ilyen esetben a Dermavital nyugtató bőrápoló krém lehet jó kiindulás. A látható hajszálereket kozmetikum nem tünteti el, de az érzékeny bőr komfortérzetének támogatásában segíthet.',
+        'Hajszálértágulatra vagy couperose-ra hajlamos arcbőrnél különösen fontos a kíméletes ápolás. Ilyen esetben a Dermavital krém lehet jó kiindulás az érzékeny bőr mindennapi kozmetikai ápolására. A látható hajszálereket kozmetikum nem tünteti el.',
 
       confidence:
         100,
@@ -580,7 +578,7 @@ function buildProblemAnswer(
 
       suggestions:
         [
-          'Dermavital nyugtató bőrápoló krém'
+          'Dermavital krém'
         ],
 
       ruleId:
@@ -1296,6 +1294,32 @@ function createAnswer({
   }
 
   /*
+    A konkrét problémára és konkrét termékekre épülő expert szabályok
+    elsőbbséget élveznek az általános, kézzel épített problémaválaszokkal
+    szemben. Így az expert szabály terméksorrendje és kártyái nem vesznek el.
+  */
+
+  const expert = ruleEngine.resolve(
+    question,
+    history
+  );
+
+  const specificProductRuleIds = new Set([
+    'scalp_general',
+    'scalp_psoriasis',
+    'scalp_itchy',
+    'hair_loss',
+    'eczema',
+    'psoriasis_body',
+    'acne',
+    'dry_skin'
+  ]);
+
+  if (expert && specificProductRuleIds.has(expert.ruleId)) {
+    return expert;
+  }
+
+  /*
     3. PROBLÉMAKÖR ELSŐBBSÉGI FELISMERÉS
   */
 
@@ -1357,12 +1381,6 @@ function createAnswer({
   /*
     5. SZAKÉRTŐI SZABÁLYOK
   */
-
-  const expert =
-    ruleEngine.resolve(
-      question,
-      history
-    );
 
   if (
     expert
