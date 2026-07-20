@@ -32,6 +32,10 @@ const {
   findProductInText
 } = require('./product-faq.cjs');
 
+const {
+  resolveMetaIntent
+} = require('./meta-intents.cjs');
+
 /* =========================================================
    SEGÉDFÜGGVÉNYEK
 ========================================================= */
@@ -1219,6 +1223,9 @@ function createAnswer({
   ruleEngine,
   logGap
 }) {
+
+  const metaAnswer = resolveMetaIntent(question);
+  if (metaAnswer) return metaAnswer;
 
   const context = buildConversationContext(history, normalize);
 
