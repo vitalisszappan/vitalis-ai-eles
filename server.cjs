@@ -2314,13 +2314,8 @@ async function handleUnasSync(
     const result =
       await buildUnasKnowledge();
 
-    /*
-      A frissen elkészült
-      unas-knowledge.json azonnali
-      betöltése a chatbot memóriájába.
-    */
-
-    loadKnowledge();
+    // A kereskedelmi katalógussnapshot ebben a fejlesztési körben
+    // szándékosan nincs bekötve a chatbot válaszadási útvonalába.
 
     console.log(
       `UNAS szinkron sikeres. Termékek: ${result.products}`
@@ -2331,7 +2326,7 @@ async function handleUnasSync(
     );
 
     console.log(
-      `Aktív összes tudáselem: ${knowledge.length}`
+      `UNAS katalógussnapshot: ${result.file}`
     );
 
     console.log(
@@ -2363,7 +2358,7 @@ async function handleUnasSync(
         loadedAt,
 
         message:
-          `UNAS tudásszinkron sikeres. ${result.products} termék és ${result.categories} kategória került feldolgozásra. A chatbot jelenleg összesen ${knowledge.length} tudáselemet használ.`
+          `UNAS katalógusszinkron sikeres. ${result.products} termék és ${result.categories} kategória került a külön snapshotba; a chatbot aktív tudása nem változott.`
       }
     );
 

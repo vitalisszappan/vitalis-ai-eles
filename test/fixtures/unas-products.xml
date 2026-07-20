@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Products>
+  <Product>
+    <State>live</State><Id>1001</Id><Sku>SOAP-001</Sku><Name>Anonim normál szappan</Name><Unit>db</Unit>
+    <StatusBase>1</StatusBase><NoList>0</NoList><Orderable>1</Orderable>
+    <Description><Short><![CDATA[<p>Rövid <strong>leírás</strong>.</p>]]></Short><Long><![CDATA[<p>Hosszú leírás.</p>]]></Long></Description>
+    <Prices><Price><Type>normal</Type><Gross>1490</Gross><Currency>HUF</Currency><Actual>1</Actual></Price></Prices>
+    <Categories><Category><Type>base</Type><Id>10</Id><Name>Szappanok</Name></Category><Category><Type>alt</Type><Id>20</Id><Name>Problémás bőr</Name></Category></Categories>
+    <Url>https://shop.invalid/product/1001</Url>
+    <Images><DefaultFilename>anonim-1001.jpg</DefaultFilename><Image><Type>base</Type><Filename>anonim-1001.jpg</Filename><SefUrl>anonim-kep</SefUrl><Url>https://cdn.invalid/anonim-1001.jpg</Url></Image></Images>
+    <Stocks><Status><Active>1</Active><Empty>0</Empty><Variant>0</Variant></Status><Stock><Qty>12</Qty></Stock></Stocks>
+  </Product>
+  <Product>
+    <State>live</State><Id>1002</Id><Sku>SOAP-002</Sku><Name>Anonim akciós szappan</Name><Unit>db</Unit>
+    <StatusBase>1</StatusBase><NoList>0</NoList>
+    <Description><Short>Akciós termék.</Short><Long>Anonimizált hosszú leírás.</Long></Description>
+    <Prices><Price><Type>normal</Type><Gross>1990</Gross><Currency>HUF</Currency><Actual>0</Actual></Price><Price><Type>sale</Type><Gross>1590</Gross><Currency>HUF</Currency><Actual>1</Actual></Price></Prices>
+    <Categories><Category><Type>base</Type><Id>10</Id><Name>Szappanok</Name></Category></Categories>
+    <Stocks><Status><Active>1</Active><Empty>1</Empty><Variant>0</Variant></Status><Stock><Qty>0</Qty></Stock></Stocks>
+  </Product>
+  <Product>
+    <State>live</State><Id>1003</Id><Name>Hiányos anonim termék</Name><NoList>1</NoList><StatusBase>0</StatusBase>
+  </Product>
+  <Product>
+    <State>live</State><Id>1004</Id><Sku>DUP-SKU</Sku><Name>Első azonos SKU-jú termék</Name>
+  </Product>
+  <Product>
+    <State>live</State><Id>1005</Id><Sku>DUP-SKU</Sku><Name>Második azonos SKU-jú termék</Name>
+  </Product>
+  <Product>
+    <State>live</State><Id>1005</Id><Sku>DUP-SKU</Sku><Name>Duplikált UNAS ID rekord</Name>
+  </Product>
+</Products>

@@ -5,9 +5,12 @@
   "description": "Vitalis webshop chatbot – éles kiadás",
   "scripts": {
     "start": "node server.cjs",
-    "test": "node TEST_EXPERT_RULES.cjs && node TEST_1_4.cjs && node TEST_1_5.cjs && node TEST_1_6.cjs && node TEST_1_7.cjs && node TEST_CONVERSATION_CONTEXT.cjs && node TEST_PRODUCT_LINKS.cjs && node TEST_PRODUCT_AUDIT_FIXES.cjs && node TEST_META_INTENTS.cjs"
+    "test": "node TEST_EXPERT_RULES.cjs && node TEST_1_4.cjs && node TEST_1_5.cjs && node TEST_1_6.cjs && node TEST_1_7.cjs && node TEST_CONVERSATION_CONTEXT.cjs && node TEST_PRODUCT_LINKS.cjs && node TEST_PRODUCT_AUDIT_FIXES.cjs && node TEST_META_INTENTS.cjs && node TEST_UNAS_SYNC.cjs"
   },
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "fast-xml-parser": "^5.10.1"
   }
 }
