@@ -74,6 +74,10 @@ const {
   UNAS_CATALOG_PATH
 } = require('./unas-sync.cjs');
 
+const {
+  createUnasSyncCoordinator
+} = require('./unas-sync-coordinator.cjs');
+
 /* =========================================================
    MAPPÁK
 ========================================================= */
@@ -2316,10 +2320,7 @@ async function handleUnasSync(
     );
 
     const result =
-      await buildUnasKnowledge();
-
-    // A kereskedelmi katalógussnapshot ebben a fejlesztési körben
-    // szándékosan nincs bekötve a chatbot válaszadási útvonalába.
+      await unasSyncCoordinator.run('admin');
 
     console.log(
       `UNAS szinkron sikeres. Termékek: ${result.products}`
@@ -2327,10 +2328,6 @@ async function handleUnasSync(
 
     console.log(
       `Kategóriák: ${result.categories}`
-    );
-
-    console.log(
-      `UNAS katalógussnapshot: ${result.file}`
     );
 
     console.log(
@@ -2350,6 +2347,9 @@ async function handleUnasSync(
 
         categories:
           result.categories,
+
+        audit:
+          result.audit,
 
         unasItems:
           result.total,
@@ -2371,8 +2371,7 @@ async function handleUnasSync(
   ) {
 
     console.error(
-      'UNAS TUDÁSSZINKRON SIKERTELEN:',
-      error
+      'UNAS TUDÁSSZINKRON SIKERTELEN'
     );
 
     sendJson(
@@ -2384,7 +2383,7 @@ async function handleUnasSync(
           false,
 
         error:
-          error.message
+          'Az UNAS katalógusszinkron sikertelen.'
       }
     );
   }
@@ -2469,6 +2468,12 @@ async function handleUnasSnapshot(
   }
 }
 
+const unasSyncCoordinator = createUnasSyncCoordinator({
+  buildSync: () => buildUnasKnowledge(),
+  snapshotPath: UNAS_CATALOG_PATH,
+  apiConfigured: unasConfigured
+});
+
 function handleStatus(
   res
 ) {
@@ -2510,7 +2515,9 @@ function handleStatus(
         getSupabaseKeyType(),
 
       unasConfigured:
-        unasConfigured()
+        unasConfigured(),
+
+      ...unasSyncCoordinator.status()
     }
   );
 }
@@ -3090,6 +3097,8 @@ async function startServer() {
       console.log(
         '=========================================='
       );
+
+      unasSyncCoordinator.start();
     }
   );
 }
@@ -3116,6 +3125,8 @@ startServer()
 ========================================================= */
 
 function cleanupPid() {
+
+  unasSyncCoordinator.stop();
 
   try {
 

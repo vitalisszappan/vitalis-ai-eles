@@ -74,7 +74,9 @@ async function main() {
       ...process.env,
       PORT: String(PORT),
       HOST: '127.0.0.1',
-      ADMIN_TOKEN
+      ADMIN_TOKEN,
+      UNAS_API_KEY: '',
+      UNAS_SYNC_INTERVAL_MS: '0'
     },
     stdio: ['ignore', 'ignore', 'pipe']
   });
@@ -86,6 +88,15 @@ async function main() {
 
   try {
     await waitForServer(child);
+
+    const publicStatus = await request('/api/status');
+    const publicStatusBody = JSON.parse(publicStatus.body.toString('utf8'));
+    assert.equal(publicStatus.status, 200);
+    assert.equal(publicStatusBody.snapshotPresent, false);
+    assert.equal(publicStatusBody.unasSyncInProgress, false);
+    assert.equal(publicStatusBody.lastSuccessfulUnasSyncAt, null);
+    assert.equal(publicStatusBody.lastUnasSyncError, null);
+    assert.equal(publicStatus.body.includes(Buffer.from(ADMIN_TOKEN)), false);
 
     const missingToken = await request('/api/admin/unas/snapshot');
     assert.equal(missingToken.status, 401);
