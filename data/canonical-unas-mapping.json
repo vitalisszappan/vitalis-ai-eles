@@ -79,6 +79,46 @@
       "verifiedName": "Shea vajas szappan – Hidratáló, bőrpuhító luxusápolás érzékeny bőrre – 110 g",
       "mappingStatus": "approved",
       "approvedAt": "2026-07-21T11:11:31+02:00"
+    },
+    {
+      "canonicalId": "natur_kecsketejes_szappan",
+      "unasId": "1241472589",
+      "sku": "Vksz03",
+      "verifiedName": "Natúr kecsketejes szappan érzékeny, száraz bőrre – Illatmentes 110 g",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-07-21T13:50:52+02:00"
+    },
+    {
+      "canonicalId": "kecsketejes_levendulas_szappan",
+      "unasId": "1241471919",
+      "sku": "Vksz02",
+      "verifiedName": "Kecsketejes levendulás szappan gyulladt, érzékeny bőrre – Nyugtató 100 g",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-07-21T13:50:52+02:00"
+    },
+    {
+      "canonicalId": "oliva_szappan",
+      "unasId": "111374990",
+      "sku": "Vsz008",
+      "verifiedName": "Olíva kézműves szappan 100 g",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-07-21T13:50:52+02:00"
+    },
+    {
+      "canonicalId": "teafa_szappan",
+      "unasId": "111374987",
+      "sku": "Vsz005",
+      "verifiedName": "Teafa szappan 100g",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-07-21T13:50:52+02:00"
+    },
+    {
+      "canonicalId": "parajdi_sotomb",
+      "unasId": "111374965",
+      "sku": "PSSZ01",
+      "verifiedName": "Parajdi sószappan – természetes sótömb érzékeny és irritált bőrre",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-07-21T13:50:52+02:00"
     }
   ]
 }

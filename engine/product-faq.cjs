@@ -47,7 +47,33 @@ const PRODUCT_ALIASES = [
     'katrany szappan',
     'katranyszappan'
   ]],
-  ['rozmaringos_samponszappan', ['rozmaringos samponszappan']]
+  ['rozmaringos_samponszappan', ['rozmaringos samponszappan']],
+  ['natur_kecsketejes_szappan', [
+    'natur kecsketejes szappan',
+    'illatmentes kecsketejes szappan',
+    'kecsketejes szappan natur'
+  ]],
+  ['kecsketejes_levendulas_szappan', [
+    'kecsketejes levendulas szappan',
+    'levendulas kecsketejes szappan',
+    'kecsketejes levendula szappan',
+    'levendulas kecsketej szappan'
+  ]],
+  ['oliva_szappan', [
+    'oliva szappan',
+    'oliva kezmuves szappan'
+  ]],
+  ['teafa_szappan', [
+    'teafa szappan',
+    'teafas szappan',
+    'teafaolajos szappan',
+    'teafa kezmuves szappan'
+  ]],
+  ['parajdi_sotomb', [
+    'parajdi sotomb',
+    'parajdi soszappan',
+    'parajdi sos tomb'
+  ]]
 ];
 
 function findProductsInText(normalizedText) {

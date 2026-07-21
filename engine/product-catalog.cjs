@@ -70,6 +70,41 @@ const PRODUCTS = {
     description: 'Száraz, húzódó bőr kímélő mindennapi tisztítására.',
     url: null,
     image: null
+  },
+  natur_kecsketejes_szappan: {
+    id: 'natur_kecsketejes_szappan',
+    name: 'Natúr kecsketejes szappan',
+    description: 'Illatmentes szappan száraz és érzékeny bőr kíméletes tisztítására.',
+    url: 'https://www.vitalis-szappan.hu/Natur-kecsketejes-szappan',
+    image: null
+  },
+  kecsketejes_levendulas_szappan: {
+    id: 'kecsketejes_levendulas_szappan',
+    name: 'Kecsketejes levendulás szappan',
+    description: 'Levendula illóolajos szappan száraz és érzékeny bőr kíméletes tisztítására.',
+    url: 'https://www.vitalis-szappan.hu/nyugtato-kecsketejes-szappan-tihanyi-Levendula-ola',
+    image: null
+  },
+  oliva_szappan: {
+    id: 'oliva_szappan',
+    name: 'Olíva szappan',
+    description: 'Olívaalapú kézműves szappan száraz és normál bőr kíméletes tisztítására.',
+    url: 'https://www.vitalis-szappan.hu/termek/oliva-szappan',
+    image: null
+  },
+  teafa_szappan: {
+    id: 'teafa_szappan',
+    name: 'Teafa szappan',
+    description: 'Teafa illóolajos szappan zsíros és kombinált bőr kozmetikai tisztítására.',
+    url: 'https://www.vitalis-szappan.hu/termek/teafa-szappan',
+    image: null
+  },
+  parajdi_sotomb: {
+    id: 'parajdi_sotomb',
+    name: 'Parajdi sótömb',
+    description: 'Nem habzó és nem tisztító sótömb, tisztálkodás utáni kiegészítő kozmetikai bőrápolásra.',
+    url: 'https://www.vitalis-szappan.hu/termek/parajdi-soszappan',
+    image: null
   }
 };
 

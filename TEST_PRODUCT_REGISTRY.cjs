@@ -178,8 +178,8 @@ assert.deepEqual(ids(ask('az elsőt', history)), ['psorivital_csomag']);
 
 const approvedMappings = require('./data/canonical-unas-mapping.json').mappings
   .filter((item) => item.mappingStatus === 'approved');
-assert.equal(approvedMappings.length, 9);
-const nineProductRegistry = registry(
+assert.equal(approvedMappings.length, 14);
+const approvedProductRegistry = registry(
   approvedMappings,
   approvedMappings.map((item, index) => snapshotProduct({
     unasId: item.unasId,
@@ -188,16 +188,16 @@ const nineProductRegistry = registry(
     url: `https://www.vitalis-szappan.hu/audit-${index + 1}`
   }))
 );
-const nineCards = productCards(
+const approvedCards = productCards(
   approvedMappings.map((item) => item.canonicalId),
-  { registry: nineProductRegistry }
+  { registry: approvedProductRegistry }
 );
 assert.deepEqual(
-  nineCards.map((card) => card.id),
+  approvedCards.map((card) => card.id),
   approvedMappings.map((item) => item.canonicalId)
 );
-for (let index = 0; index < nineCards.length; index += 1) {
-  const card = nineCards[index];
+for (let index = 0; index < approvedCards.length; index += 1) {
+  const card = approvedCards[index];
   const mappingItem = approvedMappings[index];
   assert.equal(card.commerce.unasId, mappingItem.unasId);
   assert.equal(card.commerce.sku, mappingItem.sku);

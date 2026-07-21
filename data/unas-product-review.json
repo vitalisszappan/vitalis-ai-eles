@@ -1,0 +1,2342 @@
+{
+  "schema": "vitalis-unas-product-review/v1",
+  "sourceSnapshotGeneratedAt": "2026-07-21T08:57:18.568Z",
+  "sourceSnapshotProductCount": 83,
+  "generation": {
+    "deterministic": true,
+    "automaticMappingCreated": false,
+    "fuzzyMatchingUsedForApproval": false,
+    "sourceFiles": [
+      "data/unas-catalog-snapshot.json",
+      "data/canonical-unas-mapping.json",
+      "engine/product-catalog.cjs",
+      "engine/product-faq.cjs",
+      "data/knowledge.json",
+      "data/rules/expert-rules.json"
+    ],
+    "sourceEvidence": {
+      "canonicalProductCount": 15,
+      "aliasCanonicalCount": 15,
+      "knowledgeEntryCount": 96,
+      "expertRuleCount": 19,
+      "ruleCanonicalIds": [
+        "aktiv_szenes_szappan",
+        "dermavital_sampon",
+        "dermavital_krem",
+        "dermavital_szappan",
+        "shea_vajas_szappan",
+        "rozmaringos_samponszappan",
+        "psorivital_csomag",
+        "holt_tengeri_so_balzsam",
+        "katrany_szappan"
+      ]
+    }
+  },
+  "summary": {
+    "total": 83,
+    "approved_mapped": 14,
+    "mapping_candidate": 0,
+    "new_product_candidate": 57,
+    "needs_review": 11,
+    "excluded_or_non_product": 1,
+    "families": [
+      {
+        "family": "szappanok",
+        "total": 28,
+        "mapped": 9,
+        "unmapped": 19
+      },
+      {
+        "family": "samponszappanok",
+        "total": 2,
+        "mapped": 1,
+        "unmapped": 1
+      },
+      {
+        "family": "samponok",
+        "total": 3,
+        "mapped": 1,
+        "unmapped": 2
+      },
+      {
+        "family": "krémek és balzsamok",
+        "total": 9,
+        "mapped": 2,
+        "unmapped": 7
+      },
+      {
+        "family": "testápolók",
+        "total": 3,
+        "mapped": 0,
+        "unmapped": 3
+      },
+      {
+        "family": "dezodorok",
+        "total": 3,
+        "mapped": 0,
+        "unmapped": 3
+      },
+      {
+        "family": "fürdősók",
+        "total": 1,
+        "mapped": 0,
+        "unmapped": 1
+      },
+      {
+        "family": "fürdőbombák",
+        "total": 5,
+        "mapped": 0,
+        "unmapped": 5
+      },
+      {
+        "family": "ajakápolók",
+        "total": 6,
+        "mapped": 0,
+        "unmapped": 6
+      },
+      {
+        "family": "fogápolás",
+        "total": 3,
+        "mapped": 0,
+        "unmapped": 3
+      },
+      {
+        "family": "illóolajok",
+        "total": 0,
+        "mapped": 0,
+        "unmapped": 0
+      },
+      {
+        "family": "csomagok",
+        "total": 10,
+        "mapped": 1,
+        "unmapped": 9
+      },
+      {
+        "family": "egyéb",
+        "total": 10,
+        "mapped": 0,
+        "unmapped": 10
+      }
+    ],
+    "topNewProductCandidateIds": [
+      "1229782139",
+      "1229849469",
+      "1462215016",
+      "1462205581",
+      "1462229441",
+      "163834530",
+      "163833777",
+      "864855961",
+      "449056663",
+      "1080620650",
+      "111374978",
+      "111374975",
+      "111374976",
+      "111374977",
+      "1423171731",
+      "1511229416",
+      "423469634",
+      "111374995",
+      "111374983",
+      "111374968"
+    ],
+    "needsReviewIds": [
+      "1467818511",
+      "1412841306",
+      "1120474529",
+      "1120474184",
+      "1120473169",
+      "1120472549",
+      "169075266",
+      "121057699",
+      "111406270",
+      "111374991",
+      "111374969"
+    ]
+  },
+  "records": [
+    {
+      "unasId": "1553769891",
+      "sku": "Vitdermsamp01",
+      "officialName": "Dermavital Sampon – nyugtató ápolás viszkető, irritált és érzékeny fejbőrre",
+      "url": "https://www.vitalis-szappan.hu/dermavital-sampon-viszketo-irritalt-fejborre",
+      "image": "https://www.vitalis-szappan.hu/img/99212/Vitdermsamp01/Vitdermsamp01.jpg?time=1783438162",
+      "price": 3400,
+      "currency": null,
+      "categories": [
+        "Összes termékünk"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "samponok",
+      "canonicalCandidate": "dermavital_sampon",
+      "confidence": "exact",
+      "reviewStatus": "approved_mapped",
+      "reason": "Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val.",
+      "note": "Jóváhagyott mapping; canonical név: Dermavital sampon."
+    },
+    {
+      "unasId": "1511229416",
+      "sku": "Vsz023",
+      "officialName": "Mentás kávé szappan – Frissítő radírozás koffeinnel és borsmentával – 110 g",
+      "url": "https://www.vitalis-szappan.hu/mentas-kave-szappan",
+      "image": "https://www.vitalis-szappan.hu/img/99212/Vsz023/Vsz023.jpg?time=1778048413",
+      "price": 1490,
+      "currency": null,
+      "categories": [
+        "Kézműves szappanok"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "szappanok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "1467825966",
+      "sku": "Vssz02",
+      "officialName": "Kézműves Samponszappan – Rozmaring 110 g",
+      "url": "https://www.vitalis-szappan.hu/termek/sampon-szappan-normal-hajra-rozmaring",
+      "image": "https://www.vitalis-szappan.hu/img/99212/Vssz02/Vssz02.jpg?time=1772450237",
+      "price": 1600,
+      "currency": null,
+      "categories": [
+        "Kézműves szappanok|Hajmosásra ajánlott szappanok"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "samponszappanok",
+      "canonicalCandidate": "rozmaringos_samponszappan",
+      "confidence": "exact",
+      "reviewStatus": "approved_mapped",
+      "reason": "Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val.",
+      "note": "Jóváhagyott mapping; canonical név: Rozmaringos samponszappan."
+    },
+    {
+      "unasId": "1467818511",
+      "sku": "Vssz01",
+      "officialName": "Samponszappan – Teafa & Aktív szén 110 g",
+      "url": "https://www.vitalis-szappan.hu/termek/samponszappan-teafa-aktiv-szen-110-g",
+      "image": "https://www.vitalis-szappan.hu/img/99212/Vssz01/Vssz01.jpg?time=1772449215",
+      "price": 1600,
+      "currency": null,
+      "categories": [
+        "Kézműves szappanok|Hajmosásra ajánlott szappanok"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "samponszappanok",
+      "canonicalCandidate": "aktiv_szenes_szappan",
+      "confidence": "medium",
+      "reason": "A névben aktív szén szerepel, de az UNAS rekord samponszappan, a canonical termék pedig bőrtisztító szappan.",
+      "note": "Nem azonosítható az aktiv_szenes_szappan termékkel; eltérő terméktípus, automatikus mapping tilos.",
+      "reviewStatus": "needs_review"
+    },
+    {
+      "unasId": "1462570616",
+      "sku": "VDVSZ",
+      "officialName": "Dermavital szappan – Holt-tengeri ásványokkal problémás bőrre 120 g",
+      "url": "https://www.vitalis-szappan.hu/vitalis-dermavital-szappan",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VDVSZ/VDVSZ.jpg?time=1771688491",
+      "price": 2700,
+      "currency": null,
+      "categories": [
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan száraz bőrre – kíméletes tisztítás természetesen",
+        "Összes termékünk",
+        "Kézműves szappanok",
+        "Kézműves szappanok|Szappanok bőrtípus szerint",
+        "Problémák és megoldások",
+        "Problémák és megoldások|Ekcémára és pikkelysömörre hajlamos bőr ápolása"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "szappanok",
+      "canonicalCandidate": "dermavital_szappan",
+      "confidence": "exact",
+      "reviewStatus": "approved_mapped",
+      "reason": "Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val.",
+      "note": "Jóváhagyott mapping; canonical név: Dermavital szappan."
+    },
+    {
+      "unasId": "1462229441",
+      "sku": "VSZDCS",
+      "officialName": "Vitalis Szájápolási Duo – Természetes fogkrém és aktív szenes fogfehérítő por",
+      "url": "https://www.vitalis-szappan.hu/vitalis-szajapolasi-duo",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VSZDCS/VSZDCS.jpg?time=1771688640",
+      "price": 6190,
+      "currency": null,
+      "categories": [
+        "Szájápolás – Természetes fogkrémek és fogfehérítő por",
+        "Összes termékünk"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "fogápolás",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "1462215016",
+      "sku": "VFG",
+      "officialName": "Természetes fogkrém – Zöld agyaggal és mentával",
+      "url": "https://www.vitalis-szappan.hu/termeszetes-fogkrem-zold-agyaggal-es-mentaval",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VFG/VFG.jpg?time=1771606886",
+      "price": 3400,
+      "currency": null,
+      "categories": [
+        "Szájápolás – Természetes fogkrémek és fogfehérítő por",
+        "Összes termékünk"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "fogápolás",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "1462205581",
+      "sku": "VFFP",
+      "officialName": "Fogfehérítő por – Aktív kókusz szénnel és borsmentával 30 g",
+      "url": "https://www.vitalis-szappan.hu/fogfeherito-por-aktiv-kokusz-szennel-es-borsmentav",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VFFP/VFFP.jpg?time=1771602491",
+      "price": 3400,
+      "currency": null,
+      "categories": [
+        "Szájápolás – Természetes fogkrémek és fogfehérítő por",
+        "Összes termékünk"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "fogápolás",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "1437951756",
+      "sku": "VAJ06",
+      "officialName": "Ajakkaland Csilis | Kézműves ajakbalzsam csili kivonattal 8 ml",
+      "url": "https://www.vitalis-szappan.hu/Ajakkaland-Csilis-Kezmuves-ajakbalzsam-csili-kivon",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VAJ06/VAJ06.jpg?time=1768996353",
+      "price": 950,
+      "currency": null,
+      "categories": [
+        "Bőr-és hajápolás|Ajakápolás"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "ajakápolók",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "1437928551",
+      "sku": "VAJ05",
+      "officialName": "Ajakbalzsam – Natúr | Illatmentes, kézműves ajakápoló balzsam 8 ml",
+      "url": "https://www.vitalis-szappan.hu/natur-ajakbalzsam-illatmentes",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VAJ05/VAJ05.jpg?time=1768996310",
+      "price": 950,
+      "currency": null,
+      "categories": [
+        "Bőr-és hajápolás|Ajakápolás"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "ajakápolók",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "1437913216",
+      "sku": "VAJ04",
+      "officialName": "Ajakbalzsam – Mojito | Kézműves ajakápoló balzsam 8 ml",
+      "url": "https://www.vitalis-szappan.hu/ajakbalzsam-mojito",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VAJ04/VAJ04.jpg?time=1768994435",
+      "price": 950,
+      "currency": null,
+      "categories": [
+        "Bőr-és hajápolás|Ajakápolás"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "ajakápolók",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "1437903471",
+      "sku": "VAJ03",
+      "officialName": "Ajakbalzsam – Mézes | Kézműves ajakápoló balzsam 8 ml",
+      "url": "https://www.vitalis-szappan.hu/ajakbalzsam-mezes",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VAJ03/VAJ03.jpg?time=1768993756",
+      "price": 950,
+      "currency": null,
+      "categories": [
+        "Bőr-és hajápolás|Ajakápolás"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "ajakápolók",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "1423192981",
+      "sku": "VTUS07",
+      "officialName": "Természetes tusfürdő – Mentás citrom 250 ml Frissítő, élénkítő illatú tusfürdő",
+      "url": "https://www.vitalis-szappan.hu/Termeszetes-tusfurdo-Mentas-citrom-250-ml-Frissito",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VTUS07/VTUS07.jpg?time=1765903160",
+      "price": 1590,
+      "currency": null,
+      "categories": [
+        "Természetes tusfürdők – hagyományos folyékony szappanok"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "szappanok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "1423189211",
+      "sku": "VTUS05",
+      "officialName": "Természetes tusfürdő – Rózsa 250 ml Finom, elegáns illat",
+      "url": "https://www.vitalis-szappan.hu/Termeszetes-tusfurdo-Rozsa",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VTUS05/VTUS05.jpg?time=1765901539",
+      "price": 1590,
+      "currency": null,
+      "categories": [
+        "Természetes tusfürdők – hagyományos folyékony szappanok"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "szappanok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "1423186461",
+      "sku": "VTUS04",
+      "officialName": "Természetes tusfürdő – Levendula 250 ml Nyugtató, mindennapi használatra",
+      "url": "https://www.vitalis-szappan.hu/Termeszetes-tusfurdo-Levendula-250-ml-Nyugtato-min",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VTUS04/VTUS04.jpg?time=1765899723",
+      "price": 1590,
+      "currency": null,
+      "categories": [
+        "Természetes tusfürdők – hagyományos folyékony szappanok"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "szappanok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "1423171731",
+      "sku": "VTUS03",
+      "officialName": "Természetes tusfürdő – Teafa & Levendula 250 ml Frissítő tisztaság",
+      "url": "https://www.vitalis-szappan.hu/Termeszetes-tusfurdo-Teafa-Levendula",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VTUS03/VTUS03.jpg?time=1765897595",
+      "price": 1590,
+      "currency": null,
+      "categories": [
+        "Természetes tusfürdők – hagyományos folyékony szappanok"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "szappanok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "1423140766",
+      "sku": "VTUS02",
+      "officialName": "Természetes tusfürdő – Barack 250 ml",
+      "url": "https://www.vitalis-szappan.hu/Termeszetes-tusfurdo-Barack",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VTUS02/VTUS02.jpg?time=1765891187",
+      "price": 1590,
+      "currency": null,
+      "categories": [
+        "Természetes tusfürdők – hagyományos folyékony szappanok"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "szappanok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "1412841306",
+      "sku": "KACS01",
+      "officialName": "Vitalis Karácsonyi Ajándékcsomag – Hajápoló válogatás (3 részes)",
+      "url": "https://www.vitalis-szappan.hu/Vitalis-Karacsonyi-Ajandekcsomag-Hajapolo-valogata",
+      "image": "https://www.vitalis-szappan.hu/img/99212/KACS01/KACS01.jpg?time=1764267994",
+      "price": 8400,
+      "currency": null,
+      "categories": [
+        "Csomagajánlatok",
+        "Összes termékünk"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "csomagok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "needs_review",
+      "reason": "Csomagtermék; összetevői, időszakossága és esetleges átfedései kézi ellenőrzést igényelnek.",
+      "note": "Önálló canonical termékként vagy csomagként történő későbbi kezelésről külön döntés szükséges."
+    },
+    {
+      "unasId": "1412837511",
+      "sku": "VDVK100",
+      "officialName": "Dermavital nyugtató bőrápoló krém – érzékeny, irritált, ekcémára hajlamos bőrre (100 ml)",
+      "url": "https://www.vitalis-szappan.hu/dermavital-balzsam-100-ml",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VDVK100/VDVK100.jpg?time=1764265227",
+      "price": 3700,
+      "currency": null,
+      "categories": [
+        "Bőr-és hajápolás|Test és arcápoló krémek",
+        "Összes termékünk",
+        "Problémák és megoldások",
+        "Problémák és megoldások|Ekcémára és pikkelysömörre hajlamos bőr ápolása"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "krémek és balzsamok",
+      "canonicalCandidate": "dermavital_krem",
+      "confidence": "exact",
+      "reviewStatus": "approved_mapped",
+      "reason": "Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val.",
+      "note": "Jóváhagyott mapping; canonical név: Dermavital krém."
+    },
+    {
+      "unasId": "1241472589",
+      "sku": "Vksz03",
+      "officialName": "Natúr kecsketejes szappan érzékeny, száraz bőrre – Illatmentes 110 g",
+      "url": "https://www.vitalis-szappan.hu/Natur-kecsketejes-szappan",
+      "image": "https://www.vitalis-szappan.hu/img/99212/Vksz03/Vksz03.jpg?time=1746460924",
+      "price": 1490,
+      "currency": null,
+      "categories": [
+        "Kézműves szappanok",
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan száraz bőrre – kíméletes tisztítás természetesen",
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan normál bőrre",
+        "Kézműves szappanok|Szappanok összetevők szerint",
+        "Kézműves szappanok|Szappanok összetevők szerint|Kecsketejes szappanok",
+        "Összes termékünk"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "szappanok",
+      "canonicalCandidate": "natur_kecsketejes_szappan",
+      "confidence": "exact",
+      "reviewStatus": "approved_mapped",
+      "reason": "Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val.",
+      "note": "Jóváhagyott mapping; canonical név: Natúr kecsketejes szappan."
+    },
+    {
+      "unasId": "1241471919",
+      "sku": "Vksz02",
+      "officialName": "Kecsketejes levendulás szappan gyulladt, érzékeny bőrre – Nyugtató 100 g",
+      "url": "https://www.vitalis-szappan.hu/nyugtato-kecsketejes-szappan-tihanyi-Levendula-ola",
+      "image": "https://www.vitalis-szappan.hu/img/99212/Vksz02/Vksz02.jpg?time=1746461004",
+      "price": 1490,
+      "currency": null,
+      "categories": [
+        "Kézműves szappanok",
+        "Összes termékünk",
+        "Kézműves szappanok|Szappanok összetevők szerint|Kecsketejes szappanok",
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan száraz bőrre – kíméletes tisztítás természetesen",
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan normál bőrre",
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan kombinált bőrre"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "szappanok",
+      "canonicalCandidate": "kecsketejes_levendulas_szappan",
+      "confidence": "exact",
+      "reviewStatus": "approved_mapped",
+      "reason": "Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val.",
+      "note": "Jóváhagyott mapping; canonical név: Kecsketejes levendulás szappan."
+    },
+    {
+      "unasId": "1229849469",
+      "sku": "VSZSP05",
+      "officialName": "Szilárd sampon normál hajra zöldteával – Kíméletes tisztítás érzékeny fejbőrre",
+      "url": "https://www.vitalis-szappan.hu/szilard-sampon-normal-hajra-zoldteaval",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VSZSP05/VSZSP05.jpg?time=1745837045",
+      "price": 3400,
+      "currency": null,
+      "categories": [
+        "Bőr-és hajápolás",
+        "Összes termékünk",
+        "Bőr-és hajápolás|Szilárd samponok"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "samponok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "1229782139",
+      "sku": "VSZSP04",
+      "officialName": "Szilárd sampon zsíros hajra rozmaringgal és koffeinnel – Hajnövekedés és hajdúsítás természetesen",
+      "url": "https://www.vitalis-szappan.hu/szilard-sampon-zsiros-hajra-rozmaring",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VSZSP04/VSZSP04.jpg?time=1745835669",
+      "price": 3400,
+      "currency": null,
+      "categories": [
+        "Bőr-és hajápolás",
+        "Bőr-és hajápolás|Szilárd samponok",
+        "Összes termékünk"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "samponok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "1120474529",
+      "sku": "CS005",
+      "officialName": "Nyugodt Karácsony Csomag (pikkelysömör, ekcéma)",
+      "url": "https://www.vitalis-szappan.hu/Nyugodt-Karacsony-Csomag-pikkelysomor-ekcema",
+      "image": "https://www.vitalis-szappan.hu/img/99212/CS005/CS005.jpg?time=1733916468",
+      "price": 6100,
+      "currency": null,
+      "categories": [
+        "Csomagajánlatok"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "csomagok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "needs_review",
+      "reason": "Csomagtermék; összetevői, időszakossága és esetleges átfedései kézi ellenőrzést igényelnek.",
+      "note": "Önálló canonical termékként vagy csomagként történő későbbi kezelésről külön döntés szükséges."
+    },
+    {
+      "unasId": "1120474184",
+      "sku": "CS004",
+      "officialName": "\"Ízületi Kényeztetés\" csomag (visszér és gyulladás)",
+      "url": "https://www.vitalis-szappan.hu/Izuleti-Kenyeztetes-csomag",
+      "image": "https://www.vitalis-szappan.hu/img/99212/CS004/CS004.jpg?time=1733916267",
+      "price": 9900,
+      "currency": null,
+      "categories": [
+        "Csomagajánlatok"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "csomagok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "needs_review",
+      "reason": "Csomagtermék; összetevői, időszakossága és esetleges átfedései kézi ellenőrzést igényelnek.",
+      "note": "Önálló canonical termékként vagy csomagként történő későbbi kezelésről külön döntés szükséges."
+    },
+    {
+      "unasId": "1120473169",
+      "sku": "CS003",
+      "officialName": "\"Havasi Frissesség\" csomag (Száraz bőrre)",
+      "url": "https://www.vitalis-szappan.hu/Havasi-Frissesseg-csomag-Szaraz-borre",
+      "image": "https://www.vitalis-szappan.hu/img/99212/CS003/CS003.jpg?time=1733915551",
+      "price": 9700,
+      "currency": null,
+      "categories": [
+        "Csomagajánlatok"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "csomagok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "needs_review",
+      "reason": "Csomagtermék; összetevői, időszakossága és esetleges átfedései kézi ellenőrzést igényelnek.",
+      "note": "Önálló canonical termékként vagy csomagként történő későbbi kezelésről külön döntés szükséges."
+    },
+    {
+      "unasId": "1120472549",
+      "sku": "CS002",
+      "officialName": "\"Tiszta Kezdet\" csomag (Pattanásos és zsíros bőrre)",
+      "url": "https://www.vitalis-szappan.hu/Tiszta-Kezdet-csomag-Pattanasos-es-zsiros-borre",
+      "image": "https://www.vitalis-szappan.hu/img/99212/CS002/CS002.jpg?time=1733915188",
+      "price": 4700,
+      "currency": null,
+      "categories": [
+        "Csomagajánlatok"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "csomagok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "needs_review",
+      "reason": "Csomagtermék; összetevői, időszakossága és esetleges átfedései kézi ellenőrzést igényelnek.",
+      "note": "Önálló canonical termékként vagy csomagként történő későbbi kezelésről külön döntés szükséges."
+    },
+    {
+      "unasId": "1120057029",
+      "sku": "CS001",
+      "officialName": "PsoriVital csomag – Pikkelysömörrel érintett, hámlásra hajlamos bőr ápolására",
+      "url": "https://www.vitalis-szappan.hu/psorivital-csomag-ekcemas-borre",
+      "image": "https://www.vitalis-szappan.hu/img/99212/CS001/CS001.jpg?time=1747987427",
+      "price": 6500,
+      "currency": null,
+      "categories": [
+        "Csomagajánlatok",
+        "Problémák és megoldások",
+        "Problémák és megoldások|Ekcémára és pikkelysömörre hajlamos bőr ápolása"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "csomagok",
+      "canonicalCandidate": "psorivital_csomag",
+      "confidence": "exact",
+      "reviewStatus": "approved_mapped",
+      "reason": "Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val.",
+      "note": "Jóváhagyott mapping; canonical név: PsoriVital csomag."
+    },
+    {
+      "unasId": "1080620650",
+      "sku": "VHB01",
+      "officialName": "Hortobágyi Mester Balzsam – Ízületi és Izomfájdalmakra 250 ml",
+      "url": "https://www.vitalis-szappan.hu/termek/hortobagyi-mester-balzsam-izuleti-es-izomfajdalmak",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VHB01/VHB01.jpg?time=1745398827",
+      "price": 5790,
+      "currency": null,
+      "categories": [
+        "Problémák és megoldások",
+        "Összes termékünk"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "krémek és balzsamok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "999444670",
+      "sku": "VHB011",
+      "officialName": "Tápláló Hajkondicionáló Pakolás Argán- és Ricinus Olajjal 50 ml",
+      "url": "https://www.vitalis-szappan.hu/termek-taplalo-hajkondicionalo-pakolas",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VHB011/VHB011.jpg?time=1745398753",
+      "price": 3790,
+      "currency": null,
+      "categories": [
+        "Bőr-és hajápolás|Organikus bőrápoló vajak, olajak",
+        "Összes termékünk"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "egyéb",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "864855961",
+      "sku": "VHi01",
+      "officialName": "Hyaluron feszesítő arckrém 75 ml",
+      "url": "https://www.vitalis-szappan.hu/Hyaluron-feszesito-arckrem",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VHi01/VHi01.jpg?time=1745398796",
+      "price": 4280,
+      "currency": null,
+      "categories": [
+        "Bőr-és hajápolás|Test és arcápoló krémek",
+        "Összes termékünk",
+        "Bőr-és hajápolás"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "krémek és balzsamok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "679258019",
+      "sku": "Vcfsz101",
+      "officialName": "Citromfüves szappan – Frissítő, kiegyensúlyozó tisztítás normál bőrre – 100 g",
+      "url": "https://www.vitalis-szappan.hu/termek/citromfuves-szappan",
+      "image": "https://www.vitalis-szappan.hu/img/99212/Vcfsz101/Vcfsz101.jpg?time=1746438145",
+      "price": 1490,
+      "currency": null,
+      "categories": [
+        "Kézműves szappanok",
+        "Összes termékünk",
+        "Kézműves szappanok|Szappanok bőrtípus szerint",
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan normál bőrre",
+        "Kézműves szappanok|Szappanok összetevők szerint",
+        "Kézműves szappanok|Szappanok összetevők szerint|Vegán szappanok"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "szappanok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "449056663",
+      "sku": "VCS60",
+      "officialName": "Csiga kivonatos regeneráló arckrém 75 ml",
+      "url": "https://www.vitalis-szappan.hu/termek/csiga-kivonatos-regeneralo-arckrem",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VCS60/VCS60.jpg?time=1745398772",
+      "price": 4390,
+      "currency": null,
+      "categories": [
+        "Bőr-és hajápolás|Test és arcápoló krémek",
+        "Összes termékünk",
+        "Bőr-és hajápolás"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "krémek és balzsamok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "423469634",
+      "sku": "VSZ026",
+      "officialName": "Aloe vera szappan – Nyugtató, hidratáló bőrápolás természetes aloe géllel – 100 g",
+      "url": "https://www.vitalis-szappan.hu/termek/aloe-vera-szappan",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VSZ026/VSZ026.jpg?time=1746438195",
+      "price": 1490,
+      "currency": null,
+      "categories": [
+        "Kézműves szappanok",
+        "Összes termékünk",
+        "Kézműves szappanok|Szappanok bőrtípus szerint",
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan száraz bőrre – kíméletes tisztítás természetesen",
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan normál bőrre",
+        "Kézműves szappanok|Szappanok összetevők szerint",
+        "Kézműves szappanok|Szappanok összetevők szerint|Vegán szappanok"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "szappanok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "423468118",
+      "sku": "VSZ025",
+      "officialName": "Csipkebogyó szappan – Regeneráló, frissítő szappan normál bőrre gyógynövényes illattal – 100 g",
+      "url": "https://www.vitalis-szappan.hu/termek/csipkebogyo-szappan",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VSZ025/VSZ025.jpg?time=1742805885",
+      "price": 1490,
+      "currency": null,
+      "categories": [
+        "Kézműves szappanok",
+        "Összes termékünk",
+        "Kézműves szappanok|Szappanok bőrtípus szerint",
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan normál bőrre",
+        "Kézműves szappanok|Szappanok összetevők szerint",
+        "Kézműves szappanok|Szappanok összetevők szerint|Vegán szappanok"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "szappanok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "188248827",
+      "sku": "Vktg",
+      "officialName": "Kéztisztító gél 70% alkohol tartalommal",
+      "url": "https://www.vitalis-szappan.hu/termek/keztisztito-gel-70-alkohol-tartalommal-60ml",
+      "image": "https://www.vitalis-szappan.hu/img/99212/Vktg/Vktg.jpg?time=1692291863",
+      "price": 490,
+      "currency": null,
+      "categories": [
+        "Kézfertőtlenítés - kéztisztítás - kézápolás",
+        "Összes termékünk"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "egyéb",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "169075266",
+      "sku": "VKARACSONY",
+      "officialName": "Karácsonyi Ajándék Csomag",
+      "url": "https://www.vitalis-szappan.hu/termek/karacsonyi-ajandek-csomag",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VKARACSONY/VKARACSONY.jpg?time=1714992521",
+      "price": 7000,
+      "currency": null,
+      "categories": [
+        "Csomagajánlatok",
+        "Összes termékünk"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "csomagok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "needs_review",
+      "reason": "Csomagtermék; összetevői, időszakossága és esetleges átfedései kézi ellenőrzést igényelnek.",
+      "note": "Önálló canonical termékként vagy csomagként történő későbbi kezelésről külön döntés szükséges."
+    },
+    {
+      "unasId": "163834530",
+      "sku": "VEM05",
+      "officialName": "Kecsketejes testápoló krém levendula 250 ml",
+      "url": "https://www.vitalis-szappan.hu/termek/kecsketejes-testapolo-krem-levendula",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VEM05/VEM05.jpg?time=1745398877",
+      "price": 3890,
+      "currency": null,
+      "categories": [
+        "Bőr-és hajápolás|Test és arcápoló krémek",
+        "Összes termékünk",
+        "Bőr-és hajápolás"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "testápolók",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "163834320",
+      "sku": "VEM04",
+      "officialName": "Vadgesztenyés balzsam 200 ml",
+      "url": "https://www.vitalis-szappan.hu/termek/vadgesztenyes-balzsam",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VEM04/VEM04.jpg?time=1745398721",
+      "price": 3490,
+      "currency": null,
+      "categories": [
+        "Problémák és megoldások",
+        "Összes termékünk"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "krémek és balzsamok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "163833777",
+      "sku": "VEM03",
+      "officialName": "Shea vajas hidratáló krém 250 ml",
+      "url": "https://www.vitalis-szappan.hu/termek/shea-vajas-hidratalo-krem",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VEM03/VEM03.jpg?time=1745398850",
+      "price": 3890,
+      "currency": null,
+      "categories": [
+        "Bőr-és hajápolás|Test és arcápoló krémek",
+        "Összes termékünk",
+        "Bőr-és hajápolás",
+        "Problémák és megoldások"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "krémek és balzsamok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "163833663",
+      "sku": "VEM02",
+      "officialName": "Holt-tengeri só balzsam száraz, érzékeny bőrre – intenzív ápolás 250 ml",
+      "url": "https://www.vitalis-szappan.hu/termek/holt-tengeri-so-balzsam",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VEM02/VEM02.jpg?time=1745398703",
+      "price": 4290,
+      "currency": null,
+      "categories": [
+        "Problémák és megoldások",
+        "Összes termékünk",
+        "Problémák és megoldások|Ekcémára és pikkelysömörre hajlamos bőr ápolása"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "krémek és balzsamok",
+      "canonicalCandidate": "holt_tengeri_so_balzsam",
+      "confidence": "exact",
+      "reviewStatus": "approved_mapped",
+      "reason": "Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val.",
+      "note": "Jóváhagyott mapping; canonical név: Holt-tengeri só balzsam."
+    },
+    {
+      "unasId": "163833576",
+      "sku": "VEM01",
+      "officialName": "Yin Yang ízületi balzsam 250 ml",
+      "url": "https://www.vitalis-szappan.hu/termek/yin-yan-izuleti-balzsam",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VEM01/VEM01.jpg?time=1745398812",
+      "price": 4290,
+      "currency": null,
+      "categories": [
+        "Problémák és megoldások",
+        "Összes termékünk"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "krémek és balzsamok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "138721785",
+      "sku": "VSV04",
+      "officialName": "Shea vaj – Gyömbér és citrom illóolajokkal 100 ml",
+      "url": "https://www.vitalis-szappan.hu/termek/shea-vaj-gyomber-citrom",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VSV04/VSV04.jpg?time=1709657933",
+      "price": 3290,
+      "currency": null,
+      "categories": [
+        "Bőr-és hajápolás|Organikus bőrápoló vajak, olajak",
+        "Bőr-és hajápolás|Shea vaj",
+        "Bőr-és hajápolás",
+        "Összes termékünk"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "egyéb",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "121057699",
+      "sku": "VHCS",
+      "officialName": "Természetes hajápolás csomag",
+      "url": "https://www.vitalis-szappan.hu/termek/termeszetes-hajapolas-csomag",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VHCS/VHCS.jpg?time=1692303074",
+      "price": 4500,
+      "currency": null,
+      "categories": [
+        "Csomagajánlatok",
+        "Összes termékünk"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "csomagok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "needs_review",
+      "reason": "Csomagtermék; összetevői, időszakossága és esetleges átfedései kézi ellenőrzést igényelnek.",
+      "note": "Önálló canonical termékként vagy csomagként történő későbbi kezelésről külön döntés szükséges."
+    },
+    {
+      "unasId": "117505303",
+      "sku": "VFBLEV",
+      "officialName": "Fürdőbomba – Levendula 70 g",
+      "url": "https://www.vitalis-szappan.hu/termek/furdobomba-levendula",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VFBLEV/VFBLEV.jpg?time=1692289768",
+      "price": 850,
+      "currency": null,
+      "categories": [
+        "Wellness otthon",
+        "Wellness otthon|Fürdőbombák",
+        "Összes termékünk"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "fürdőbombák",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "117503451",
+      "sku": "VFBCSV",
+      "officialName": "Fürdőbomba – Cherry Blossom 70 g",
+      "url": "https://www.vitalis-szappan.hu/termek/furdobomba-cseresznyevirag",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VFBCSV/VFBCSV.jpg?time=1692289293",
+      "price": 850,
+      "currency": null,
+      "categories": [
+        "Wellness otthon",
+        "Wellness otthon|Fürdőbombák",
+        "Összes termékünk"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "fürdőbombák",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "117209249",
+      "sku": "VFBEP",
+      "officialName": "Fürdőbomba - Eper 70g",
+      "url": "https://www.vitalis-szappan.hu/termek/furdobomba-eper",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VFBEP/VFBEP.jpg?time=1692124974",
+      "price": 700,
+      "currency": null,
+      "categories": [
+        "Wellness otthon|Fürdőbombák",
+        "Wellness otthon",
+        "Összes termékünk"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "fürdőbombák",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "116883769",
+      "sku": "Vsz23",
+      "officialName": "Hévízi Gyógyiszapos Termál Szappan",
+      "url": "https://www.vitalis-szappan.hu/termek/hevizi-gyogyiszap-szappan",
+      "image": "https://www.vitalis-szappan.hu/img/99212/Vsz23/Vsz23.jpg?time=1692294633",
+      "price": 1490,
+      "currency": null,
+      "categories": [
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan zsíros, pattanásos bőrre",
+        "Összes termékünk"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "szappanok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "112116789",
+      "sku": "VKAK01",
+      "officialName": "Kakaóvaj – 100% tisztaságú, organikus 100g",
+      "url": "https://www.vitalis-szappan.hu/Kakaovaj-100-tisztasagu-organikus-100g",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VKAK01/VKAK01.jpg?time=1692375400",
+      "price": 3990,
+      "currency": null,
+      "categories": [
+        "Bőr-és hajápolás|Organikus bőrápoló vajak, olajak",
+        "Összes termékünk"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "egyéb",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "111406270",
+      "sku": "VCS002",
+      "officialName": "Levendulás ápolás csomag",
+      "url": "https://www.vitalis-szappan.hu/termek/levendulas-apolas-csomag",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VCS002/VCS002.jpg?time=1692302314",
+      "price": 3300,
+      "currency": null,
+      "categories": [
+        "Csomagajánlatok",
+        "Összes termékünk"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "csomagok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "needs_review",
+      "reason": "Csomagtermék; összetevői, időszakossága és esetleges átfedései kézi ellenőrzést igényelnek.",
+      "note": "Önálló canonical termékként vagy csomagként történő későbbi kezelésről külön döntés szükséges."
+    },
+    {
+      "unasId": "111401392",
+      "sku": "VK01",
+      "officialName": "Kókuszolaj 100 ml",
+      "url": "https://www.vitalis-szappan.hu/termek/kokuszolaj",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VK01/VK01.jpg?time=1692375497",
+      "price": 1900,
+      "currency": null,
+      "categories": [
+        "Bőr-és hajápolás|Organikus bőrápoló vajak, olajak",
+        "Összes termékünk"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "egyéb",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "111375002",
+      "sku": "VSZ024",
+      "officialName": "Dióliget szappan – Tisztító, nyugtató gyógynövényes bőrápolás diólevéllel és fűszeres illattal – 100 g",
+      "url": "https://www.vitalis-szappan.hu/termek/dioliget-szappan",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VSZ024/VSZ024.jpg?time=1742561612",
+      "price": 1490,
+      "currency": null,
+      "categories": [
+        "Kézműves szappanok",
+        "Összes termékünk",
+        "Kézműves szappanok|Szappanok bőrtípus szerint",
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan normál bőrre",
+        "Kézműves szappanok|Szappanok összetevők szerint|Vegán szappanok"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "szappanok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "111375001",
+      "sku": "VSZ022",
+      "officialName": "Csalán szappan",
+      "url": "https://www.vitalis-szappan.hu/termek/csalan-szappan",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VSZ022/VSZ022.jpg?time=1692293029",
+      "price": 1490,
+      "currency": null,
+      "categories": [
+        "Kézműves szappanok",
+        "Összes termékünk",
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan normál bőrre",
+        "Kézműves szappanok|Szappanok összetevők szerint",
+        "Kézműves szappanok|Szappanok összetevők szerint|Vegán szappanok"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "szappanok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "111374999",
+      "sku": "Vsz018",
+      "officialName": "Sárgarépa szappan shea vajjal",
+      "url": "https://www.vitalis-szappan.hu/termek/sargarepa-szappan-shea-vajjal",
+      "image": "https://www.vitalis-szappan.hu/img/99212/Vsz018/Vsz018.jpg?time=1692297346",
+      "price": 1490,
+      "currency": null,
+      "categories": [
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan száraz bőrre – kíméletes tisztítás természetesen",
+        "Összes termékünk",
+        "Kézműves szappanok",
+        "Kézműves szappanok|Szappanok bőrtípus szerint",
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan normál bőrre",
+        "Kézműves szappanok|Szappanok összetevők szerint",
+        "Kézműves szappanok|Szappanok összetevők szerint|Vegán szappanok"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "szappanok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "111374998",
+      "sku": "Vsz017",
+      "officialName": "Gyógynövény szappan",
+      "url": "https://www.vitalis-szappan.hu/termek/gyogynoveny-szappan",
+      "image": "https://www.vitalis-szappan.hu/img/99212/Vsz017/Vsz017.jpg?time=1692298148",
+      "price": 1490,
+      "currency": null,
+      "categories": [
+        "Kézműves szappanok",
+        "Összes termékünk",
+        "Kézműves szappanok|Szappanok bőrtípus szerint",
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan kombinált bőrre",
+        "Kézműves szappanok|Szappanok összetevők szerint"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "szappanok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "111374997",
+      "sku": "Vsz016",
+      "officialName": "Shea vajas szappan – Hidratáló, bőrpuhító luxusápolás érzékeny bőrre – 110 g",
+      "url": "https://www.vitalis-szappan.hu/termek/shea-vajas-szappan",
+      "image": "https://www.vitalis-szappan.hu/img/99212/Vsz016/Vsz016.jpg?time=1742806204",
+      "price": 1490,
+      "currency": null,
+      "categories": [
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan száraz bőrre – kíméletes tisztítás természetesen",
+        "Összes termékünk",
+        "Kézműves szappanok",
+        "Kézműves szappanok|Szappanok bőrtípus szerint",
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan normál bőrre",
+        "Kézműves szappanok|Szappanok összetevők szerint",
+        "Kézműves szappanok|Szappanok összetevők szerint|Vegán szappanok"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "szappanok",
+      "canonicalCandidate": "shea_vajas_szappan",
+      "confidence": "exact",
+      "reviewStatus": "approved_mapped",
+      "reason": "Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val.",
+      "note": "Jóváhagyott mapping; canonical név: Shea vajas szappan."
+    },
+    {
+      "unasId": "111374995",
+      "sku": "Vsz014",
+      "officialName": "Körömvirág szappan – Nyugtató, regeneráló gyógynövényes ápolás érzékeny, kipirosodásra hajlamos bőrre – 100 g",
+      "url": "https://www.vitalis-szappan.hu/termek/koromvirag-szappan",
+      "image": "https://www.vitalis-szappan.hu/img/99212/Vsz014/Vsz014.jpg?time=1742805976",
+      "price": 1490,
+      "currency": null,
+      "categories": [
+        "Kézműves szappanok",
+        "Összes termékünk",
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan kombinált bőrre",
+        "Kézműves szappanok|Szappanok összetevők szerint",
+        "Kézműves szappanok|Szappanok összetevők szerint|Vegán szappanok",
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan normál bőrre"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "szappanok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "111374994",
+      "sku": "Vsz013",
+      "officialName": "Kecsketejes Étcsokis Krémvarázs szappan",
+      "url": "https://www.vitalis-szappan.hu/termek/kecsketejes-etcsokis-kremvarazs-szappan",
+      "image": "https://www.vitalis-szappan.hu/img/99212/Vsz013/Vsz013.jpg?time=1692296120",
+      "price": 1490,
+      "currency": null,
+      "categories": [
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan száraz bőrre – kíméletes tisztítás természetesen",
+        "Kézműves szappanok",
+        "Kézműves szappanok|Szappanok bőrtípus szerint",
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan normál bőrre",
+        "Kézműves szappanok|Szappanok összetevők szerint|Kecsketejes szappanok"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "krémek és balzsamok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "111374991",
+      "sku": "Vsz010",
+      "officialName": "Sószappan 120g",
+      "url": "https://www.vitalis-szappan.hu/termek/soszappan",
+      "image": "https://www.vitalis-szappan.hu/img/99212/Vsz010/Vsz010.jpg?time=1692303625",
+      "price": 1990,
+      "currency": null,
+      "categories": [
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan zsíros, pattanásos bőrre",
+        "Összes termékünk",
+        "Kézműves szappanok",
+        "Kézműves szappanok|Szappanok bőrtípus szerint",
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan kombinált bőrre",
+        "Kézműves szappanok|Szappanok összetevők szerint",
+        "Kézműves szappanok|Szappanok összetevők szerint|Vegán szappanok",
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan normál bőrre"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "szappanok",
+      "canonicalCandidate": null,
+      "confidence": "medium",
+      "reason": "Sószappan variáns, miközben a kínálatban külön Parajdi sószappan/sótömb is található.",
+      "note": "A két sótermék rendeltetése és terméktípusa kézi ellenőrzést igényel.",
+      "reviewStatus": "needs_review"
+    },
+    {
+      "unasId": "111374990",
+      "sku": "Vsz008",
+      "officialName": "Olíva kézműves szappan 100 g",
+      "url": "https://www.vitalis-szappan.hu/termek/oliva-szappan",
+      "image": "https://www.vitalis-szappan.hu/img/99212/Vsz008/Vsz008.jpg?time=1742806111",
+      "price": 1490,
+      "currency": null,
+      "categories": [
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan száraz bőrre – kíméletes tisztítás természetesen",
+        "Összes termékünk",
+        "Kézműves szappanok",
+        "Kézműves szappanok|Szappanok bőrtípus szerint",
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan normál bőrre",
+        "Kézműves szappanok|Szappanok összetevők szerint",
+        "Kézműves szappanok|Szappanok összetevők szerint|Vegán szappanok"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "szappanok",
+      "canonicalCandidate": "oliva_szappan",
+      "confidence": "exact",
+      "reviewStatus": "approved_mapped",
+      "reason": "Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val.",
+      "note": "Jóváhagyott mapping; canonical név: Olíva szappan."
+    },
+    {
+      "unasId": "111374989",
+      "sku": "Vsz007",
+      "officialName": "Holt-tengeri iszap szappan 110 g – zsíros, pattanásos bőrre | Vitalis",
+      "url": "https://www.vitalis-szappan.hu/termek/holt-tengeri-iszap-szappan",
+      "image": "https://www.vitalis-szappan.hu/img/99212/Vsz007/Vsz007.jpg?time=1742805956",
+      "price": 1490,
+      "currency": null,
+      "categories": [
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan zsíros, pattanásos bőrre",
+        "Összes termékünk",
+        "Kézműves szappanok",
+        "Kézműves szappanok|Szappanok bőrtípus szerint",
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan kombinált bőrre",
+        "Kézműves szappanok|Szappanok összetevők szerint",
+        "Kézműves szappanok|Szappanok összetevők szerint|Vegán szappanok",
+        "Problémák és megoldások",
+        "Problémák és megoldások|Ekcémára és pikkelysömörre hajlamos bőr ápolása"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "szappanok",
+      "canonicalCandidate": "holt_tengeri_iszapos_szappan",
+      "confidence": "exact",
+      "reviewStatus": "approved_mapped",
+      "reason": "Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val.",
+      "note": "Jóváhagyott mapping; canonical név: Holt-tengeri iszapos szappan."
+    },
+    {
+      "unasId": "111374988",
+      "sku": "Vsz006",
+      "officialName": "Levendula Szappan 110 g",
+      "url": "https://www.vitalis-szappan.hu/termek/levendula-szappan",
+      "image": "https://www.vitalis-szappan.hu/img/99212/Vsz006/Vsz006.jpg?time=1742806002",
+      "price": 1490,
+      "currency": null,
+      "categories": [
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan normál bőrre",
+        "Összes termékünk",
+        "Kézműves szappanok",
+        "Kézműves szappanok|Szappanok bőrtípus szerint",
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan kombinált bőrre"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "szappanok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "111374987",
+      "sku": "Vsz005",
+      "officialName": "Teafa szappan 100g",
+      "url": "https://www.vitalis-szappan.hu/termek/teafa-szappan",
+      "image": "https://www.vitalis-szappan.hu/img/99212/Vsz005/Vsz005.jpg?time=1742806260",
+      "price": 1490,
+      "currency": null,
+      "categories": [
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan zsíros, pattanásos bőrre",
+        "Összes termékünk",
+        "Kézműves szappanok",
+        "Kézműves szappanok|Szappanok bőrtípus szerint",
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan kombinált bőrre",
+        "Kézműves szappanok|Szappanok összetevők szerint",
+        "Kézműves szappanok|Szappanok összetevők szerint|Vegán szappanok"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "szappanok",
+      "canonicalCandidate": "teafa_szappan",
+      "confidence": "exact",
+      "reviewStatus": "approved_mapped",
+      "reason": "Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val.",
+      "note": "Jóváhagyott mapping; canonical név: Teafa szappan."
+    },
+    {
+      "unasId": "111374985",
+      "sku": "Vsz003",
+      "officialName": "Chilis Étcsokis Szappan - Érzéki Kombináció a Bőrápolás és Élvezet Végett",
+      "url": "https://www.vitalis-szappan.hu/termek/chillis-etcsokis-szappan-kecsketejjel",
+      "image": "https://www.vitalis-szappan.hu/img/99212/Vsz003/Vsz003.jpg?time=1692297859",
+      "price": 1490,
+      "currency": null,
+      "categories": [
+        "Kézműves szappanok",
+        "Összes termékünk"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "szappanok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "111374984",
+      "sku": "VSZ002",
+      "officialName": "Gyógyászati Kátrány Szappan - Ichtiol Hatóanyaggal a Zsíros és Problémás Bőrért 100 g",
+      "url": "https://www.vitalis-szappan.hu/termek/gyogyaszati-katrany-szappan-ichtyol",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VSZ002/VSZ002.jpg?time=1742805927",
+      "price": 1490,
+      "currency": null,
+      "categories": [
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan zsíros, pattanásos bőrre",
+        "Összes termékünk",
+        "Kézműves szappanok",
+        "Kézműves szappanok|Szappanok bőrtípus szerint",
+        "Kézműves szappanok|Szappanok összetevők szerint"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "szappanok",
+      "canonicalCandidate": "katrany_szappan",
+      "confidence": "exact",
+      "reviewStatus": "approved_mapped",
+      "reason": "Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val.",
+      "note": "Jóváhagyott mapping; canonical név: Gyógyászati kátrány szappan."
+    },
+    {
+      "unasId": "111374983",
+      "sku": "Vsz001",
+      "officialName": "Kecsketejes mézes szappan száraz, vízhiányos bőrre – Hidratáló 110 g",
+      "url": "https://www.vitalis-szappan.hu/termek/mezes-kecsketejes-szappan",
+      "image": "https://www.vitalis-szappan.hu/img/99212/Vsz001/Vsz001.jpg?time=1742806084",
+      "price": 1490,
+      "currency": null,
+      "categories": [
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan száraz bőrre – kíméletes tisztítás természetesen",
+        "Összes termékünk",
+        "Kézműves szappanok",
+        "Kézműves szappanok|Szappanok bőrtípus szerint",
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan normál bőrre",
+        "Kézműves szappanok|Szappanok összetevők szerint|Kecsketejes szappanok"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "szappanok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "111374982",
+      "sku": "VSVH01",
+      "officialName": "Shea vajas testápoló habkrém mandula olajjal - Citromfű, Geránium 75 ml",
+      "url": "https://www.vitalis-szappan.hu/termek/shea-vajas-testapolo-habkrem-mandula-olajjal-citromfu-geranium",
+      "image": null,
+      "price": 2690,
+      "currency": null,
+      "categories": [
+        "Bőr-és hajápolás|Test és arcápoló krémek",
+        "Összes termékünk"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "testápolók",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "111374981",
+      "sku": "VSV03",
+      "officialName": "Shea vaj – Narancs, Levendula 100 ml",
+      "url": "https://www.vitalis-szappan.hu/termek/shea-vaj-finomitatlan-bio-narancs-levendula",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VSV03/VSV03.jpg?time=1692376037",
+      "price": 3290,
+      "currency": null,
+      "categories": [
+        "Bőr-és hajápolás|Organikus bőrápoló vajak, olajak",
+        "Összes termékünk",
+        "Bőr-és hajápolás",
+        "Bőr-és hajápolás|Shea vaj"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "egyéb",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "111374980",
+      "sku": "VSV02",
+      "officialName": "Shea vaj – Finomítatlan – Bio – Levendula 100 ml",
+      "url": "https://www.vitalis-szappan.hu/termek/shea-vaj-finomitatlan-bio-levendula",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VSV02/VSV02.jpg?time=1692375738",
+      "price": 3290,
+      "currency": null,
+      "categories": [
+        "Bőr-és hajápolás|Organikus bőrápoló vajak, olajak",
+        "Összes termékünk",
+        "Bőr-és hajápolás|Shea vaj",
+        "Problémák és megoldások",
+        "Problémák és megoldások|Ekcémára és pikkelysömörre hajlamos bőr ápolása"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "egyéb",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "111374979",
+      "sku": "VS01",
+      "officialName": "Shea vaj – Finomítatlan 100 ml",
+      "url": "https://www.vitalis-szappan.hu/termek/shea-vaj-finomitatlan-bio",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VS01/VS01.jpg?time=1692375903",
+      "price": 2980,
+      "currency": null,
+      "categories": [
+        "Bőr-és hajápolás|Organikus bőrápoló vajak, olajak",
+        "Összes termékünk",
+        "Bőr-és hajápolás",
+        "Bőr-és hajápolás|Shea vaj"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "egyéb",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "111374978",
+      "sku": "VPS01",
+      "officialName": "Parajdi fürdősó natúr - 1000gr",
+      "url": "https://www.vitalis-szappan.hu/termek/parajdi-furdoso-natur",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VPS01/VPS01.jpg?time=1692374544",
+      "price": 1440,
+      "currency": null,
+      "categories": [
+        "Wellness otthon|Parajdi fürdősók",
+        "Wellness otthon",
+        "Összes termékünk",
+        "Problémák és megoldások",
+        "Problémák és megoldások|Ekcémára és pikkelysömörre hajlamos bőr ápolása"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "fürdősók",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "111374977",
+      "sku": "VKD03",
+      "officialName": "Alumínium mentes dezodor - Ylang Ylang-Narancs 50ml",
+      "url": "https://www.vitalis-szappan.hu/termek/kremdezodor-aluminium-mentes-ylang-ylang-narancs",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VKD03/VKD03.jpg?time=1723542014",
+      "price": 1950,
+      "currency": null,
+      "categories": [
+        "Bőr-és hajápolás|Krémdezodorok - alumínium mentes",
+        "Összes termékünk",
+        "Bőr-és hajápolás"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "dezodorok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "111374976",
+      "sku": "VKD02",
+      "officialName": "Alumínium mentes dezodor - Teafa, Levendula 50 ml",
+      "url": "https://www.vitalis-szappan.hu/termek/aluminium-mentes-dezodor-teafa-levendula",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VKD02/VKD02.jpg?time=1723541992",
+      "price": 1950,
+      "currency": null,
+      "categories": [
+        "Bőr-és hajápolás|Krémdezodorok - alumínium mentes",
+        "Összes termékünk"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "dezodorok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "111374975",
+      "sku": "VKD01",
+      "officialName": "Alumíniummentes dezodor - Natúr 50ml",
+      "url": "https://www.vitalis-szappan.hu/termek/kremdezodor-aluminium-mentes-natur",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VKD01/VKD01.jpg?time=1723542031",
+      "price": 1950,
+      "currency": null,
+      "categories": [
+        "Bőr-és hajápolás|Krémdezodorok - alumínium mentes",
+        "Összes termékünk"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "dezodorok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "111374973",
+      "sku": "VJO01",
+      "officialName": "Jojoba olaj",
+      "url": "https://www.vitalis-szappan.hu/termek/jojoba-olaj",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VJO01/VJO01.jpg?time=1692374885",
+      "price": 1800,
+      "currency": null,
+      "categories": [
+        "Bőr-és hajápolás|Bőrápoló olajak",
+        "Összes termékünk"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "egyéb",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "111374972",
+      "sku": "VHK01",
+      "officialName": "Kókuszvajas testápoló habkrém kakaóvajjal 75ml",
+      "url": "https://www.vitalis-szappan.hu/termek/kokuszvajas-testapolo-habkrem-kakaovajjal",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VHK01/VHK01.jpg?time=1692125767",
+      "price": 2690,
+      "currency": null,
+      "categories": [
+        "Bőr-és hajápolás|Test és arcápoló krémek",
+        "Összes termékünk"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "testápolók",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "111374971",
+      "sku": "VFB02",
+      "officialName": "Vanilla Fountain fürdőbomba 70 g",
+      "url": "https://www.vitalis-szappan.hu/termek/vanilla-fountain-furdobomba",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VFB02/VFB02.jpg?time=1693405421",
+      "price": 480,
+      "currency": null,
+      "categories": [
+        "Wellness otthon",
+        "Wellness otthon|Fürdőbombák",
+        "Összes termékünk"
+      ],
+      "publication": {
+        "public": false,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "fürdőbombák",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "excluded_or_non_product",
+      "reason": "Az UNAS snapshot szerint a rekord nem publikus.",
+      "note": "Nem ajánlható normál, publikus webshoptermékként."
+    },
+    {
+      "unasId": "111374970",
+      "sku": "VFB01",
+      "officialName": "Teafás fürdőbomba parajdi sóval 70 g",
+      "url": "https://www.vitalis-szappan.hu/termek/teafas-furdobomba-parajdi-soval",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VFB01/VFB01.jpg?time=1692290276",
+      "price": 580,
+      "currency": null,
+      "categories": [
+        "Wellness otthon",
+        "Wellness otthon|Fürdőbombák",
+        "Összes termékünk"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "fürdőbombák",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "111374969",
+      "sku": "VCS001",
+      "officialName": "Problémamentes bőr csomag",
+      "url": "https://www.vitalis-szappan.hu/termek/problemamentes-bor-csomag",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VCS001/VCS001.jpg?time=1692302986",
+      "price": 6100,
+      "currency": null,
+      "categories": [
+        "Csomagajánlatok",
+        "Összes termékünk"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "csomagok",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "needs_review",
+      "reason": "Csomagtermék; összetevői, időszakossága és esetleges átfedései kézi ellenőrzést igényelnek.",
+      "note": "Önálló canonical termékként vagy csomagként történő későbbi kezelésről külön döntés szükséges."
+    },
+    {
+      "unasId": "111374968",
+      "sku": "VARG01",
+      "officialName": "Argán olaj 50 ml",
+      "url": "https://www.vitalis-szappan.hu/termek/argan-olaj",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VARG01/VARG01.jpg?time=1725795374",
+      "price": 3390,
+      "currency": null,
+      "categories": [
+        "Bőr-és hajápolás|Bőrápoló olajak",
+        "Összes termékünk",
+        "Bőr-és hajápolás",
+        "Bőr-és hajápolás|Organikus bőrápoló vajak, olajak"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "egyéb",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "111374967",
+      "sku": "Vaj02",
+      "officialName": "Ajakbalzsam – Eper | Kézműves ajakápoló balzsam 8 ml",
+      "url": "https://www.vitalis-szappan.hu/ajakbalzsam-eper",
+      "image": "https://www.vitalis-szappan.hu/img/99212/Vaj02/Vaj02.jpg?time=1768123204",
+      "price": 950,
+      "currency": null,
+      "categories": [
+        "Bőr-és hajápolás|Ajakápolás",
+        "Összes termékünk",
+        "Bőr-és hajápolás"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "ajakápolók",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "111374966",
+      "sku": "VAJ01",
+      "officialName": "Ajakbalzsam – Sherbet Lemon | Kézműves ajakápoló balzsam 8 ml",
+      "url": "https://www.vitalis-szappan.hu/ajakbalzsam-sherbet-lemon",
+      "image": "https://www.vitalis-szappan.hu/img/99212/VAJ01/VAJ01.jpg?time=1768993204",
+      "price": 950,
+      "currency": null,
+      "categories": [
+        "Bőr-és hajápolás|Ajakápolás",
+        "Összes termékünk",
+        "Bőr-és hajápolás"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "ajakápolók",
+      "canonicalCandidate": null,
+      "confidence": "none",
+      "reviewStatus": "new_product_candidate",
+      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
+      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+    },
+    {
+      "unasId": "111374965",
+      "sku": "PSSZ01",
+      "officialName": "Parajdi sószappan – természetes sótömb érzékeny és irritált bőrre",
+      "url": "https://www.vitalis-szappan.hu/termek/parajdi-soszappan",
+      "image": "https://www.vitalis-szappan.hu/img/99212/PSSZ01/PSSZ01.jpg?time=1776782300",
+      "price": 1800,
+      "currency": null,
+      "categories": [
+        "Wellness otthon",
+        "Összes termékünk",
+        "Kézműves szappanok",
+        "Kézműves szappanok|Szappanok bőrtípus szerint",
+        "Kézműves szappanok|Szappanok bőrtípus szerint|Szappan száraz bőrre – kíméletes tisztítás természetesen",
+        "Kézműves szappanok|Szappanok összetevők szerint",
+        "Kézműves szappanok|Szappanok összetevők szerint|Vegán szappanok",
+        "Problémák és megoldások",
+        "Problémák és megoldások|Ekcémára és pikkelysömörre hajlamos bőr ápolása"
+      ],
+      "publication": {
+        "public": true,
+        "active": null,
+        "orderable": null,
+        "state": "live"
+      },
+      "productFamily": "szappanok",
+      "canonicalCandidate": "parajdi_sotomb",
+      "confidence": "exact",
+      "reviewStatus": "approved_mapped",
+      "reason": "Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val.",
+      "note": "Jóváhagyott mapping; canonical név: Parajdi sótömb."
+    }
+  ]
+}
