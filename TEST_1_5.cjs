@@ -11,13 +11,13 @@ let r = answer('Gyermeknek is használható?', [
   {role:'user', content:'Mit ajánlasz ekcémára?'},
   {role:'assistant', content:'Erre elsőként a Dermavital krémet javaslom, mellé pedig a Dermavital szappant.'}
 ]);
-assert(r && /Dermavital krém/.test(r.links[0]?.name || ''));
+assert(r && r.links[0]?.id === 'dermavital_krem');
 assert(/gyermekek/.test(r.answer));
 
 r = answer('Gyereknek is jó?', [
   {role:'assistant', content:'Problémás fejbőrre elsőként a Dermavital sampont javaslom.'}
 ]);
-assert(r && /Dermavital sampon/.test(r.links[0]?.name || ''));
+assert(r && r.links[0]?.id === 'dermavital_sampon');
 assert(/gyermekeknél/.test(r.answer));
 
 r = answer('Gyermeknek is használható?', []);

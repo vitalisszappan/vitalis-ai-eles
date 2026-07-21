@@ -17,7 +17,7 @@ let result = ask('Milyen szappant használjak mellé?', eczemaHistory);
 assert(result, 'Nincs válasz a kapcsolódó szappan kérdésre.');
 assert.strictEqual(result.source, 'product-relation');
 assert(result.answer.includes('Dermavital szappant'));
-assert(result.links.some((x) => x.name === 'Dermavital szappan'));
+assert(result.links.some((x) => x.id === 'dermavital_szappan'));
 
 result = ask('Mellé mit használjak?', eczemaHistory);
 assert(result.answer.includes('Dermavital szappant'));

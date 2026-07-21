@@ -1,3 +1,5 @@
+const { createProductRegistry } = require('./product-registry.cjs');
+
 const PRODUCTS = {
   dermavital_sampon: {
     id: 'dermavital_sampon',
@@ -90,13 +92,18 @@ function validProductUrl(value) {
   }
 }
 
-function productCards(ids = []) {
+const defaultRegistry = createProductRegistry();
+
+function productCards(ids = [], options = {}) {
+  const registry = options.registry || defaultRegistry;
   return ids
     .map((id, index) => {
-      const product = PRODUCTS[id];
+      const canonicalProduct = PRODUCTS[id];
+      if (!canonicalProduct) return null;
+      const product = registry.resolve(id, canonicalProduct);
       if (!product) return null;
       const name = cleanText(product.name, 'Vitalis termék');
-      return {
+      const card = {
         id: cleanText(product.id, String(id || `product_${index + 1}`)),
         name,
         title: name,
@@ -107,6 +114,13 @@ function productCards(ids = []) {
         rank: index + 1,
         recommendationType: index === 0 ? 'primary' : 'secondary'
       };
+      if (typeof product.price === 'number') card.price = product.price;
+      if (typeof product.priceGross === 'number') card.priceGross = product.priceGross;
+      if (typeof product.actualPriceGross === 'number') card.actualPriceGross = product.actualPriceGross;
+      if (cleanText(product.currency)) card.currency = cleanText(product.currency);
+      if (product.availability) card.availability = { ...product.availability };
+      if (product.commerce) card.commerce = { ...product.commerce };
+      return card;
     })
     .filter(Boolean);
 }

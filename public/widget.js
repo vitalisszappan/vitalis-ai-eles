@@ -60,6 +60,18 @@ function safeProductUrl(value) {
   }
 }
 
+function safeProductPrice(value) {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0
+    ? value
+    : null;
+}
+
+function formatProductPrice(price, currency) {
+  if (price === null) return '';
+  const amount = new Intl.NumberFormat('hu-HU', { maximumFractionDigits: 2 }).format(price);
+  return currency ? `${amount} ${currency}` : amount;
+}
+
 function normalizeProduct(item, index) {
   if (!item || typeof item !== 'object') return null;
   const name = safeText(item.name) || safeText(item.title) || safeText(item.label) || 'Vitalis termék';
@@ -69,6 +81,8 @@ function normalizeProduct(item, index) {
     description: safeText(item.description),
     url: safeProductUrl(item.url),
     image: safeText(item.image),
+    price: safeProductPrice(item.price),
+    currency: safeText(item.currency),
     recommendationType: item.recommendationType === 'secondary' ? 'secondary' : (index === 0 ? 'primary' : 'secondary')
   };
 }
@@ -108,6 +122,7 @@ function addProductCards(article, links = []) {
     const media = item.image
       ? `<img class="product-image" src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}">`
       : `<span class="product-mark" aria-hidden="true">V</span>`;
+    const priceText = formatProductPrice(item.price, item.currency);
 
     card.innerHTML = `
       ${media}
@@ -115,6 +130,7 @@ function addProductCards(article, links = []) {
         <span class="product-badge">${badgeText}</span>
         <strong>${escapeHtml(item.name)}</strong>
         ${item.description ? `<small>${escapeHtml(item.description)}</small>` : ''}
+        ${priceText ? `<small class="product-price">Ár: ${escapeHtml(priceText)}</small>` : ''}
         ${hasUrl
           ? '<small class="product-open">Termékoldal megnyitása →</small>'
           : '<small class="product-unavailable">A termékoldal linkje hamarosan elérhető.</small>'}

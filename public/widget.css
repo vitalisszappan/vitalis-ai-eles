@@ -65,6 +65,7 @@ footer{padding:0 13px 12px;color:#70857d;font-size:10.5px;line-height:1.35;backg
 @media(prefers-reduced-motion:reduce){.typing span{animation:none}.minimize,.suggestions button,.composer button{transition:none}}
 .product-card small { display:block; margin-top:4px; line-height:1.35; }
 .product-card .product-open { margin-top:7px; font-weight:700; color:#0d7657; }
+.product-card .product-price { margin-top:6px; font-weight:700; color:#114f3e; }
 
 
 /* Expert Rules 1.1 – professzionális termékkártyák */
