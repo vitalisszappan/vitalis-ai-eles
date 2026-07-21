@@ -1,6 +1,7 @@
 'use strict';
 
 const assert = require('assert');
+const fs = require('fs');
 const path = require('path');
 const knowledge = require('./data/knowledge.json');
 const { PRODUCTS, productCards, validProductUrl } = require('./engine/product-catalog.cjs');
@@ -174,5 +175,55 @@ const history = [
   { role: 'assistant', content: ask('Mit ajánlasz pikkelysömörre?').answer }
 ];
 assert.deepEqual(ids(ask('az elsőt', history)), ['psorivital_csomag']);
+
+const approvedMappings = require('./data/canonical-unas-mapping.json').mappings
+  .filter((item) => item.mappingStatus === 'approved');
+assert.equal(approvedMappings.length, 9);
+const nineProductRegistry = registry(
+  approvedMappings,
+  approvedMappings.map((item, index) => snapshotProduct({
+    unasId: item.unasId,
+    sku: item.sku,
+    name: item.verifiedName,
+    url: `https://www.vitalis-szappan.hu/audit-${index + 1}`
+  }))
+);
+const nineCards = productCards(
+  approvedMappings.map((item) => item.canonicalId),
+  { registry: nineProductRegistry }
+);
+assert.deepEqual(
+  nineCards.map((card) => card.id),
+  approvedMappings.map((item) => item.canonicalId)
+);
+for (let index = 0; index < nineCards.length; index += 1) {
+  const card = nineCards[index];
+  const mappingItem = approvedMappings[index];
+  assert.equal(card.commerce.unasId, mappingItem.unasId);
+  assert.equal(card.commerce.sku, mappingItem.sku);
+  assert.equal(card.description, PRODUCTS[mappingItem.canonicalId].description);
+}
+
+const liveSnapshotPath = path.join(__dirname, 'data', 'unas-catalog-snapshot.json');
+if (fs.existsSync(liveSnapshotPath)) {
+  const liveSnapshot = JSON.parse(fs.readFileSync(liveSnapshotPath, 'utf8'));
+  const productsById = new Map(liveSnapshot.products.map((item) => [item.unasId, item]));
+  const liveCards = productCards(approvedMappings.map((item) => item.canonicalId));
+  for (let index = 0; index < approvedMappings.length; index += 1) {
+    const mappingItem = approvedMappings[index];
+    const snapshotItem = productsById.get(mappingItem.unasId);
+    const card = liveCards[index];
+    assert(snapshotItem, mappingItem.canonicalId);
+    assert.equal(snapshotItem.sku, mappingItem.sku);
+    assert.equal(card.id, mappingItem.canonicalId);
+    assert.equal(card.name, snapshotItem.name);
+    assert.equal(card.url, snapshotItem.url);
+    assert.ok(card.image);
+    assert.equal(card.price, snapshotItem.actualPriceGross ?? snapshotItem.priceGross);
+    assert.equal(card.description, PRODUCTS[mappingItem.canonicalId].description);
+    assert.equal(card.commerce.unasId, mappingItem.unasId);
+    assert.equal(card.commerce.sku, mappingItem.sku);
+  }
+}
 
 console.log('TEST_PRODUCT_REGISTRY: minden ellenőrzés sikeres');

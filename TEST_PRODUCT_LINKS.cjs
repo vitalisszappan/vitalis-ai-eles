@@ -2,6 +2,7 @@
 
 const assert = require('assert');
 const fs = require('fs');
+const vm = require('vm');
 const { createAnswer } = require('./engine/answer-service.cjs');
 const { PRODUCTS, productCards, validProductUrl } = require('./engine/product-catalog.cjs');
 const { createProductRegistry } = require('./engine/product-registry.cjs');
@@ -52,5 +53,16 @@ assert(/card\.target = '_blank'/.test(widget));
 assert(/card\.rel = 'noopener noreferrer'/.test(widget));
 assert(/price: safeProductPrice\(item\.price\)/.test(widget));
 assert(/class="product-price"/.test(widget));
+const priceHelpers = widget.match(
+  /function safeProductPrice[\s\S]*?(?=\nfunction normalizeProduct)/
+)?.[0];
+assert(priceHelpers);
+const priceContext = {};
+vm.runInNewContext(priceHelpers, priceContext);
+assert.strictEqual(priceContext.formatProductPrice(priceContext.safeProductPrice(6500)), '6 500 Ft');
+assert.strictEqual(priceContext.formatProductPrice(priceContext.safeProductPrice(1490)), '1 490 Ft');
+assert.strictEqual(priceContext.formatProductPrice(priceContext.safeProductPrice(3400)), '3 400 Ft');
+assert.strictEqual(priceContext.formatProductPrice(priceContext.safeProductPrice(undefined)), '');
+assert.strictEqual(priceContext.formatProductPrice(priceContext.safeProductPrice('hibás')), '');
 
-console.log('TEST_PRODUCT_LINKS: 14/14 sikeres');
+console.log('TEST_PRODUCT_LINKS: 19/19 sikeres');

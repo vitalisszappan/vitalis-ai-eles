@@ -66,10 +66,10 @@ function safeProductPrice(value) {
     : null;
 }
 
-function formatProductPrice(price, currency) {
+function formatProductPrice(price) {
   if (price === null) return '';
-  const amount = new Intl.NumberFormat('hu-HU', { maximumFractionDigits: 2 }).format(price);
-  return currency ? `${amount} ${currency}` : amount;
+  const amount = String(Math.round(price)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  return `${amount} Ft`;
 }
 
 function normalizeProduct(item, index) {
@@ -122,7 +122,7 @@ function addProductCards(article, links = []) {
     const media = item.image
       ? `<img class="product-image" src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}">`
       : `<span class="product-mark" aria-hidden="true">V</span>`;
-    const priceText = formatProductPrice(item.price, item.currency);
+    const priceText = formatProductPrice(item.price);
 
     card.innerHTML = `
       ${media}
