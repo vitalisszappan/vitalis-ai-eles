@@ -70,7 +70,8 @@ const SUPABASE_SERVICE_ROLE_KEY = String(
 
 const {
   testUnasConnection,
-  buildUnasKnowledge
+  buildUnasKnowledge,
+  UNAS_CATALOG_PATH
 } = require('./unas-sync.cjs');
 
 /* =========================================================
@@ -587,15 +588,16 @@ function getSupabaseHost() {
 
 function getSuppliedAdminToken(
   req,
-  url
+  url,
+  allowQueryToken = true
 ) {
   return String(
     req.headers[
       'x-admin-token'
     ] ||
-    url.searchParams.get(
+    (allowQueryToken && url.searchParams.get(
       'token'
-    ) ||
+    )) ||
     ''
   ).trim();
 }
@@ -603,7 +605,8 @@ function getSuppliedAdminToken(
 function authorizeAdmin(
   req,
   res,
-  url
+  url,
+  options = {}
 ) {
 
   if (
@@ -628,7 +631,8 @@ function authorizeAdmin(
   const supplied =
     getSuppliedAdminToken(
       req,
-      url
+      url,
+      options.allowQueryToken !== false
     );
 
   if (
@@ -2390,6 +2394,81 @@ async function handleUnasSync(
    RENDSZERÁLLAPOT
 ========================================================= */
 
+async function handleUnasSnapshot(
+  req,
+  res,
+  url
+) {
+
+  if (
+    !authorizeAdmin(
+      req,
+      res,
+      url,
+      { allowQueryToken: false }
+    )
+  ) {
+
+    return;
+  }
+
+  try {
+
+    const body =
+      await fs.promises.readFile(
+        UNAS_CATALOG_PATH
+      );
+
+    // Sérült vagy részlegesen írt snapshotot ne szolgáljunk ki.
+    JSON.parse(
+      body.toString('utf8')
+    );
+
+    res.writeHead(
+      200,
+      {
+        'Content-Type':
+          'application/json; charset=utf-8',
+        'Content-Length':
+          body.length,
+        'Cache-Control':
+          'no-store',
+        'X-Content-Type-Options':
+          'nosniff'
+      }
+    );
+
+    res.end(body);
+
+  } catch (error) {
+
+    if (error && error.code === 'ENOENT') {
+      sendJson(
+        res,
+        404,
+        {
+          ok: false,
+          error: 'Az UNAS katalógussnapshot nem található.'
+        }
+      );
+      return;
+    }
+
+    console.error(
+      'UNAS KATALOGUSSNAPSHOT LETOLTESI HIBA'
+    );
+
+    sendJson(
+      res,
+      500,
+      {
+        ok: false,
+        error: 'Az UNAS katalógussnapshot nem tölthető le.'
+      }
+    );
+  }
+}
+
 function handleStatus(
   res
 ) {
@@ -2707,6 +2786,26 @@ const server =
         ) {
 
           await handleUnasSync(
+            req,
+            res,
+            url
+          );
+
+          return;
+        }
+
+        /* -------------------------
+           UNAS SNAPSHOT LETOLTES
+        ------------------------- */
+
+        if (
+          req.method ===
+          'GET' &&
+          url.pathname ===
+          '/api/admin/unas/snapshot'
+        ) {
+
+          await handleUnasSnapshot(
             req,
             res,
             url
