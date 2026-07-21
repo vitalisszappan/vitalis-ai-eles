@@ -1,0 +1,84 @@
+{
+  "schema": "vitalis-canonical-unas-mapping/v1",
+  "version": 1,
+  "mappings": [
+    {
+      "canonicalId": "dermavital_sampon",
+      "unasId": "1553769891",
+      "sku": "Vitdermsamp01",
+      "verifiedName": "Dermavital Sampon – nyugtató ápolás viszkető, irritált és érzékeny fejbőrre",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-07-21T11:11:31+02:00"
+    },
+    {
+      "canonicalId": "rozmaringos_samponszappan",
+      "unasId": "1467825966",
+      "sku": "Vssz02",
+      "verifiedName": "Kézműves Samponszappan – Rozmaring 110 g",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-07-21T11:11:31+02:00"
+    },
+    {
+      "canonicalId": "dermavital_krem",
+      "unasId": "1412837511",
+      "sku": "VDVK100",
+      "verifiedName": "Dermavital nyugtató bőrápoló krém – érzékeny, irritált, ekcémára hajlamos bőrre (100 ml)",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-07-21T11:11:31+02:00"
+    },
+    {
+      "canonicalId": "dermavital_szappan",
+      "unasId": "1462570616",
+      "sku": "VDVSZ",
+      "verifiedName": "Dermavital szappan – Holt-tengeri ásványokkal problémás bőrre 120 g",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-07-21T11:11:31+02:00"
+    },
+    {
+      "canonicalId": "psorivital_csomag",
+      "unasId": "1120057029",
+      "sku": "CS001",
+      "verifiedName": "PsoriVital csomag – Pikkelysömörrel érintett, hámlásra hajlamos bőr ápolására",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-07-21T11:11:31+02:00"
+    },
+    {
+      "canonicalId": "holt_tengeri_so_balzsam",
+      "unasId": "163833663",
+      "sku": "VEM02",
+      "verifiedName": "Holt-tengeri só balzsam száraz, érzékeny bőrre – intenzív ápolás 250 ml",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-07-21T11:11:31+02:00"
+    },
+    {
+      "canonicalId": "holt_tengeri_iszapos_szappan",
+      "unasId": "111374989",
+      "sku": "Vsz007",
+      "verifiedName": "Holt-tengeri iszap szappan 110 g – zsíros, pattanásos bőrre | Vitalis",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-07-21T11:11:31+02:00"
+    },
+    {
+      "canonicalId": "aktiv_szenes_szappan",
+      "mappingStatus": "needs_review",
+      "approvedAt": null,
+      "note": "A talált aktív szenes UNAS-termék eltérő terméktípusú samponszappan, ezért ehhez a canonical termékhez nincs automatikusan hozzárendelve."
+    },
+    {
+      "canonicalId": "katrany_szappan",
+      "unasId": "111374984",
+      "sku": "VSZ002",
+      "verifiedName": "Gyógyászati Kátrány Szappan - Ichtiol Hatóanyaggal a Zsíros és Problémás Bőrért 100 g",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-07-21T11:11:31+02:00"
+    },
+    {
+      "canonicalId": "shea_vajas_szappan",
+      "unasId": "111374997",
+      "sku": "Vsz016",
+      "verifiedName": "Shea vajas szappan – Hidratáló, bőrpuhító luxusápolás érzékeny bőrre – 110 g",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-07-21T11:11:31+02:00"
+    }
+  ]
+}
