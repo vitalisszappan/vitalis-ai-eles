@@ -114,6 +114,9 @@ let conversations = [];
 
 let knowledgeGaps = [];
 
+let knowledgeTasks = [];
+let knowledgeTaskFilter = 'open';
+
 let adminToken = '';
 
 /* =========================================================
@@ -1537,6 +1540,73 @@ async function refreshEverything() {
    ESEMÉNYKEZELŐK
 ========================================================= */
 
+const knowledgeTaskList = document.getElementById('knowledgeTaskList');
+const knowledgeTaskStatus = document.getElementById('knowledgeTaskStatus');
+const knowledgeTaskFilters = document.getElementById('knowledgeTaskFilters');
+const loadKnowledgeTasksButton = document.getElementById('loadKnowledgeTasksButton');
+const exportKnowledgeDraftsButton = document.getElementById('exportKnowledgeDraftsButton');
+
+function renderDraftPanel(panel, task, draft) {
+  if (!draft) {
+    panel.innerHTML = '<p>Nincs draft ehhez a feladathoz.</p><button class="draft-generate" type="button">Draft létrehozása</button>';
+  } else {
+    panel.innerHTML = `<div class="draft-grid"><label>Draft típusa<select class="draft-type">${['faq','knowledge','admin_intent','expert_rule_proposal','canonical_proposal','manual_required'].map(value=>`<option ${value===draft.draftType?'selected':''}>${value}</option>`).join('')}</select></label><label>Kategória<input class="draft-category" value="${escapeHtml(draft.category||'egyéb')}"></label><label>Kérdés<textarea class="draft-question">${escapeHtml(draft.question||'')}</textarea></label><label>Javasolt válasz<textarea class="draft-answer">${escapeHtml(draft.answer||'')}</textarea></label><label>Kulcsszavak<input class="draft-keywords" value="${escapeHtml((draft.keywords||[]).join(', '))}"></label><label>Canonical termékek<input class="draft-canonical" value="${escapeHtml((draft.canonicalIds||[]).join(', '))}"></label><label>Bizonyosság<input class="draft-confidence" type="number" min="0" max="100" value="${Number(draft.confidenceScore)||0}"></label><label>Biztonsági státusz<select class="draft-safety">${['safe','caution','manual_required'].map(value=>`<option ${value===draft.safetyStatus?'selected':''}>${value}</option>`).join('')}</select></label></div><div><strong>Draft státusza:</strong> ${escapeHtml(draft.generationStatus)}</div><div><strong>Generálási indok:</strong> ${escapeHtml(draft.generationReason||'')}</div><div class="draft-sources"><strong>Források:</strong> ${escapeHtml(draft.sourceSummary||'Nincs approved tartalmi forrás.')}<br>Beszélgetések: ${escapeHtml((draft.sourceConversationIds||[]).join(', '))}</div><label>Reviewer megjegyzés<textarea class="draft-note">${escapeHtml(draft.reviewerNote||'')}</textarea></label><div class="draft-actions"><button class="draft-regenerate" type="button">Újragenerálás</button><button class="draft-save" type="button">Mentés</button><button data-draft-status="in_review" type="button">Review megnyitása</button><button data-draft-status="approved_for_import" type="button">Jóváhagyás exportra</button><button data-draft-status="rejected" type="button">Elutasítás</button></div>`;
+  }
+  const generate = panel.querySelector('.draft-generate');
+  if (generate) generate.addEventListener('click', async()=>{ try{const data=await adminFetch('/api/admin/knowledge-drafts/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({taskId:task.id})});renderDraftPanel(panel,task,data.draft);}catch(error){knowledgeTaskStatus.textContent=`Draft generálási hiba: ${error.message}`;} });
+  const regenerate = panel.querySelector('.draft-regenerate');
+  if (regenerate) regenerate.addEventListener('click',async()=>{const overwrite=draft.manuallyEdited?window.confirm('A draft kézzel módosult. Biztosan felülírod a generált változattal?'):false;if(draft.manuallyEdited&&!overwrite)return;try{const data=await adminFetch('/api/admin/knowledge-drafts/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({taskId:task.id,overwriteEdited:overwrite})});renderDraftPanel(panel,task,data.draft);}catch(error){knowledgeTaskStatus.textContent=`Újragenerálási hiba: ${error.message}`;} });
+  const save=panel.querySelector('.draft-save');
+  if(save)save.addEventListener('click',async()=>{try{const data=await adminFetch('/api/admin/knowledge-drafts/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:draft.id,draftType:panel.querySelector('.draft-type').value,question:panel.querySelector('.draft-question').value,answer:panel.querySelector('.draft-answer').value,keywords:panel.querySelector('.draft-keywords').value.split(',').map(x=>x.trim()).filter(Boolean),category:panel.querySelector('.draft-category').value,canonicalIds:panel.querySelector('.draft-canonical').value.split(',').map(x=>x.trim()).filter(Boolean),confidenceScore:Number(panel.querySelector('.draft-confidence').value),safetyStatus:panel.querySelector('.draft-safety').value,reviewerNote:panel.querySelector('.draft-note').value})});renderDraftPanel(panel,task,data.draft);knowledgeTaskStatus.textContent='A draft mentve.';}catch(error){knowledgeTaskStatus.textContent=`Draft mentési hiba: ${error.message}`;} });
+  panel.querySelectorAll('[data-draft-status]').forEach(button=>button.addEventListener('click',async()=>{try{const data=await adminFetch('/api/admin/knowledge-drafts/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:draft.id,generationStatus:button.dataset.draftStatus})});renderDraftPanel(panel,task,data.draft);knowledgeTaskStatus.textContent='A draft státusza mentve.';}catch(error){knowledgeTaskStatus.textContent=`Draft státuszhiba: ${error.message}`;} }));
+}
+
+async function openDraftPanel(card, task) {
+  let panel=card.querySelector('.draft-panel'); if(panel){panel.remove();return;}
+  panel=document.createElement('section');panel.className='draft-panel';panel.textContent='Draft betöltése...';card.appendChild(panel);
+  try{const data=await adminFetch(`/api/admin/knowledge-drafts?taskId=${encodeURIComponent(task.id)}`);renderDraftPanel(panel,task,data.draft);}catch(error){panel.textContent=`Draft betöltési hiba: ${error.message}`;}
+}
+
+function renderKnowledgeTasks() {
+  if (!knowledgeTaskList) return;
+  const rootGroups = { expert: ['expert_rule_missing','expert_rule_bypassed'], canonical: ['canonical_product_missing','canonical_mapping_missing','canonical_not_approved'] };
+  const filtered = knowledgeTasks.filter(task => {
+    if (knowledgeTaskFilter === 'all') return true;
+    if (knowledgeTaskFilter === 'open') return task.status === 'open';
+    if (knowledgeTaskFilter === 'critical') return task.priority === 'critical';
+    if (knowledgeTaskFilter === 'ignored') return task.status === 'ignored';
+    if (knowledgeTaskFilter === 'impact:high') return Number(task.estimatedImpact) >= 70;
+    if (knowledgeTaskFilter.startsWith('root:')) { const value = knowledgeTaskFilter.slice(5); return rootGroups[value] ? rootGroups[value].includes(task.rootCause) : task.rootCause === value; }
+    return task.classification === knowledgeTaskFilter;
+  });
+  knowledgeTaskList.innerHTML = '';
+  if (!filtered.length) { knowledgeTaskList.innerHTML = '<div class="empty-state">Nincs a szűrőnek megfelelő feladat.</div>'; return; }
+  filtered.forEach(task => {
+    const card = document.createElement('details'); card.className = 'knowledge-task-card'; card.dataset.priority = task.priority;
+    const rootLabels = { knowledge_missing:'Tudáshiány', intent_routing_error:'Routing hiba', expert_rule_bypassed:'Expert szabály megkerülve', canonical_not_approved:'Nem approved canonical termék', unsafe_or_medical_guidance_missing:'Biztonsági tudás hiánya', unknown:'Ismeretlen' };
+    const impact = task.impactBreakdown || {};
+    card.innerHTML = `<summary class="task-summary">${escapeHtml(task.question || task.topic || 'Névtelen feladat')}</summary><div class="task-badges"><strong>Hatás: ${Number(task.estimatedImpact)||0}/100</strong><span>${escapeHtml(rootLabels[task.rootCause] || task.rootCause || 'Ismeretlen')}</span><span>javítás: ${escapeHtml(task.repairTarget || 'manual_review')}</span><span>${escapeHtml(task.classification)}</span><span>${escapeHtml(task.priority)}</span><span>${task.occurrenceCount || 1} előfordulás</span><span>üzleti érték: ${task.businessValue}/5</span><span>${escapeHtml(task.status)}</span></div><div class="task-detail"><strong>Eredeti kérdés</strong><blockquote>${escapeHtml(task.question || '')}</blockquote><strong>Eredeti válasz</strong><blockquote>${escapeHtml(task.answer || '')}</blockquote><div><strong>Root cause:</strong> ${escapeHtml(rootLabels[task.rootCause] || task.rootCause || '')}</div><div><strong>Root cause indoklása:</strong> ${escapeHtml(task.rootCauseReason || '')}</div><div><strong>Javítás helye:</strong> ${escapeHtml(task.repairTarget || '')}</div><div><strong>Estimated impact:</strong> ${Number(task.estimatedImpact)||0}/100 — priority ${impact.priority||0}, businessValue ${impact.businessValue||0}, occurrenceCount ${impact.occurrenceCount||0}, classification ${impact.classification||0}, biztonsági kiegészítés ${impact.safety||0}</div><div><strong>Besorolás indoka:</strong> ${escapeHtml(task.classificationReason || '')}</div><div><strong>Javasolt teendő:</strong> ${escapeHtml(task.suggestedAction || '')}</div><div><strong>Canonical termékek:</strong> ${escapeHtml((task.canonicalIds || []).join(', ') || '–')}</div><div><strong>Kapcsolódó beszélgetések:</strong> ${escapeHtml((task.conversationIds || []).join(', '))}</div><div class="task-editor"><label>Státusz<select class="task-status">${['open','in_review','approved','rejected','resolved','ignored'].map(status => `<option ${status === task.status ? 'selected' : ''}>${status}</option>`).join('')}</select></label><label>Reviewer note<textarea class="task-note">${escapeHtml(task.reviewerNote || '')}</textarea></label><button class="task-save" type="button">Mentés</button></div></div>`;
+    const draftButton=document.createElement('button');draftButton.type='button';draftButton.className='draft-open';draftButton.textContent='Draft megnyitása / létrehozása';card.querySelector('.task-detail').appendChild(draftButton);draftButton.addEventListener('click',()=>openDraftPanel(card,task));
+    card.querySelector('.task-save').addEventListener('click', async () => {
+      const button = card.querySelector('.task-save'); button.disabled = true;
+      try { const data = await adminFetch('/api/admin/knowledge-tasks/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: task.id, status: card.querySelector('.task-status').value, reviewerNote: card.querySelector('.task-note').value }) }); Object.assign(task, { status: data.status, reviewerNote: data.reviewerNote }); knowledgeTaskStatus.textContent = 'A feladat mentve.'; renderKnowledgeTasks(); }
+      catch (error) { knowledgeTaskStatus.textContent = `Mentési hiba: ${error.message}`; } finally { button.disabled = false; }
+    });
+    knowledgeTaskList.appendChild(card);
+  });
+}
+
+async function loadKnowledgeTasks() {
+  if (!knowledgeTaskStatus) return;
+  knowledgeTaskStatus.textContent = 'Knowledge Queue betöltése...';
+  try { const data = await adminFetch('/api/admin/knowledge-tasks?limit=500'); knowledgeTasks = data.items || []; knowledgeTaskStatus.textContent = `${knowledgeTasks.length} feladat betöltve (${data.storage}).`; renderKnowledgeTasks(); }
+  catch (error) { knowledgeTaskStatus.textContent = `Knowledge Queue betöltési hiba: ${error.message}`; }
+}
+
+if (knowledgeTaskFilters) knowledgeTaskFilters.addEventListener('click', event => { const button = event.target.closest('[data-filter]'); if (!button) return; knowledgeTaskFilter = button.dataset.filter; knowledgeTaskFilters.querySelectorAll('button').forEach(item => item.classList.toggle('active', item === button)); renderKnowledgeTasks(); });
+if (loadKnowledgeTasksButton) loadKnowledgeTasksButton.addEventListener('click', loadKnowledgeTasks);
+if (exportKnowledgeDraftsButton) exportKnowledgeDraftsButton.addEventListener('click',async()=>{if(!ensureAdminToken())return;try{const response=await fetch('/api/admin/knowledge-drafts/export',{method:'POST',headers:{'X-Admin-Token':adminToken}});if(!response.ok)throw new Error((await response.json()).error||'Export hiba.');const blob=await response.blob(),link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download='knowledge-import.json';link.click();URL.revokeObjectURL(link.href);}catch(error){knowledgeTaskStatus.textContent=`Export hiba: ${error.message}`;}});
+
 if (
   searchInput
 ) {
@@ -1614,3 +1684,4 @@ if (
 ========================================================= */
 
 refreshEverything();
+loadKnowledgeTasks();

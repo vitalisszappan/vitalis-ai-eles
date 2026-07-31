@@ -152,6 +152,28 @@
 
     </section>
 
+    <section class="toolbar knowledge-queue-toolbar">
+      <div><h2>Knowledge Queue</h2><p>Strukturált, felülvizsgálható tudásfejlesztési feladatok. A műveletek nem módosítják automatikusan a chatbot tudását.</p></div>
+      <button id="loadKnowledgeTasksButton" type="button">Queue frissítése</button>
+      <button id="exportKnowledgeDraftsButton" type="button">Jóváhagyott draftok exportja</button>
+    </section>
+    <nav id="knowledgeTaskFilters" class="queue-filters" aria-label="Knowledge Queue szűrők">
+      <button data-filter="open" class="active">Nyitott</button><button data-filter="critical">Kritikus</button>
+      <button data-filter="missing_knowledge">Tudáshiány</button><button data-filter="wrong_answer">Hibás válasz</button>
+      <button data-filter="outdated_knowledge">Elavult tudás</button><button data-filter="solved">Megoldott</button>
+      <button data-filter="ignored">Figyelmen kívül hagyott</button><button data-filter="all">Mind</button>
+      <button data-filter="root:knowledge_missing">Gyökérok: tudáshiány</button>
+      <button data-filter="root:intent_routing_error">Gyökérok: routing hiba</button>
+      <button data-filter="root:expert">Gyökérok: expert szabály</button>
+      <button data-filter="root:canonical">Gyökérok: canonical/mapping</button>
+      <button data-filter="root:alias_missing">Gyökérok: alias</button>
+      <button data-filter="root:unsafe_or_medical_guidance_missing">Gyökérok: biztonsági tudás</button>
+      <button data-filter="root:unknown">Ismeretlen gyökérok</button>
+      <button data-filter="impact:high">Magas hatású</button>
+    </nav>
+    <section id="knowledgeTaskStatus" class="status">A Knowledge Queue betöltése folyamatban...</section>
+    <section id="knowledgeTaskList" class="knowledge-task-list"></section>
+
     <section
       id="knowledgeGapStatusMessage"
       class="status"
@@ -278,7 +300,7 @@
 
   </main>
 
-  <script src="/admin.js?v=20260718-2"></script>
+  <script src="/admin.js?v=20260731-knowledge-builder-3"></script>
 
 </body>
 

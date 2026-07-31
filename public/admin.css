@@ -371,6 +371,26 @@ button:disabled {
   color: var(--muted);
 }
 
+/* Knowledge Queue */
+.queue-filters { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 16px; }
+.queue-filters button.active { background:#0f684f; color:#fff; }
+.knowledge-task-list { display:grid; gap:14px; margin-bottom:32px; }
+.knowledge-task-card { background:var(--panel); border:1px solid var(--border); border-left:6px solid #7b9189; border-radius:var(--radius); padding:18px; }
+.knowledge-task-card[data-priority="critical"] { border-left-color:#b42318; }
+.knowledge-task-card[data-priority="high"] { border-left-color:#d97706; }
+.task-summary { cursor:pointer; font-weight:700; }
+.task-badges { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0; color:var(--muted); font-size:13px; }
+.task-detail { display:grid; gap:10px; margin-top:14px; }
+.task-detail blockquote { margin:0; padding:10px 14px; background:#f5f8f7; white-space:pre-wrap; }
+.task-editor { display:grid; grid-template-columns:minmax(140px,220px) 1fr auto; gap:10px; align-items:end; }
+.task-editor textarea { min-height:70px; resize:vertical; }
+.draft-panel { margin-top:16px; padding:16px; border:1px solid var(--border); border-radius:12px; background:#f8fbfa; display:grid; gap:10px; }
+.draft-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.draft-panel label { display:grid; gap:5px; font-weight:600; }
+.draft-panel textarea { min-height:90px; resize:vertical; }
+.draft-actions { display:flex; flex-wrap:wrap; gap:8px; }
+.draft-sources { font-size:13px; color:var(--muted); }
+
 /* =========================================================
    MOBIL / TABLET
 ========================================================= */
@@ -411,6 +431,7 @@ button:disabled {
 }
 
 @media (max-width: 560px) {
+  .draft-grid { grid-template-columns:1fr; }
   .brand img {
     width: 60px;
   }

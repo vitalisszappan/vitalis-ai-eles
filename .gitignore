@@ -1,3 +1,6 @@
 node_modules/
 data/unas-catalog-snapshot.json
 data/unas-catalog-snapshot.json.*.tmp
+data/logs/*.jsonl
+knowledge-import.json
+chatbot.pid

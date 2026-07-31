@@ -1,0 +1,15 @@
+'use strict';
+const fs = require('fs');
+const path = require('path');
+const { mergeTasks } = require('../engine/knowledge-tasks.cjs');
+const root = path.join(__dirname, '..');
+const input = path.join(root, 'data', 'logs', 'conversations.jsonl');
+const output = path.join(root, 'data', 'logs', 'knowledge-tasks.jsonl');
+const mappingPath = path.join(root, 'data', 'canonical-unas-mapping.json');
+const conversations = fs.existsSync(input) ? fs.readFileSync(input, 'utf8').split(/\r?\n/).filter(Boolean).map(line => JSON.parse(line)) : [];
+const mapping = fs.existsSync(mappingPath) ? JSON.parse(fs.readFileSync(mappingPath, 'utf8')) : { mappings: [] };
+const productStatuses = Object.fromEntries((mapping.mappings || []).map(item => [item.canonicalId, item.mappingStatus]));
+const tasks = mergeTasks(conversations, { productStatuses });
+const write = process.argv.includes('--write');
+console.log(JSON.stringify({ dryRun: !write, conversations: conversations.length, tasks: tasks.length }, null, 2));
+if (write) fs.writeFileSync(output, tasks.map(task => JSON.stringify(task)).join('\n') + (tasks.length ? '\n' : ''), 'utf8');

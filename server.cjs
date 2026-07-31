@@ -43,6 +43,21 @@ const KNOWLEDGE_GAP_LOG = path.join(
   'knowledge-gaps.jsonl'
 );
 
+const KNOWLEDGE_TASK_LOG = path.join(LOG_DIR, 'knowledge-tasks.jsonl');
+const KNOWLEDGE_DRAFT_LOG = path.join(LOG_DIR, 'knowledge-drafts.jsonl');
+const CANONICAL_MAPPING_PATH = path.join(DATA_DIR, 'canonical-unas-mapping.json');
+
+const { STATUSES: KNOWLEDGE_TASK_STATUSES, taskFromConversation, mergeTasks, sortKnowledgeTasks, calculateEstimatedImpact } = require('./engine/knowledge-tasks.cjs');
+const { DRAFT_TYPES, GENERATION_STATUSES, SAFETY_STATUSES, contentHash, generateKnowledgeDraft, validateDraft, buildKnowledgeExport } = require('./engine/knowledge-drafts.cjs');
+const { resolveAdministrativeIntent } = require('./engine/admin-intents.cjs');
+
+function readCanonicalProductStatuses() {
+  try {
+    const raw = JSON.parse(fs.readFileSync(CANONICAL_MAPPING_PATH, 'utf8'));
+    return Object.fromEntries((raw.mappings || []).map(item => [item.canonicalId, item.mappingStatus]));
+  } catch { return {}; }
+}
+
 const PORT = Number(
   process.env.PORT || 3218
 );
@@ -695,7 +710,8 @@ function getSupabaseHeaders(
 function supabaseRequest({
   method = 'GET',
   pathname,
-  body = null
+  body = null,
+  headers: extraHeaders = {}
 }) {
 
   return new Promise(
@@ -749,7 +765,8 @@ function supabaseRequest({
       const headers =
         getSupabaseHeaders({
           Accept:
-            'application/json'
+            'application/json',
+          ...extraHeaders
         });
 
       if (
@@ -768,8 +785,7 @@ function supabaseRequest({
             bodyText
           );
 
-        headers.Prefer =
-          'return=minimal';
+        headers.Prefer = headers.Prefer || 'return=minimal';
       }
 
       const options = {
@@ -1021,7 +1037,7 @@ async function persistConversation(
   if (
     !supabaseConfigured()
   ) {
-
+    await upsertKnowledgeTask(taskFromConversation(safe, { productStatuses: readCanonicalProductStatuses() }));
     return;
   }
 
@@ -1057,6 +1073,8 @@ async function persistConversation(
       error.message
     );
   }
+
+  await upsertKnowledgeTask(taskFromConversation(safe, { productStatuses: readCanonicalProductStatuses() }));
 }
 
 /* =========================================================
@@ -1539,7 +1557,7 @@ async function handleAdminKnowledgeGaps(req, res, url) {
 }
 
 async function handleApproveKnowledgeGap(req, res, url) {
-  if (!authorizeAdmin(req, res, url)) return;
+  if (!authorizeAdmin(req, res, url, { allowQueryToken: false })) return;
 
   const rawBody = await parseBody(req);
   const parsed = JSON.parse(rawBody || '{}');
@@ -1595,7 +1613,7 @@ async function handleApproveKnowledgeGap(req, res, url) {
 }
 
 async function handleDismissKnowledgeGap(req, res, url) {
-  if (!authorizeAdmin(req, res, url)) return;
+  if (!authorizeAdmin(req, res, url, { allowQueryToken: false })) return;
 
   const rawBody = await parseBody(req);
   const parsed = JSON.parse(rawBody || '{}');
@@ -2096,7 +2114,8 @@ async function handleKnowledgeImport(
     !authorizeAdmin(
       req,
       res,
-      url
+      url,
+      { allowQueryToken: false }
     )
   ) {
 
@@ -2302,7 +2321,8 @@ async function handleUnasSync(
     !authorizeAdmin(
       req,
       res,
-      url
+      url,
+      { allowQueryToken: false }
     )
   ) {
 
@@ -2466,6 +2486,229 @@ async function handleUnasSnapshot(
       }
     );
   }
+
+}
+
+/* =========================================================
+   KNOWLEDGE QUEUE
+========================================================= */
+
+function readLocalKnowledgeTasks() {
+  if (!fs.existsSync(KNOWLEDGE_TASK_LOG)) return [];
+  return fs.readFileSync(KNOWLEDGE_TASK_LOG, 'utf8').split(/\r?\n/).filter(Boolean).map(line => {
+    try { return JSON.parse(line); } catch { return null; }
+  }).filter(Boolean);
+}
+
+function writeLocalKnowledgeTasks(items) {
+  fs.writeFileSync(KNOWLEDGE_TASK_LOG, items.map(item => JSON.stringify(item)).join('\n') + (items.length ? '\n' : ''), 'utf8');
+}
+
+function taskToRow(task) {
+  return {
+    id: task.id, normalized_question_key: task.normalizedQuestionKey, conversation_id: task.conversationId,
+    conversation_ids: task.conversationIds, question: task.question, answer: task.answer, answer_source: task.answerSource,
+    confidence_score: task.confidenceScore, detected_intent: task.detectedIntent, canonical_ids: task.canonicalIds,
+    page_url: task.pageUrl, occurred_at: task.occurredAt, classification: task.classification,
+    classification_reason: task.classificationReason, root_cause: task.rootCause, root_cause_reason: task.rootCauseReason,
+    repair_target: task.repairTarget, estimated_impact: task.estimatedImpact, impact_breakdown: task.impactBreakdown,
+    priority: task.priority, business_value: task.businessValue,
+    topic: task.topic, product_family: task.productFamily, suggested_action: task.suggestedAction, status: task.status,
+    occurrence_count: task.occurrenceCount, first_seen_at: task.firstSeenAt, last_seen_at: task.lastSeenAt,
+    reviewer_note: task.reviewerNote, reviewed_at: task.reviewedAt, resolved_at: task.resolvedAt,
+    created_at: task.createdAt, updated_at: task.updatedAt
+  };
+}
+
+function rowToTask(row) {
+  const task = {};
+  for (const [key, value] of Object.entries(row)) task[key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase())] = value;
+  return task;
+}
+
+async function readKnowledgeTasks(limit = 500) {
+  if (!supabaseConfigured()) return { storage: 'local', items: sortKnowledgeTasks(readLocalKnowledgeTasks()).slice(0, limit) };
+  const result = await supabaseRequest({ method: 'GET', pathname: `/rest/v1/knowledge_tasks?select=*&limit=${Math.min(Math.max(Number(limit) || 500, 1), 1000)}` });
+  return { storage: 'supabase', items: sortKnowledgeTasks(JSON.parse(result.body || '[]').map(rowToTask)) };
+}
+
+async function upsertKnowledgeTask(incoming) {
+  if (!supabaseConfigured()) {
+    const items = readLocalKnowledgeTasks();
+    const index = items.findIndex(item => item.id === incoming.id);
+    if (index >= 0) {
+      const old = items[index];
+      const ids = [...new Set([...(old.conversationIds || []), ...incoming.conversationIds])];
+      items[index] = { ...incoming, status: old.status, reviewerNote: old.reviewerNote, reviewedAt: old.reviewedAt, resolvedAt: old.resolvedAt, createdAt: old.createdAt, conversationIds: ids, occurrenceCount: ids.length, firstSeenAt: old.firstSeenAt < incoming.firstSeenAt ? old.firstSeenAt : incoming.firstSeenAt, updatedAt: new Date().toISOString() };
+      const impact = calculateEstimatedImpact(items[index]); items[index].estimatedImpact = impact.total; items[index].impactBreakdown = impact.breakdown;
+    } else items.push(incoming);
+    writeLocalKnowledgeTasks(items);
+    return;
+  }
+  let existing = [];
+  try {
+    const found = await supabaseRequest({ method: 'GET', pathname: `/rest/v1/knowledge_tasks?id=eq.${encodeURIComponent(incoming.id)}&select=*` });
+    existing = JSON.parse(found.body || '[]');
+  } catch (error) { console.error('Knowledge Task olvasási hiba:', error.message); }
+  const old = existing[0] ? rowToTask(existing[0]) : null;
+  const ids = [...new Set([...(old?.conversationIds || []), ...incoming.conversationIds])];
+  const task = old ? { ...incoming, status: old.status, reviewerNote: old.reviewerNote, reviewedAt: old.reviewedAt, resolvedAt: old.resolvedAt, createdAt: old.createdAt, conversationIds: ids, occurrenceCount: ids.length, firstSeenAt: old.firstSeenAt < incoming.firstSeenAt ? old.firstSeenAt : incoming.firstSeenAt, updatedAt: new Date().toISOString() } : incoming;
+  const impact = calculateEstimatedImpact(task); task.estimatedImpact = impact.total; task.impactBreakdown = impact.breakdown;
+  await supabaseRequest({ method: 'POST', pathname: '/rest/v1/knowledge_tasks?on_conflict=id', body: taskToRow(task), headers: { Prefer: 'resolution=merge-duplicates' } });
+}
+
+async function handleAdminKnowledgeTasks(req, res, url) {
+  if (!authorizeAdmin(req, res, url)) return;
+  try { sendJson(res, 200, { ok: true, ...(await readKnowledgeTasks(url.searchParams.get('limit') || 500)) }); }
+  catch (error) { console.error('Knowledge Queue read failed.'); sendJson(res, 500, { ok: false, error: 'A Knowledge Queue jelenleg nem tölthető be.' }); }
+}
+
+async function handleUpdateKnowledgeTask(req, res, url) {
+  if (!authorizeAdmin(req, res, url, { allowQueryToken: false })) return;
+  let parsed;
+  try { parsed = JSON.parse((await parseBody(req)) || '{}'); } catch { return sendJson(res, 400, { ok: false, error: 'Hibás JSON.' }); }
+  const id = cleanText(parsed.id, 80); const status = cleanText(parsed.status, 30); const reviewerNote = cleanText(parsed.reviewerNote, 4000) || '';
+  if (!id || !KNOWLEDGE_TASK_STATUSES.includes(status)) return sendJson(res, 400, { ok: false, error: 'Érvénytelen id vagy státusz.' });
+  const now = new Date().toISOString();
+  try {
+    if (supabaseConfigured()) {
+      await supabaseRequest({ method: 'PATCH', pathname: `/rest/v1/knowledge_tasks?id=eq.${encodeURIComponent(id)}`, body: { status, reviewer_note: reviewerNote, reviewed_at: now, resolved_at: status === 'resolved' ? now : null, updated_at: now } });
+    } else {
+      const items = readLocalKnowledgeTasks(); const item = items.find(entry => entry.id === id);
+      if (!item) return sendJson(res, 404, { ok: false, error: 'A feladat nem található.' });
+      Object.assign(item, { status, reviewerNote, reviewedAt: now, resolvedAt: status === 'resolved' ? now : null, updatedAt: now }); writeLocalKnowledgeTasks(items);
+    }
+    sendJson(res, 200, { ok: true, id, status, reviewerNote });
+  } catch (error) { console.error('Knowledge Task update failed.'); sendJson(res, 500, { ok: false, error: 'A Knowledge Task jelenleg nem menthető.' }); }
+}
+
+async function handleKnowledgeTaskBackfill(req, res, url) {
+  if (!authorizeAdmin(req, res, url, { allowQueryToken: false })) return;
+  let parsed = {}; try { parsed = JSON.parse((await parseBody(req)) || '{}'); } catch { return sendJson(res, 400, { ok: false, error: 'Hibás JSON.' }); }
+  try {
+    const remote = await readSupabaseConversations(1000).catch(() => null);
+    const conversations = remote ?? readLocalConversations(1000); const tasks = mergeTasks(conversations, { productStatuses: readCanonicalProductStatuses() });
+    if (parsed.write === true) for (const task of tasks) await upsertKnowledgeTask(task);
+    sendJson(res, 200, { ok: true, dryRun: parsed.write !== true, conversations: conversations.length, tasks: tasks.length });
+  } catch (error) {
+    console.error('Knowledge Task backfill failed.');
+    sendJson(res, 500, { ok: false, error: 'A Knowledge Task backfill jelenleg nem futtatható.' });
+  }
+}
+
+/* =========================================================
+   KNOWLEDGE DRAFTS
+========================================================= */
+
+function readLocalKnowledgeDrafts() {
+  if (!fs.existsSync(KNOWLEDGE_DRAFT_LOG)) return [];
+  return fs.readFileSync(KNOWLEDGE_DRAFT_LOG, 'utf8').split(/\r?\n/).filter(Boolean).map(line => {
+    try { return JSON.parse(line); } catch { return null; }
+  }).filter(Boolean);
+}
+
+function writeLocalKnowledgeDrafts(items) {
+  fs.writeFileSync(KNOWLEDGE_DRAFT_LOG, items.map(item => JSON.stringify(item)).join('\n') + (items.length ? '\n' : ''), 'utf8');
+}
+
+function draftToRow(draft) {
+  return {
+    id:draft.id,task_id:draft.taskId,draft_type:draft.draftType,question:draft.question,answer:draft.answer,
+    keywords:draft.keywords,category:draft.category,canonical_ids:draft.canonicalIds,source_conversation_ids:draft.sourceConversationIds,
+    source_knowledge_ids:draft.sourceKnowledgeIds,source_rule_ids:draft.sourceRuleIds,source_summary:draft.sourceSummary,
+    generation_status:draft.generationStatus,confidence_score:draft.confidenceScore,safety_status:draft.safetyStatus,
+    generation_reason:draft.generationReason,generated_content_hash:draft.generatedContentHash,manually_edited:Boolean(draft.manuallyEdited),
+    reviewer_note:draft.reviewerNote,reviewed_at:draft.reviewedAt,approved_at:draft.approvedAt,created_at:draft.createdAt,updated_at:draft.updatedAt
+  };
+}
+
+async function readKnowledgeDrafts() {
+  if (!supabaseConfigured()) return readLocalKnowledgeDrafts();
+  const result = await supabaseRequest({method:'GET',pathname:'/rest/v1/knowledge_drafts?select=*'});
+  return JSON.parse(result.body||'[]').map(rowToTask);
+}
+
+async function upsertKnowledgeDraft(draft) {
+  if (!supabaseConfigured()) {
+    const items=readLocalKnowledgeDrafts(), index=items.findIndex(item=>item.id===draft.id||item.taskId===draft.taskId);
+    if(index>=0) items[index]=draft; else items.push(draft);
+    writeLocalKnowledgeDrafts(items); return;
+  }
+  await supabaseRequest({method:'POST',pathname:'/rest/v1/knowledge_drafts?on_conflict=id',body:draftToRow(draft),headers:{Prefer:'resolution=merge-duplicates'}});
+}
+
+async function findKnowledgeTask(taskId) {
+  if (!supabaseConfigured()) return readLocalKnowledgeTasks().find(task=>task.id===taskId)||null;
+  const result=await supabaseRequest({method:'GET',pathname:`/rest/v1/knowledge_tasks?id=eq.${encodeURIComponent(taskId)}&select=*`});
+  const rows=JSON.parse(result.body||'[]'); return rows[0]?rowToTask(rows[0]):null;
+}
+
+async function setKnowledgeTaskLifecycle(taskId,status) {
+  const now=new Date().toISOString();
+  if (!supabaseConfigured()) { const items=readLocalKnowledgeTasks(),task=items.find(item=>item.id===taskId); if(task){task.status=status;task.reviewedAt=now;task.updatedAt=now;writeLocalKnowledgeTasks(items);} return; }
+  await supabaseRequest({method:'PATCH',pathname:`/rest/v1/knowledge_tasks?id=eq.${encodeURIComponent(taskId)}`,body:{status,reviewed_at:now,updated_at:now}});
+}
+
+function draftGenerationSources(task) {
+  const approvedBase=knowledge.filter(item=>item&&item.source!=='unas'&&item.sourceType!=='product'&&item.sourceType!=='category');
+  return {adminIntent:resolveAdministrativeIntent(task.question),expertRule:ruleEngine.resolve(task.question,[]),approvedKnowledge:approvedBase,productStatuses:readCanonicalProductStatuses()};
+}
+
+async function handleGetKnowledgeDraft(req,res,url) {
+  if(!authorizeAdmin(req,res,url,{allowQueryToken:false})) return;
+  const taskId=cleanText(url.searchParams.get('taskId'),80);
+  try { const draft=(await readKnowledgeDrafts()).find(item=>item.taskId===taskId)||null; sendJson(res,200,{ok:true,draft}); }
+  catch { console.error('Knowledge Draft read failed.'); sendJson(res,500,{ok:false,error:'A Knowledge Draft jelenleg nem tölthető be.'}); }
+}
+
+async function handleGenerateKnowledgeDraft(req,res,url) {
+  if(!authorizeAdmin(req,res,url,{allowQueryToken:false})) return;
+  let parsed={};try{parsed=JSON.parse((await parseBody(req))||'{}');}catch{return sendJson(res,400,{ok:false,error:'Hibás JSON.'});}
+  const taskId=cleanText(parsed.taskId,80);
+  try {
+    const task=await findKnowledgeTask(taskId); if(!task)return sendJson(res,404,{ok:false,error:'A Knowledge Task nem található.'});
+    const existing=(await readKnowledgeDrafts()).find(item=>item.taskId===taskId)||null;
+    if(existing?.manuallyEdited&&parsed.overwriteEdited!==true)return sendJson(res,409,{ok:false,error:'A draft kézzel módosult. Az újrageneráláshoz explicit felülírási megerősítés szükséges.',requiresOverwriteConfirmation:true});
+    let draft=generateKnowledgeDraft(task,draftGenerationSources(task));
+    if(!draft)return sendJson(res,422,{ok:false,error:'Ehhez a megoldott vagy irreleváns feladathoz nem készül új draft.'});
+    if(existing) draft={...draft,id:existing.id,createdAt:existing.createdAt,reviewerNote:existing.reviewerNote||''};
+    await upsertKnowledgeDraft(draft); sendJson(res,200,{ok:true,draft});
+  } catch { console.error('Knowledge Draft generation failed.'); sendJson(res,500,{ok:false,error:'A Knowledge Draft jelenleg nem generálható.'}); }
+}
+
+async function handleSaveKnowledgeDraft(req,res,url) {
+  if(!authorizeAdmin(req,res,url,{allowQueryToken:false})) return;
+  let parsed={};try{parsed=JSON.parse((await parseBody(req))||'{}');}catch{return sendJson(res,400,{ok:false,error:'Hibás JSON.'});}
+  try {
+    const drafts=await readKnowledgeDrafts(), old=drafts.find(item=>item.id===cleanText(parsed.id,80)); if(!old)return sendJson(res,404,{ok:false,error:'A draft nem található.'});
+    const statuses=readCanonicalProductStatuses(), canonicalIds=Array.isArray(parsed.canonicalIds)?[...new Set(parsed.canonicalIds.map(id=>cleanText(id,120)).filter(Boolean))]:old.canonicalIds;
+    if(canonicalIds.some(id=>statuses[id]!=='approved'))return sendJson(res,400,{ok:false,error:'Csak approved canonical termék menthető a draftba.'});
+    const draft={...old,draftType:cleanText(parsed.draftType,40)||old.draftType,question:cleanText(parsed.question,4000),answer:cleanText(parsed.answer,12000),keywords:Array.isArray(parsed.keywords)?parsed.keywords.map(word=>cleanText(word,80)).filter(Boolean).slice(0,10):old.keywords,category:cleanText(parsed.category,80)||old.category,canonicalIds,confidenceScore:Number(parsed.confidenceScore),safetyStatus:cleanText(parsed.safetyStatus,40)||old.safetyStatus,reviewerNote:cleanText(parsed.reviewerNote,4000)||'',updatedAt:new Date().toISOString()};
+    draft.manuallyEdited=contentHash(draft)!==draft.generatedContentHash;
+    if(!DRAFT_TYPES.includes(draft.draftType)||!SAFETY_STATUSES.includes(draft.safetyStatus)||!validateDraft(draft))return sendJson(res,400,{ok:false,error:'Érvénytelen draft mező vagy enum.'});
+    await upsertKnowledgeDraft(draft);sendJson(res,200,{ok:true,draft});
+  } catch { console.error('Knowledge Draft save failed.');sendJson(res,500,{ok:false,error:'A Knowledge Draft jelenleg nem menthető.'}); }
+}
+
+async function handleKnowledgeDraftStatus(req,res,url) {
+  if(!authorizeAdmin(req,res,url,{allowQueryToken:false})) return;
+  let parsed={};try{parsed=JSON.parse((await parseBody(req))||'{}');}catch{return sendJson(res,400,{ok:false,error:'Hibás JSON.'});}
+  try {
+    const drafts=await readKnowledgeDrafts(),draft=drafts.find(item=>item.id===cleanText(parsed.id,80)),status=cleanText(parsed.generationStatus,40);
+    if(!draft)return sendJson(res,404,{ok:false,error:'A draft nem található.'}); if(!GENERATION_STATUSES.includes(status)||status==='exported')return sendJson(res,400,{ok:false,error:'Érvénytelen draft státusz.'});
+    if(status==='approved_for_import'&&(draft.draftType==='manual_required'||draft.safetyStatus==='manual_required'||!draft.answer||draft.answer==='Kiegészítés szükséges.'))return sendJson(res,400,{ok:false,error:'A manual_required draft nem hagyható jóvá biztonságos tartalom nélkül.'});
+    const now=new Date().toISOString();Object.assign(draft,{generationStatus:status,reviewedAt:['in_review','approved_for_import','rejected'].includes(status)?now:draft.reviewedAt,approvedAt:status==='approved_for_import'?now:null,updatedAt:now});
+    await upsertKnowledgeDraft(draft);if(status==='in_review')await setKnowledgeTaskLifecycle(draft.taskId,'in_review');if(status==='approved_for_import')await setKnowledgeTaskLifecycle(draft.taskId,'approved');sendJson(res,200,{ok:true,draft});
+  } catch { console.error('Knowledge Draft status update failed.');sendJson(res,500,{ok:false,error:'A Knowledge Draft státusza jelenleg nem menthető.'}); }
+}
+
+async function handleKnowledgeDraftExport(req,res,url) {
+  if(!authorizeAdmin(req,res,url,{allowQueryToken:false})) return;
+  try {
+    const drafts=await readKnowledgeDrafts(),payload=buildKnowledgeExport(drafts);
+    for(const draft of drafts.filter(item=>item.generationStatus==='approved_for_import')){draft.generationStatus='exported';draft.updatedAt=new Date().toISOString();await upsertKnowledgeDraft(draft);}
+    const body=JSON.stringify(payload,null,2);res.writeHead(200,{'Content-Type':'application/json; charset=utf-8','Content-Disposition':'attachment; filename="knowledge-import.json"','Cache-Control':'no-store'});res.end(body);
+  } catch { console.error('Knowledge Draft export failed.');sendJson(res,500,{ok:false,error:'A Knowledge Draft export jelenleg nem készíthető el.'}); }
 }
 
 const unasSyncCoordinator = createUnasSyncCoordinator({
@@ -2707,6 +2950,37 @@ const server =
           );
 
           return;
+        }
+
+        if (req.method === 'GET' && url.pathname === '/api/admin/knowledge-tasks') {
+          await handleAdminKnowledgeTasks(req, res, url);
+          return;
+        }
+
+        if (req.method === 'POST' && url.pathname === '/api/admin/knowledge-tasks/update') {
+          await handleUpdateKnowledgeTask(req, res, url);
+          return;
+        }
+
+        if (req.method === 'POST' && url.pathname === '/api/admin/knowledge-tasks/backfill') {
+          await handleKnowledgeTaskBackfill(req, res, url);
+          return;
+        }
+
+        if (req.method === 'GET' && url.pathname === '/api/admin/knowledge-drafts') {
+          await handleGetKnowledgeDraft(req,res,url); return;
+        }
+        if (req.method === 'POST' && url.pathname === '/api/admin/knowledge-drafts/generate') {
+          await handleGenerateKnowledgeDraft(req,res,url); return;
+        }
+        if (req.method === 'POST' && url.pathname === '/api/admin/knowledge-drafts/save') {
+          await handleSaveKnowledgeDraft(req,res,url); return;
+        }
+        if (req.method === 'POST' && url.pathname === '/api/admin/knowledge-drafts/status') {
+          await handleKnowledgeDraftStatus(req,res,url); return;
+        }
+        if (req.method === 'POST' && url.pathname === '/api/admin/knowledge-drafts/export') {
+          await handleKnowledgeDraftExport(req,res,url); return;
         }
 
         if (
