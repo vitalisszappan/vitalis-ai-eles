@@ -79,6 +79,32 @@ const SUPABASE_SERVICE_ROLE_KEY = String(
   process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 ).trim();
 
+function normalizeSupabaseIdentifier(value, fallback) {
+  const text = String(value || '').trim();
+  return /^[A-Za-z_][A-Za-z0-9_]*$/.test(text) ? text : fallback;
+}
+
+const CONVERSATION_TABLE = normalizeSupabaseIdentifier(
+  process.env.SUPABASE_CONVERSATION_TABLE,
+  'chat_log'
+);
+
+const CONVERSATION_COLUMNS = Object.freeze([
+  'id',
+  'created_at',
+  'session_id',
+  'question',
+  'answer',
+  'confidence',
+  'matched_knowledge_ids',
+  'source',
+  'response_ms',
+  'user_agent',
+  'page_url'
+]);
+
+const CONVERSATION_BACKFILL_SELECT = CONVERSATION_COLUMNS.join(',');
+
 /* =========================================================
    UNAS MODUL
 ========================================================= */
@@ -951,7 +977,14 @@ function createSupabaseRequestError({
   error.supabaseDetails = String(parsed.details || '');
   error.method = method;
   error.pathname = pathname;
+  error.operation = method;
+  error.table = getSupabaseTableFromPath(pathname);
   return error;
+}
+
+function getSupabaseTableFromPath(pathname) {
+  const match = String(pathname || '').match(/^\/rest\/v1\/([^?]+)/);
+  return match ? decodeURIComponent(match[1]) : 'unknown';
 }
 
 function getSupabaseMissingColumn(error) {
@@ -963,9 +996,11 @@ function getSupabaseMissingColumn(error) {
   return match ? match[1] : null;
 }
 
-function logSafeTechnicalError(label, error) {
+function logSafeTechnicalError(label, error, metadata = {}) {
   const parts = [
     label,
+    `operation=${metadata.operation || error?.operation || 'unknown'}`,
+    `table=${metadata.table || error?.table || 'unknown'}`,
     `name=${error?.name || 'Error'}`,
     `status=${error?.status || 'n/a'}`,
     `code=${error?.supabaseCode || error?.code || 'n/a'}`
@@ -981,6 +1016,14 @@ function logSafeTechnicalError(label, error) {
       .join('\n');
     if (safeStack) console.error(safeStack);
   }
+}
+
+function supabaseTablePath(table, query = '') {
+  return `/rest/v1/${table}${query}`;
+}
+
+function conversationTablePath(query = '') {
+  return supabaseTablePath(CONVERSATION_TABLE, query);
 }
 
 /* =========================================================
@@ -1109,29 +1152,24 @@ async function persistConversation(
         'POST',
 
       pathname:
-        '/rest/v1/chat_conversations',
+        conversationTablePath(),
 
       body:
         safe
     });
 
     console.log(
-      'SUPABASE MENTÉS SIKERES:',
-      safe.question
-        .slice(
-          0,
-          100
-        )
+      `SUPABASE MENTES SIKERES: operation=conversation_write table=${CONVERSATION_TABLE}`
     );
 
   } catch (
     error
   ) {
 
-    console.error(
-      'SUPABASE MENTÉS SIKERTELEN:',
-      error.message
-    );
+    logSafeTechnicalError('SUPABASE MENTES SIKERTELEN.', error, {
+      operation: 'conversation_write',
+      table: CONVERSATION_TABLE
+    });
   }
 
   await upsertKnowledgeTask(taskFromConversation(safe, { productStatuses: readCanonicalProductStatuses() }));
@@ -1228,10 +1266,11 @@ async function readSupabaseConversations(
         'GET',
 
       pathname:
-        '/rest/v1/chat_conversations' +
-        '?select=*' +
-        '&order=created_at.desc' +
-        `&limit=${safeLimit}`
+        conversationTablePath(
+          '?select=*' +
+          '&order=created_at.desc' +
+          `&limit=${safeLimit}`
+        )
     });
 
   if (
@@ -1370,11 +1409,12 @@ async function readApprovedKnowledgeRows(limit = 1000) {
   const result = await supabaseRequest({
     method: 'GET',
     pathname:
-      '/rest/v1/chat_conversations' +
-      '?select=created_at,question,answer,matched_knowledge_ids,source' +
-      '&source=eq.approved-knowledge' +
-      '&order=created_at.asc' +
-      `&limit=${safeLimit}`
+      conversationTablePath(
+        '?select=created_at,question,answer,matched_knowledge_ids,source' +
+        '&source=eq.approved-knowledge' +
+        '&order=created_at.asc' +
+        `&limit=${safeLimit}`
+      )
   });
 
   return result.body ? JSON.parse(result.body) : [];
@@ -1550,11 +1590,12 @@ async function readSupabaseKnowledgeGaps(limit = 500) {
   const result = await supabaseRequest({
     method: 'GET',
     pathname:
-      '/rest/v1/chat_conversations' +
-      '?select=created_at,session_id,question,answer,confidence,page_url,source' +
-      '&source=eq.gap' +
-      '&order=created_at.desc' +
-      `&limit=${safeLimit}`
+      conversationTablePath(
+        '?select=created_at,session_id,question,answer,confidence,page_url,source' +
+        '&source=eq.gap' +
+        '&order=created_at.desc' +
+        `&limit=${safeLimit}`
+      )
   });
 
   return result.body ? JSON.parse(result.body) : [];
@@ -1567,10 +1608,11 @@ async function readSupabaseDismissedGaps(limit = 2000) {
   const result = await supabaseRequest({
     method: 'GET',
     pathname:
-      '/rest/v1/chat_conversations' +
-      '?select=question,source' +
-      '&source=eq.dismissed-gap' +
-      `&limit=${safeLimit}`
+      conversationTablePath(
+        '?select=question,source' +
+        '&source=eq.dismissed-gap' +
+        `&limit=${safeLimit}`
+      )
   });
 
   return result.body ? JSON.parse(result.body) : [];
@@ -1627,7 +1669,7 @@ async function handleApproveKnowledgeGap(req, res, url) {
   if (supabaseConfigured()) {
     await supabaseRequest({
       method: 'POST',
-      pathname: '/rest/v1/chat_conversations',
+      pathname: conversationTablePath(),
       body: row
     });
   } else {
@@ -1678,7 +1720,7 @@ async function handleDismissKnowledgeGap(req, res, url) {
   if (supabaseConfigured()) {
     await supabaseRequest({
       method: 'POST',
-      pathname: '/rest/v1/chat_conversations',
+      pathname: conversationTablePath(),
       body: row
     });
   } else {
@@ -2678,7 +2720,7 @@ async function readAllSupabaseRows(pathname, orderBy = 'id.asc') {
 async function executeSupabaseKnowledgeTaskBackfill(write) {
   if (!supabaseConfigured()) throw new Error('supabase_not_configured');
   const conversations = await readAllSupabaseRows(
-    '/rest/v1/chat_conversations?select=id,created_at,session_id,question,answer,confidence,matched_knowledge_ids,source,response_ms,user_agent,page_url'
+    conversationTablePath(`?select=${CONVERSATION_BACKFILL_SELECT}`)
   );
   const tasks = mergeTasks(conversations, { productStatuses: readCanonicalProductStatuses() });
   const existingRows = await readAllSupabaseRows('/rest/v1/knowledge_tasks?select=*');
