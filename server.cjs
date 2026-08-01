@@ -1303,6 +1303,23 @@ function buildApprovedKnowledgeItem(row) {
   };
 }
 
+async function readApprovedKnowledgeRows(limit = 1000) {
+  if (!supabaseConfigured()) return [];
+
+  const safeLimit = Math.max(1, Math.min(Number(limit) || 1000, 5000));
+  const result = await supabaseRequest({
+    method: 'GET',
+    pathname:
+      '/rest/v1/chat_conversations' +
+      '?select=created_at,question,answer,matched_knowledge_ids,source' +
+      '&source=eq.approved-knowledge' +
+      '&order=created_at.asc' +
+      `&limit=${safeLimit}`
+  });
+
+  return result.body ? JSON.parse(result.body) : [];
+}
+
 async function getOpenKnowledgeGaps(limit = 500) {
   let gaps;
 
