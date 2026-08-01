@@ -1516,45 +1516,6 @@ async function readSupabaseDismissedGaps(limit = 2000) {
   return result.body ? JSON.parse(result.body) : [];
 }
 
-async function getOpenKnowledgeGaps(limit = 500) {
-  let gaps;
-
-  try {
-    gaps = await readSupabaseKnowledgeGaps(limit);
-  } catch (error) {
-    console.error('Supabase gap olvasási hiba:', error.message);
-    gaps = null;
-  }
-
-  if (gaps === null) gaps = readLocalKnowledgeGaps(limit);
-
-  let approvedRows = [];
-  let dismissedRows = [];
-
-  if (supabaseConfigured()) {
-    try {
-      approvedRows = await readApprovedKnowledgeRows();
-      dismissedRows = await readSupabaseDismissedGaps();
-    } catch (error) {
-      console.error('Gap státusz olvasási hiba:', error.message);
-    }
-  }
-
-  const resolvedKeys = new Set([
-    ...approvedRows.map((row) => normalizeGapKey(row.question)),
-    ...dismissedRows.map((row) => normalizeGapKey(row.question))
-  ]);
-
-  const unique = new Map();
-  for (const gap of gaps) {
-    const key = normalizeGapKey(gap.question);
-    if (!key || resolvedKeys.has(key) || unique.has(key)) continue;
-    unique.set(key, { ...gap, key });
-  }
-
-  return Array.from(unique.values());
-}
-
 async function handleAdminKnowledgeGaps(req, res, url) {
   if (!authorizeAdmin(req, res, url)) return;
 
@@ -3374,6 +3335,12 @@ server.on(
 ========================================================= */
 
 async function startServer() {
+
+  if (typeof readApprovedKnowledgeRows !== 'function') {
+    throw new Error('approved_knowledge_reader_missing');
+  }
+
+  console.log('Jóváhagyott tudás olvasó: ELÉRHETŐ');
 
   await hydrateApprovedKnowledge();
 
