@@ -5,7 +5,7 @@ const { spawn } = require('child_process');
 const APP_PORT = 3401, SUPABASE_PORT = 3402, TOKEN = 'backfill-admin-token';
 const SECRET = 'sb_secret_BACKFILL_SECRET_MUST_NOT_LEAK', LEAK_MARKER = 'SUPABASE_PRIVATE_ERROR_MUST_NOT_LEAK';
 const PRIVATE_ANSWER = 'private-answer', PRIVATE_URL = '/private-page', PRIVATE_AGENT = 'private-agent';
-const state = { fail: false, delay: false, tasks: new Map(), conversations: [{ id: 77, created_at: '2026-07-31T10:00:00.000Z',
+const state = { fail: false, delay: false, legacyKnowledgeTaskSchema: false, tasks: new Map(), conversations: [{ id: 77, created_at: '2026-07-31T10:00:00.000Z',
   session_id: 'session-private', question: 'Mennyi a szállítási idő?', answer: PRIVATE_ANSWER, confidence: 0.2,
   matched_knowledge_ids: [], source: 'gap', response_ms: 20, user_agent: PRIVATE_AGENT, page_url: PRIVATE_URL }] };
 function json(res, status, body) { const text = JSON.stringify(body); res.writeHead(status, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(text) }); res.end(text); }
@@ -15,7 +15,9 @@ const supabase = http.createServer(async (req, res) => {
   if (state.fail) return json(res, 500, { message: LEAK_MARKER });
   if (req.method === 'GET' && url.pathname === '/rest/v1/chat_conversations') { if (state.delay) await new Promise(resolve => setTimeout(resolve, 200)); return json(res, 200, state.conversations); }
   if (req.method === 'GET' && url.pathname === '/rest/v1/knowledge_tasks') return json(res, 200, [...state.tasks.values()]);
-  if (req.method === 'POST' && url.pathname === '/rest/v1/knowledge_tasks') { const row = await readBody(req); state.tasks.set(row.id, row); res.writeHead(201, { 'Content-Type': 'application/json' }); return res.end(''); }
+  if (req.method === 'POST' && url.pathname === '/rest/v1/knowledge_tasks') { const row = await readBody(req);
+    if (state.legacyKnowledgeTaskSchema && Object.prototype.hasOwnProperty.call(row, 'root_cause')) return json(res, 400, { code: 'PGRST204', message: "Could not find the 'root_cause' column of 'knowledge_tasks' in the schema cache" });
+    state.tasks.set(row.id, row); res.writeHead(201, { 'Content-Type': 'application/json' }); return res.end(''); }
   return json(res, 404, { message: 'not found' });
 });
 function request(pathname, token, body) { return new Promise((resolve, reject) => {
@@ -46,6 +48,12 @@ async function main() {
     assert.equal(dry.body.classificationSummary.missing_knowledge, 1);
     const nonBooleanWrite = await request('/api/admin/knowledge-tasks/backfill', TOKEN, { write: 'true' });
     assert.equal(nonBooleanWrite.status, 200); assert.equal(nonBooleanWrite.body.dryRun, true); assert.equal(state.tasks.size, 0);
+    state.legacyKnowledgeTaskSchema = true;
+    const legacyWritten = await request('/api/admin/knowledge-tasks/backfill', TOKEN, { write: true });
+    assert.equal(legacyWritten.status, 200); assert.equal(legacyWritten.body.tasksCreated, 1); assert.equal(legacyWritten.body.dryRun, false); assert.equal(state.tasks.size, 1);
+    const legacyRow = [...state.tasks.values()][0]; assert.equal(Object.prototype.hasOwnProperty.call(legacyRow, 'root_cause'), false);
+    await new Promise(resolve => setTimeout(resolve, 50)); assert.equal(output.includes('code=PGRST204'), true); assert.equal(output.includes('session-private'), false); assert.equal(output.includes(PRIVATE_ANSWER), false);
+    state.legacyKnowledgeTaskSchema = false; state.tasks.clear();
     const written = await request('/api/admin/knowledge-tasks/backfill', TOKEN, { write: true });
     assert.equal(written.status, 200); assert.equal(written.body.tasksCreated, 1); assert.equal(written.body.dryRun, false); assert.equal(state.tasks.size, 1);
     const existing = [...state.tasks.values()][0]; existing.status = 'in_review'; existing.reviewer_note = 'Megőrzendő review'; state.tasks.set(existing.id, existing);

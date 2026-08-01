@@ -10,6 +10,23 @@ const root = path.join(__dirname, '..');
 const input = path.join(root, 'data', 'logs', 'conversations.jsonl');
 const output = path.join(root, 'data', 'logs', 'knowledge-tasks.jsonl');
 const mappingPath = path.join(root, 'data', 'canonical-unas-mapping.json');
+const KNOWLEDGE_TASK_TABLE = 'knowledge_tasks';
+const KNOWLEDGE_TASK_COLUMNS = Object.freeze([
+  'id', 'normalized_question_key', 'conversation_id', 'conversation_ids', 'question', 'answer', 'answer_source',
+  'confidence_score', 'detected_intent', 'canonical_ids', 'page_url', 'occurred_at', 'classification',
+  'classification_reason', 'root_cause', 'root_cause_reason', 'repair_target', 'estimated_impact',
+  'impact_breakdown', 'priority', 'business_value', 'topic', 'product_family', 'suggested_action', 'status',
+  'occurrence_count', 'first_seen_at', 'last_seen_at', 'reviewer_note', 'reviewed_at', 'resolved_at',
+  'created_at', 'updated_at'
+]);
+const KNOWLEDGE_TASK_LEGACY_COLUMNS = Object.freeze([
+  'id', 'normalized_question_key', 'conversation_id', 'conversation_ids', 'question', 'answer', 'answer_source',
+  'confidence_score', 'detected_intent', 'canonical_ids', 'page_url', 'occurred_at', 'classification',
+  'classification_reason', 'priority', 'business_value', 'topic', 'product_family', 'suggested_action', 'status',
+  'occurrence_count', 'first_seen_at', 'last_seen_at', 'reviewer_note', 'reviewed_at', 'resolved_at',
+  'created_at', 'updated_at'
+]);
+const KNOWLEDGE_TASK_NEW_SCHEMA_COLUMNS = new Set(KNOWLEDGE_TASK_COLUMNS.filter(column => !KNOWLEDGE_TASK_LEGACY_COLUMNS.includes(column)));
 
 function parseEnv(text) {
   const values = {};
@@ -51,8 +68,12 @@ function inspectServiceRoleKey(key) {
   return { type: 'unknown', serviceRole: false };
 }
 
-function taskToRow(task) {
-  return {
+function pickKnowledgeTaskColumns(row, columns) {
+  return Object.fromEntries(columns.map(column => [column, row[column]]));
+}
+
+function taskToRow(task, columns = KNOWLEDGE_TASK_COLUMNS) {
+  const row = {
     id: task.id, normalized_question_key: task.normalizedQuestionKey, conversation_id: task.conversationId,
     conversation_ids: task.conversationIds, question: task.question, answer: task.answer, answer_source: task.answerSource,
     confidence_score: task.confidenceScore, detected_intent: task.detectedIntent, canonical_ids: task.canonicalIds,
@@ -64,6 +85,37 @@ function taskToRow(task) {
     first_seen_at: task.firstSeenAt, last_seen_at: task.lastSeenAt, reviewer_note: task.reviewerNote,
     reviewed_at: task.reviewedAt, resolved_at: task.resolvedAt, created_at: task.createdAt, updated_at: task.updatedAt
   };
+  return pickKnowledgeTaskColumns(row, columns);
+}
+
+function parseSupabaseErrorBody(responseBody) {
+  try {
+    const parsed = JSON.parse(responseBody || '{}');
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function createSupabaseRequestError(status, statusMessage, responseBody) {
+  const parsed = parseSupabaseErrorBody(responseBody);
+  const error = new Error(`Supabase HTTP ${status}${parsed.code ? ` ${parsed.code}` : ''}`);
+  error.name = 'SupabaseRequestError';
+  error.status = status;
+  error.supabaseCode = parsed.code || null;
+  error.supabaseMessage = String(parsed.message || statusMessage || '');
+  error.supabaseDetails = String(parsed.details || '');
+  return error;
+}
+
+function getSupabaseMissingColumn(error) {
+  const text = [error?.supabaseMessage, error?.supabaseDetails].filter(Boolean).join(' ');
+  const match = text.match(/'([a-z0-9_]+)'\s+column/i);
+  return match ? match[1] : null;
+}
+
+function isKnowledgeTaskSchemaFallbackError(error) {
+  return error?.supabaseCode === 'PGRST204' && KNOWLEDGE_TASK_NEW_SCHEMA_COLUMNS.has(getSupabaseMissingColumn(error));
 }
 
 function supabaseRequest({ url, key, rows }) {
@@ -76,14 +128,14 @@ function supabaseRequest({ url, key, rows }) {
     if (key.startsWith('eyJ')) headers.Authorization = `Bearer ${key}`;
     const request = (base.protocol === 'https:' ? https : http).request({
       protocol: base.protocol, hostname: base.hostname, port: base.port || undefined,
-      method: 'POST', path: '/rest/v1/knowledge_tasks?on_conflict=id', headers, timeout: 15000
+      method: 'POST', path: `/rest/v1/${KNOWLEDGE_TASK_TABLE}?on_conflict=id`, headers, timeout: 15000
     }, response => {
       let responseBody = '';
       response.setEncoding('utf8');
       response.on('data', chunk => { responseBody += chunk; });
       response.on('end', () => {
         const status = response.statusCode || 0;
-        if (status < 200 || status >= 300) { reject(new Error(`Supabase HTTP ${status}: ${responseBody || response.statusMessage || 'ismeretlen hiba'}`)); return; }
+        if (status < 200 || status >= 300) { reject(createSupabaseRequestError(status, response.statusMessage || 'ismeretlen hiba', responseBody)); return; }
         let written;
         try { written = JSON.parse(responseBody || '[]'); } catch { reject(new Error('A Supabase irasi valasza nem ervenyes JSON.')); return; }
         if (!Array.isArray(written) || written.length !== rows.length) {
@@ -97,6 +149,16 @@ function supabaseRequest({ url, key, rows }) {
     request.write(body);
     request.end();
   });
+}
+
+async function supabaseRequestWithSchemaFallback({ url, key, rows }) {
+  try {
+    return await supabaseRequest({ url, key, rows });
+  } catch (error) {
+    if (!isKnowledgeTaskSchemaFallbackError(error)) throw error;
+    console.warn(`Knowledge Task Supabase schema fallback used. code=${error.supabaseCode} missing_column=${getSupabaseMissingColumn(error)}`);
+    return supabaseRequest({ url, key, rows: rows.map(row => pickKnowledgeTaskColumns(row, KNOWLEDGE_TASK_LEGACY_COLUMNS)) });
+  }
 }
 
 function writeJsonl(tasks, file = output) {
@@ -127,7 +189,7 @@ async function run(options = {}) {
   if (write) {
     if (configured) {
       if (!keyInfo.serviceRole) throw new Error(`A SUPABASE_SERVICE_ROLE_KEY nem service role kulcs (tipus: ${keyInfo.type}${keyInfo.role ? `, role: ${keyInfo.role}` : ''}).`);
-      const result = await (options.supabaseWrite || supabaseRequest)({ url, key, rows: tasks.map(taskToRow) });
+      const result = await (options.supabaseWrite || supabaseRequestWithSchemaFallback)({ url, key, rows: tasks.map(task => taskToRow(task)) });
       writes.supabase = { occurred: true, records: result.count };
     } else writes.jsonl = { occurred: true, records: (options.jsonlWrite || writeJsonl)(tasks) };
   }
@@ -141,4 +203,4 @@ if (require.main === module) {
     process.exitCode = 1;
   });
 }
-module.exports = { inspectServiceRoleKey, loadEnvironment, parseEnv, run, supabaseRequest, taskToRow, writeJsonl };
+module.exports = { KNOWLEDGE_TASK_COLUMNS, KNOWLEDGE_TASK_LEGACY_COLUMNS, KNOWLEDGE_TASK_TABLE, inspectServiceRoleKey, loadEnvironment, parseEnv, run, supabaseRequest, supabaseRequestWithSchemaFallback, taskToRow, writeJsonl };

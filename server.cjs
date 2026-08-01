@@ -878,13 +878,14 @@ function supabaseRequest({
                 }
 
                 reject(
-                  new Error(
-                    `Supabase HTTP ${status}: ${
-                      responseBody ||
-                      response.statusMessage ||
-                      'Ismeretlen hiba'
-                    }`
-                  )
+                  createSupabaseRequestError({
+                    status,
+                    statusMessage:
+                      response.statusMessage,
+                    responseBody,
+                    method,
+                    pathname
+                  })
                 );
               }
             );
@@ -921,6 +922,65 @@ function supabaseRequest({
       request.end();
     }
   );
+}
+
+function parseSupabaseErrorBody(responseBody) {
+  try {
+    const parsed = JSON.parse(responseBody || '{}');
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function createSupabaseRequestError({
+  status,
+  statusMessage,
+  responseBody,
+  method,
+  pathname
+}) {
+  const parsed = parseSupabaseErrorBody(responseBody);
+  const error = new Error(
+    `Supabase HTTP ${status}${parsed.code ? ` ${parsed.code}` : ''}`
+  );
+  error.name = 'SupabaseRequestError';
+  error.status = status;
+  error.supabaseCode = parsed.code || null;
+  error.supabaseMessage = String(parsed.message || statusMessage || '');
+  error.supabaseDetails = String(parsed.details || '');
+  error.method = method;
+  error.pathname = pathname;
+  return error;
+}
+
+function getSupabaseMissingColumn(error) {
+  const text = [
+    error?.supabaseMessage,
+    error?.supabaseDetails
+  ].filter(Boolean).join(' ');
+  const match = text.match(/'([a-z0-9_]+)'\s+column/i);
+  return match ? match[1] : null;
+}
+
+function logSafeTechnicalError(label, error) {
+  const parts = [
+    label,
+    `name=${error?.name || 'Error'}`,
+    `status=${error?.status || 'n/a'}`,
+    `code=${error?.supabaseCode || error?.code || 'n/a'}`
+  ];
+  const missingColumn = getSupabaseMissingColumn(error);
+  if (missingColumn) parts.push(`missing_column=${missingColumn}`);
+  console.error(parts.join(' '));
+  if (error?.stack) {
+    const safeStack = String(error.stack)
+      .split(/\r?\n/)
+      .filter(line => !/SUPABASE|ADMIN_TOKEN|X-Admin-Token|session_id|question|answer/i.test(line))
+      .slice(0, 8)
+      .join('\n');
+    if (safeStack) console.error(safeStack);
+  }
 }
 
 /* =========================================================
@@ -2482,8 +2542,30 @@ function writeLocalKnowledgeTasks(items) {
   fs.writeFileSync(KNOWLEDGE_TASK_LOG, items.map(item => JSON.stringify(item)).join('\n') + (items.length ? '\n' : ''), 'utf8');
 }
 
-function taskToRow(task) {
-  return {
+const KNOWLEDGE_TASK_TABLE = 'knowledge_tasks';
+const KNOWLEDGE_TASK_COLUMNS = Object.freeze([
+  'id', 'normalized_question_key', 'conversation_id', 'conversation_ids', 'question', 'answer', 'answer_source',
+  'confidence_score', 'detected_intent', 'canonical_ids', 'page_url', 'occurred_at', 'classification',
+  'classification_reason', 'root_cause', 'root_cause_reason', 'repair_target', 'estimated_impact',
+  'impact_breakdown', 'priority', 'business_value', 'topic', 'product_family', 'suggested_action', 'status',
+  'occurrence_count', 'first_seen_at', 'last_seen_at', 'reviewer_note', 'reviewed_at', 'resolved_at',
+  'created_at', 'updated_at'
+]);
+const KNOWLEDGE_TASK_LEGACY_COLUMNS = Object.freeze([
+  'id', 'normalized_question_key', 'conversation_id', 'conversation_ids', 'question', 'answer', 'answer_source',
+  'confidence_score', 'detected_intent', 'canonical_ids', 'page_url', 'occurred_at', 'classification',
+  'classification_reason', 'priority', 'business_value', 'topic', 'product_family', 'suggested_action', 'status',
+  'occurrence_count', 'first_seen_at', 'last_seen_at', 'reviewer_note', 'reviewed_at', 'resolved_at',
+  'created_at', 'updated_at'
+]);
+const KNOWLEDGE_TASK_NEW_SCHEMA_COLUMNS = new Set(KNOWLEDGE_TASK_COLUMNS.filter(column => !KNOWLEDGE_TASK_LEGACY_COLUMNS.includes(column)));
+
+function pickKnowledgeTaskColumns(row, columns) {
+  return Object.fromEntries(columns.map(column => [column, row[column]]));
+}
+
+function taskToRow(task, columns = KNOWLEDGE_TASK_COLUMNS) {
+  const row = {
     id: task.id, normalized_question_key: task.normalizedQuestionKey, conversation_id: task.conversationId,
     conversation_ids: task.conversationIds, question: task.question, answer: task.answer, answer_source: task.answerSource,
     confidence_score: task.confidenceScore, detected_intent: task.detectedIntent, canonical_ids: task.canonicalIds,
@@ -2496,6 +2578,7 @@ function taskToRow(task) {
     reviewer_note: task.reviewerNote, reviewed_at: task.reviewedAt, resolved_at: task.resolvedAt,
     created_at: task.createdAt, updated_at: task.updatedAt
   };
+  return pickKnowledgeTaskColumns(row, columns);
 }
 
 function rowToTask(row) {
@@ -2532,7 +2615,7 @@ async function upsertKnowledgeTask(incoming) {
   const ids = [...new Set([...(old?.conversationIds || []), ...incoming.conversationIds])];
   const task = old ? { ...incoming, status: old.status, reviewerNote: old.reviewerNote, reviewedAt: old.reviewedAt, resolvedAt: old.resolvedAt, createdAt: old.createdAt, conversationIds: ids, occurrenceCount: ids.length, firstSeenAt: old.firstSeenAt < incoming.firstSeenAt ? old.firstSeenAt : incoming.firstSeenAt, updatedAt: new Date().toISOString() } : incoming;
   const impact = calculateEstimatedImpact(task); task.estimatedImpact = impact.total; task.impactBreakdown = impact.breakdown;
-  await supabaseRequest({ method: 'POST', pathname: '/rest/v1/knowledge_tasks?on_conflict=id', body: taskToRow(task), headers: { Prefer: 'resolution=merge-duplicates' } });
+  await upsertSupabaseKnowledgeTaskRow(task);
 }
 
 async function handleAdminKnowledgeTasks(req, res, url) {
@@ -2560,6 +2643,23 @@ function summarizeTaskClassifications(tasks) {
   const summary = {};
   for (const task of tasks) summary[task.classification] = (summary[task.classification] || 0) + 1;
   return summary;
+}
+
+function isKnowledgeTaskSchemaFallbackError(error) {
+  return error?.supabaseCode === 'PGRST204' &&
+    KNOWLEDGE_TASK_NEW_SCHEMA_COLUMNS.has(getSupabaseMissingColumn(error));
+}
+
+async function upsertSupabaseKnowledgeTaskRow(task) {
+  const pathname = `/rest/v1/${KNOWLEDGE_TASK_TABLE}?on_conflict=id`;
+  const headers = { Prefer: 'resolution=merge-duplicates' };
+  try {
+    await supabaseRequest({ method: 'POST', pathname, body: taskToRow(task), headers });
+  } catch (error) {
+    if (!isKnowledgeTaskSchemaFallbackError(error)) throw error;
+    console.warn(`Knowledge Task Supabase schema fallback used. code=${error.supabaseCode} missing_column=${getSupabaseMissingColumn(error)}`);
+    await supabaseRequest({ method: 'POST', pathname, body: taskToRow(task, KNOWLEDGE_TASK_LEGACY_COLUMNS), headers });
+  }
 }
 
 async function readAllSupabaseRows(pathname, orderBy = 'id.asc') {
@@ -2594,8 +2694,7 @@ async function executeSupabaseKnowledgeTaskBackfill(write) {
     else { result.skipped += 1; continue; }
     if (!write) continue;
     const task = mergeKnowledgeTaskForBackfill(incoming, old);
-    await supabaseRequest({ method: 'POST', pathname: '/rest/v1/knowledge_tasks?on_conflict=id',
-      body: taskToRow(task), headers: { Prefer: 'resolution=merge-duplicates' } });
+    await upsertSupabaseKnowledgeTaskRow(task);
     existingById.set(task.id, task);
   }
   return result;
@@ -2627,8 +2726,8 @@ async function handleKnowledgeTaskBackfill(req, res, url) {
   knowledgeTaskBackfillInFlight = true;
   try {
     sendJson(res, 200, { ok: true, ...(await executeSupabaseKnowledgeTaskBackfill(parsed.write === true)) });
-  } catch {
-    console.error('Knowledge Task Supabase backfill failed.');
+  } catch (error) {
+    logSafeTechnicalError('Knowledge Task Supabase backfill failed.', error);
     sendJson(res, 500, { ok: false, error: 'A Knowledge Task backfill jelenleg nem futtatható.' });
   } finally {
     knowledgeTaskBackfillInFlight = false;
