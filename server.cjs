@@ -2549,7 +2549,7 @@ async function upsertKnowledgeTask(incoming) {
   try {
     const found = await supabaseRequest({ method: 'GET', pathname: `/rest/v1/knowledge_tasks?id=eq.${encodeURIComponent(incoming.id)}&select=*` });
     existing = JSON.parse(found.body || '[]');
-  } catch (error) { console.error('Knowledge Task olvasási hiba:', error.message); }
+  } catch { console.error('Knowledge Task Supabase olvasási hiba; az upsert új rekordként folytatódik.'); }
   const old = existing[0] ? rowToTask(existing[0]) : null;
   const ids = [...new Set([...(old?.conversationIds || []), ...incoming.conversationIds])];
   const task = old ? { ...incoming, status: old.status, reviewerNote: old.reviewerNote, reviewedAt: old.reviewedAt, resolvedAt: old.resolvedAt, createdAt: old.createdAt, conversationIds: ids, occurrenceCount: ids.length, firstSeenAt: old.firstSeenAt < incoming.firstSeenAt ? old.firstSeenAt : incoming.firstSeenAt, updatedAt: new Date().toISOString() } : incoming;
@@ -2561,6 +2561,66 @@ async function handleAdminKnowledgeTasks(req, res, url) {
   if (!authorizeAdmin(req, res, url)) return;
   try { sendJson(res, 200, { ok: true, ...(await readKnowledgeTasks(url.searchParams.get('limit') || 500)) }); }
   catch (error) { console.error('Knowledge Queue read failed.'); sendJson(res, 500, { ok: false, error: 'A Knowledge Queue jelenleg nem tölthető be.' }); }
+}
+
+let knowledgeTaskBackfillInFlight = false;
+
+function mergeKnowledgeTaskForBackfill(incoming, old) {
+  if (!old) return incoming;
+  const conversationIds = [...new Set([...(old.conversationIds || []), ...(incoming.conversationIds || [])])];
+  const task = { ...incoming, status: old.status, reviewerNote: old.reviewerNote, reviewedAt: old.reviewedAt,
+    resolvedAt: old.resolvedAt, createdAt: old.createdAt, conversationIds, occurrenceCount: conversationIds.length,
+    firstSeenAt: old.firstSeenAt < incoming.firstSeenAt ? old.firstSeenAt : incoming.firstSeenAt,
+    updatedAt: new Date().toISOString() };
+  const impact = calculateEstimatedImpact(task);
+  task.estimatedImpact = impact.total;
+  task.impactBreakdown = impact.breakdown;
+  return task;
+}
+
+function summarizeTaskClassifications(tasks) {
+  const summary = {};
+  for (const task of tasks) summary[task.classification] = (summary[task.classification] || 0) + 1;
+  return summary;
+}
+
+async function readAllSupabaseRows(pathname, orderBy = 'id.asc') {
+  const pageSize = 1000;
+  const rows = [];
+  for (let offset = 0; ; offset += pageSize) {
+    const separator = pathname.includes('?') ? '&' : '?';
+    const result = await supabaseRequest({ method: 'GET', pathname: `${pathname}${separator}order=${orderBy}&limit=${pageSize}&offset=${offset}` });
+    const page = JSON.parse(result.body || '[]');
+    if (!Array.isArray(page)) throw new Error('invalid_supabase_response');
+    rows.push(...page);
+    if (page.length < pageSize) return rows;
+  }
+}
+
+async function executeSupabaseKnowledgeTaskBackfill(write) {
+  if (!supabaseConfigured()) throw new Error('supabase_not_configured');
+  const conversations = await readAllSupabaseRows(
+    '/rest/v1/chat_conversations?select=id,created_at,session_id,question,answer,confidence,matched_knowledge_ids,source,response_ms,user_agent,page_url'
+  );
+  const tasks = mergeTasks(conversations, { productStatuses: readCanonicalProductStatuses() });
+  const existingRows = await readAllSupabaseRows('/rest/v1/knowledge_tasks?select=*');
+  const existingById = new Map(existingRows.map(row => [row.id, rowToTask(row)]));
+  const result = { storageUsed: 'supabase', conversationsRead: conversations.length, tasksCreated: 0,
+    tasksUpdated: 0, skipped: 0, classificationSummary: summarizeTaskClassifications(tasks), dryRun: !write };
+  for (const incoming of tasks) {
+    const old = existingById.get(incoming.id) || null;
+    const oldConversationIds = new Set(old?.conversationIds || []);
+    const hasNewConversation = (incoming.conversationIds || []).some(id => !oldConversationIds.has(id));
+    if (!old) result.tasksCreated += 1;
+    else if (hasNewConversation) result.tasksUpdated += 1;
+    else { result.skipped += 1; continue; }
+    if (!write) continue;
+    const task = mergeKnowledgeTaskForBackfill(incoming, old);
+    await supabaseRequest({ method: 'POST', pathname: '/rest/v1/knowledge_tasks?on_conflict=id',
+      body: taskToRow(task), headers: { Prefer: 'resolution=merge-duplicates' } });
+    existingById.set(task.id, task);
+  }
+  return result;
 }
 
 async function handleUpdateKnowledgeTask(req, res, url) {
@@ -2585,14 +2645,15 @@ async function handleUpdateKnowledgeTask(req, res, url) {
 async function handleKnowledgeTaskBackfill(req, res, url) {
   if (!authorizeAdmin(req, res, url, { allowQueryToken: false })) return;
   let parsed = {}; try { parsed = JSON.parse((await parseBody(req)) || '{}'); } catch { return sendJson(res, 400, { ok: false, error: 'Hibás JSON.' }); }
+  if (knowledgeTaskBackfillInFlight) return sendJson(res, 409, { ok: false, error: 'A Knowledge Task backfill már folyamatban van.' });
+  knowledgeTaskBackfillInFlight = true;
   try {
-    const remote = await readSupabaseConversations(1000).catch(() => null);
-    const conversations = remote ?? readLocalConversations(1000); const tasks = mergeTasks(conversations, { productStatuses: readCanonicalProductStatuses() });
-    if (parsed.write === true) for (const task of tasks) await upsertKnowledgeTask(task);
-    sendJson(res, 200, { ok: true, dryRun: parsed.write !== true, conversations: conversations.length, tasks: tasks.length });
-  } catch (error) {
-    console.error('Knowledge Task backfill failed.');
+    sendJson(res, 200, { ok: true, ...(await executeSupabaseKnowledgeTaskBackfill(parsed.write === true)) });
+  } catch {
+    console.error('Knowledge Task Supabase backfill failed.');
     sendJson(res, 500, { ok: false, error: 'A Knowledge Task backfill jelenleg nem futtatható.' });
+  } finally {
+    knowledgeTaskBackfillInFlight = false;
   }
 }
 

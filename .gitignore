@@ -1,4 +1,6 @@
 node_modules/
+.env
+.env.local
 data/unas-catalog-snapshot.json
 data/unas-catalog-snapshot.json.*.tmp
 data/logs/*.jsonl

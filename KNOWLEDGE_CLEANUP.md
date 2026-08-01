@@ -30,4 +30,17 @@ Helyi JSONL kiírás csak kifejezett kapcsolóval:
 node scripts/backfill-knowledge-tasks.cjs --write
 ```
 
+A CLI a shell kornyezete mellett a projekt gyokereben levo `.env.local`, majd `.env` fajlt is betolti
+(a mar beallitott kornyezeti valtozokat nem irja felul). Ha a `SUPABASE_URL` es egy ervenyes
+`SUPABASE_SERVICE_ROLE_KEY` elerheto, a `knowledge_tasks` Supabase-tablat irja; csak hianyzo
+Supabase-konfiguracio eseten hasznalja a JSONL fallbacket. Konfiguralt, de sikertelen Supabase-irasnal
+hibaval all le, es nem rejti el a problemat JSONL fallbackkel. A kimenet `selectedStorage`, `writes`
+es `writeResult` mezoi megmutatjak a valasztott tarolot es a tenylegesen visszaigazolt irast.
+
 Az admin API `POST /api/admin/knowledge-tasks/backfill` végpontja szintén dry-run, amíg a JSON body nem `{ "write": true }`. Az admin token kötelező. A stabil normalizált kulcs és az upsert miatt a futás idempotens; az eredeti beszélgetéseket nem módosítja.
+
+Render free csomagon Shell nelkul a backfill az `X-Admin-Token` fejleccel indithato. Ez az endpoint
+kizarolag a Render folyamat Supabase-konfiguraciojat es a `public.chat_conversations` tablat hasznalja;
+helyi JSONL fallback nincs. Query-string token nem elfogadott. A valasz csak aggregalt szamlalokat
+(`storageUsed`, `conversationsRead`, `tasksCreated`, `tasksUpdated`, `skipped`,
+`classificationSummary`, `dryRun`) tartalmaz, kerdes- es valaszszoveget nem.
