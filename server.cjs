@@ -86,7 +86,7 @@ function normalizeSupabaseIdentifier(value, fallback) {
 
 const CONVERSATION_TABLE = normalizeSupabaseIdentifier(
   process.env.SUPABASE_CONVERSATION_TABLE,
-  'chat_log'
+  'chat_conversations'
 );
 
 const CONVERSATION_COLUMNS = Object.freeze([
@@ -737,8 +737,18 @@ function supabaseRequest({
   method = 'GET',
   pathname,
   body = null,
-  headers: extraHeaders = {}
+  headers: extraHeaders = {},
+  operation = 'supabase_request',
+  table = getSupabaseTableFromPath(pathname)
 }) {
+
+  const addContext = (error) => {
+    if (error && typeof error === 'object') {
+      error.operation = operation;
+      error.table = table;
+    }
+    return error;
+  };
 
   return new Promise(
     (
@@ -751,9 +761,9 @@ function supabaseRequest({
       ) {
 
         reject(
-          new Error(
+          addContext(new Error(
             'SUPABASE_URL vagy SUPABASE_SERVICE_ROLE_KEY hiányzik.'
-          )
+          ))
         );
 
         return;
@@ -773,9 +783,9 @@ function supabaseRequest({
       ) {
 
         reject(
-          new Error(
+          addContext(new Error(
             `Hibás SUPABASE_URL: ${error.message}`
-          )
+          ))
         );
 
         return;
@@ -910,7 +920,9 @@ function supabaseRequest({
                       response.statusMessage,
                     responseBody,
                     method,
-                    pathname
+                    pathname,
+                    operation,
+                    table
                   })
                 );
               }
@@ -933,7 +945,7 @@ function supabaseRequest({
 
       request.on(
         'error',
-        reject
+        (error) => reject(addContext(error))
       );
 
       if (
@@ -964,7 +976,9 @@ function createSupabaseRequestError({
   statusMessage,
   responseBody,
   method,
-  pathname
+  pathname,
+  operation,
+  table
 }) {
   const parsed = parseSupabaseErrorBody(responseBody);
   const error = new Error(
@@ -977,8 +991,8 @@ function createSupabaseRequestError({
   error.supabaseDetails = String(parsed.details || '');
   error.method = method;
   error.pathname = pathname;
-  error.operation = method;
-  error.table = getSupabaseTableFromPath(pathname);
+  error.operation = operation;
+  error.table = table;
   return error;
 }
 
@@ -1155,7 +1169,9 @@ async function persistConversation(
         conversationTablePath(),
 
       body:
-        safe
+        safe,
+      operation: 'conversation_write',
+      table: CONVERSATION_TABLE
     });
 
     console.log(
@@ -1270,7 +1286,9 @@ async function readSupabaseConversations(
           '?select=*' +
           '&order=created_at.desc' +
           `&limit=${safeLimit}`
-        )
+        ),
+      operation: 'conversation_list_read',
+      table: CONVERSATION_TABLE
     });
 
   if (
@@ -1414,7 +1432,9 @@ async function readApprovedKnowledgeRows(limit = 1000) {
         '&source=eq.approved-knowledge' +
         '&order=created_at.asc' +
         `&limit=${safeLimit}`
-      )
+      ),
+    operation: 'approved_knowledge_read',
+    table: CONVERSATION_TABLE
   });
 
   return result.body ? JSON.parse(result.body) : [];
@@ -1595,7 +1615,9 @@ async function readSupabaseKnowledgeGaps(limit = 500) {
         '&source=eq.gap' +
         '&order=created_at.desc' +
         `&limit=${safeLimit}`
-      )
+      ),
+    operation: 'knowledge_gap_read',
+    table: CONVERSATION_TABLE
   });
 
   return result.body ? JSON.parse(result.body) : [];
@@ -1612,7 +1634,9 @@ async function readSupabaseDismissedGaps(limit = 2000) {
         '?select=question,source' +
         '&source=eq.dismissed-gap' +
         `&limit=${safeLimit}`
-      )
+      ),
+    operation: 'dismissed_gap_read',
+    table: CONVERSATION_TABLE
   });
 
   return result.body ? JSON.parse(result.body) : [];
@@ -1670,7 +1694,9 @@ async function handleApproveKnowledgeGap(req, res, url) {
     await supabaseRequest({
       method: 'POST',
       pathname: conversationTablePath(),
-      body: row
+      body: row,
+      operation: 'approved_knowledge_write',
+      table: CONVERSATION_TABLE
     });
   } else {
     fs.appendFileSync(CONVERSATION_LOG, JSON.stringify(row) + '\n', 'utf8');
@@ -1721,7 +1747,9 @@ async function handleDismissKnowledgeGap(req, res, url) {
     await supabaseRequest({
       method: 'POST',
       pathname: conversationTablePath(),
-      body: row
+      body: row,
+      operation: 'dismissed_gap_write',
+      table: CONVERSATION_TABLE
     });
   } else {
     fs.appendFileSync(CONVERSATION_LOG, JSON.stringify(row) + '\n', 'utf8');
@@ -2631,7 +2659,7 @@ function rowToTask(row) {
 
 async function readKnowledgeTasks(limit = 500) {
   if (!supabaseConfigured()) return { storage: 'local', items: sortKnowledgeTasks(readLocalKnowledgeTasks()).slice(0, limit) };
-  const result = await supabaseRequest({ method: 'GET', pathname: `/rest/v1/knowledge_tasks?select=*&limit=${Math.min(Math.max(Number(limit) || 500, 1), 1000)}` });
+  const result = await supabaseRequest({ method: 'GET', pathname: `/rest/v1/knowledge_tasks?select=*&limit=${Math.min(Math.max(Number(limit) || 500, 1), 1000)}`, operation: 'knowledge_tasks_read', table: KNOWLEDGE_TASK_TABLE });
   return { storage: 'supabase', items: sortKnowledgeTasks(JSON.parse(result.body || '[]').map(rowToTask)) };
 }
 
@@ -2650,9 +2678,11 @@ async function upsertKnowledgeTask(incoming) {
   }
   let existing = [];
   try {
-    const found = await supabaseRequest({ method: 'GET', pathname: `/rest/v1/knowledge_tasks?id=eq.${encodeURIComponent(incoming.id)}&select=*` });
+    const found = await supabaseRequest({ method: 'GET', pathname: `/rest/v1/knowledge_tasks?id=eq.${encodeURIComponent(incoming.id)}&select=*`, operation: 'knowledge_task_upsert_existing_read', table: KNOWLEDGE_TASK_TABLE });
     existing = JSON.parse(found.body || '[]');
-  } catch { console.error('Knowledge Task Supabase olvasási hiba; az upsert új rekordként folytatódik.'); }
+  } catch (error) {
+    logSafeTechnicalError('Knowledge Task Supabase olvasasi hiba; az upsert uj rekordkent folytatodik.', error);
+  }
   const old = existing[0] ? rowToTask(existing[0]) : null;
   const ids = [...new Set([...(old?.conversationIds || []), ...incoming.conversationIds])];
   const task = old ? { ...incoming, status: old.status, reviewerNote: old.reviewerNote, reviewedAt: old.reviewedAt, resolvedAt: old.resolvedAt, createdAt: old.createdAt, conversationIds: ids, occurrenceCount: ids.length, firstSeenAt: old.firstSeenAt < incoming.firstSeenAt ? old.firstSeenAt : incoming.firstSeenAt, updatedAt: new Date().toISOString() } : incoming;
@@ -2696,20 +2726,20 @@ async function upsertSupabaseKnowledgeTaskRow(task) {
   const pathname = `/rest/v1/${KNOWLEDGE_TASK_TABLE}?on_conflict=id`;
   const headers = { Prefer: 'resolution=merge-duplicates' };
   try {
-    await supabaseRequest({ method: 'POST', pathname, body: taskToRow(task), headers });
+    await supabaseRequest({ method: 'POST', pathname, body: taskToRow(task), headers, operation: 'knowledge_task_upsert', table: KNOWLEDGE_TASK_TABLE });
   } catch (error) {
     if (!isKnowledgeTaskSchemaFallbackError(error)) throw error;
-    console.warn(`Knowledge Task Supabase schema fallback used. code=${error.supabaseCode} missing_column=${getSupabaseMissingColumn(error)}`);
-    await supabaseRequest({ method: 'POST', pathname, body: taskToRow(task, KNOWLEDGE_TASK_LEGACY_COLUMNS), headers });
+    logSafeTechnicalError('Knowledge Task Supabase schema fallback used.', error);
+    await supabaseRequest({ method: 'POST', pathname, body: taskToRow(task, KNOWLEDGE_TASK_LEGACY_COLUMNS), headers, operation: 'knowledge_task_upsert_legacy_fallback', table: KNOWLEDGE_TASK_TABLE });
   }
 }
 
-async function readAllSupabaseRows(pathname, orderBy = 'id.asc') {
+async function readAllSupabaseRows(pathname, { orderBy = 'id.asc', operation, table } = {}) {
   const pageSize = 1000;
   const rows = [];
   for (let offset = 0; ; offset += pageSize) {
     const separator = pathname.includes('?') ? '&' : '?';
-    const result = await supabaseRequest({ method: 'GET', pathname: `${pathname}${separator}order=${orderBy}&limit=${pageSize}&offset=${offset}` });
+    const result = await supabaseRequest({ method: 'GET', pathname: `${pathname}${separator}order=${orderBy}&limit=${pageSize}&offset=${offset}`, operation, table });
     const page = JSON.parse(result.body || '[]');
     if (!Array.isArray(page)) throw new Error('invalid_supabase_response');
     rows.push(...page);
@@ -2720,10 +2750,11 @@ async function readAllSupabaseRows(pathname, orderBy = 'id.asc') {
 async function executeSupabaseKnowledgeTaskBackfill(write) {
   if (!supabaseConfigured()) throw new Error('supabase_not_configured');
   const conversations = await readAllSupabaseRows(
-    conversationTablePath(`?select=${CONVERSATION_BACKFILL_SELECT}`)
+    conversationTablePath(`?select=${CONVERSATION_BACKFILL_SELECT}`),
+    { operation: 'backfill_conversations_read', table: CONVERSATION_TABLE }
   );
   const tasks = mergeTasks(conversations, { productStatuses: readCanonicalProductStatuses() });
-  const existingRows = await readAllSupabaseRows('/rest/v1/knowledge_tasks?select=*');
+  const existingRows = await readAllSupabaseRows('/rest/v1/knowledge_tasks?select=*', { operation: 'backfill_knowledge_tasks_read', table: KNOWLEDGE_TASK_TABLE });
   const existingById = new Map(existingRows.map(row => [row.id, rowToTask(row)]));
   const result = { storageUsed: 'supabase', conversationsRead: conversations.length, tasksCreated: 0,
     tasksUpdated: 0, skipped: 0, classificationSummary: summarizeTaskClassifications(tasks), dryRun: !write };
@@ -2751,14 +2782,14 @@ async function handleUpdateKnowledgeTask(req, res, url) {
   const now = new Date().toISOString();
   try {
     if (supabaseConfigured()) {
-      await supabaseRequest({ method: 'PATCH', pathname: `/rest/v1/knowledge_tasks?id=eq.${encodeURIComponent(id)}`, body: { status, reviewer_note: reviewerNote, reviewed_at: now, resolved_at: status === 'resolved' ? now : null, updated_at: now } });
+      await supabaseRequest({ method: 'PATCH', pathname: `/rest/v1/knowledge_tasks?id=eq.${encodeURIComponent(id)}`, body: { status, reviewer_note: reviewerNote, reviewed_at: now, resolved_at: status === 'resolved' ? now : null, updated_at: now }, operation: 'knowledge_task_status_update', table: KNOWLEDGE_TASK_TABLE });
     } else {
       const items = readLocalKnowledgeTasks(); const item = items.find(entry => entry.id === id);
       if (!item) return sendJson(res, 404, { ok: false, error: 'A feladat nem található.' });
       Object.assign(item, { status, reviewerNote, reviewedAt: now, resolvedAt: status === 'resolved' ? now : null, updatedAt: now }); writeLocalKnowledgeTasks(items);
     }
     sendJson(res, 200, { ok: true, id, status, reviewerNote });
-  } catch (error) { console.error('Knowledge Task update failed.'); sendJson(res, 500, { ok: false, error: 'A Knowledge Task jelenleg nem menthető.' }); }
+  } catch (error) { logSafeTechnicalError('Knowledge Task update failed.', error); sendJson(res, 500, { ok: false, error: 'A Knowledge Task jelenleg nem menthető.' }); }
 }
 
 async function handleKnowledgeTaskBackfill(req, res, url) {
@@ -2804,7 +2835,7 @@ function draftToRow(draft) {
 
 async function readKnowledgeDrafts() {
   if (!supabaseConfigured()) return readLocalKnowledgeDrafts();
-  const result = await supabaseRequest({method:'GET',pathname:'/rest/v1/knowledge_drafts?select=*'});
+  const result = await supabaseRequest({method:'GET',pathname:'/rest/v1/knowledge_drafts?select=*',operation:'knowledge_drafts_read',table:'knowledge_drafts'});
   return JSON.parse(result.body||'[]').map(rowToTask);
 }
 
@@ -2814,19 +2845,19 @@ async function upsertKnowledgeDraft(draft) {
     if(index>=0) items[index]=draft; else items.push(draft);
     writeLocalKnowledgeDrafts(items); return;
   }
-  await supabaseRequest({method:'POST',pathname:'/rest/v1/knowledge_drafts?on_conflict=id',body:draftToRow(draft),headers:{Prefer:'resolution=merge-duplicates'}});
+  await supabaseRequest({method:'POST',pathname:'/rest/v1/knowledge_drafts?on_conflict=id',body:draftToRow(draft),headers:{Prefer:'resolution=merge-duplicates'},operation:'knowledge_draft_upsert',table:'knowledge_drafts'});
 }
 
 async function findKnowledgeTask(taskId) {
   if (!supabaseConfigured()) return readLocalKnowledgeTasks().find(task=>task.id===taskId)||null;
-  const result=await supabaseRequest({method:'GET',pathname:`/rest/v1/knowledge_tasks?id=eq.${encodeURIComponent(taskId)}&select=*`});
+  const result=await supabaseRequest({method:'GET',pathname:`/rest/v1/knowledge_tasks?id=eq.${encodeURIComponent(taskId)}&select=*`,operation:'knowledge_draft_task_read',table:KNOWLEDGE_TASK_TABLE});
   const rows=JSON.parse(result.body||'[]'); return rows[0]?rowToTask(rows[0]):null;
 }
 
 async function setKnowledgeTaskLifecycle(taskId,status) {
   const now=new Date().toISOString();
   if (!supabaseConfigured()) { const items=readLocalKnowledgeTasks(),task=items.find(item=>item.id===taskId); if(task){task.status=status;task.reviewedAt=now;task.updatedAt=now;writeLocalKnowledgeTasks(items);} return; }
-  await supabaseRequest({method:'PATCH',pathname:`/rest/v1/knowledge_tasks?id=eq.${encodeURIComponent(taskId)}`,body:{status,reviewed_at:now,updated_at:now}});
+  await supabaseRequest({method:'PATCH',pathname:`/rest/v1/knowledge_tasks?id=eq.${encodeURIComponent(taskId)}`,body:{status,reviewed_at:now,updated_at:now},operation:'knowledge_draft_task_status_update',table:KNOWLEDGE_TASK_TABLE});
 }
 
 function draftGenerationSources(task) {
