@@ -116,6 +116,8 @@ let knowledgeGaps = [];
 
 let knowledgeTasks = [];
 let knowledgeTaskFilter = 'open';
+let knowledgeClusters = [];
+const knowledgeClusterFilter = { topic:'', priority:'', status:'', safetyLevel:'' };
 
 let adminToken = '';
 
@@ -1607,6 +1609,40 @@ if (knowledgeTaskFilters) knowledgeTaskFilters.addEventListener('click', event =
 if (loadKnowledgeTasksButton) loadKnowledgeTasksButton.addEventListener('click', loadKnowledgeTasks);
 if (exportKnowledgeDraftsButton) exportKnowledgeDraftsButton.addEventListener('click',async()=>{if(!ensureAdminToken())return;try{const response=await fetch('/api/admin/knowledge-drafts/export',{method:'POST',headers:{'X-Admin-Token':adminToken}});if(!response.ok)throw new Error((await response.json()).error||'Export hiba.');const blob=await response.blob(),link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download='knowledge-import.json';link.click();URL.revokeObjectURL(link.href);}catch(error){knowledgeTaskStatus.textContent=`Export hiba: ${error.message}`;}});
 
+const knowledgeClusterList=document.getElementById('knowledgeClusterList');
+const knowledgeClusterStatus=document.getElementById('knowledgeClusterStatus');
+const knowledgeClusterFilters=document.getElementById('knowledgeClusterFilters');
+const loadKnowledgeClustersButton=document.getElementById('loadKnowledgeClustersButton');
+const rebuildKnowledgeClustersButton=document.getElementById('rebuildKnowledgeClustersButton');
+
+function renderKnowledgeClusters(){
+  if(!knowledgeClusterList)return;
+  const filtered=knowledgeClusters.filter(cluster=>Object.entries(knowledgeClusterFilter).every(([key,value])=>!value||cluster[key]===value));
+  knowledgeClusterList.innerHTML='';
+  if(!filtered.length){knowledgeClusterList.innerHTML='<div class="empty-state">Nincs a szűrőknek megfelelő klaszter.</div>';return;}
+  filtered.sort((a,b)=>(Number(b.estimatedImpact)||0)-(Number(a.estimatedImpact)||0)||String(a.title).localeCompare(String(b.title),'hu')).forEach(cluster=>{
+    const card=document.createElement('details');card.className='knowledge-cluster-card';card.dataset.safety=cluster.safetyLevel;
+    card.innerHTML=`<summary>${escapeHtml(cluster.title)}</summary><div class="cluster-badges"><span>${escapeHtml(cluster.topic)}</span><span>${cluster.taskCount} task</span><span>${cluster.occurrenceCount} előfordulás</span><span>${escapeHtml(cluster.priority)}</span><span>üzleti érték: ${cluster.businessValue}/5</span><span>hatás: ${cluster.estimatedImpact}/100</span><span>${escapeHtml(cluster.safetyLevel)}</span><span>${escapeHtml(cluster.status)}</span></div><div class="cluster-detail"><p>${escapeHtml(cluster.summary||'')}</p><div><strong>Classification:</strong> ${escapeHtml(Object.entries(cluster.classificationSummary||{}).map(([key,value])=>`${key}: ${value}`).join(', '))}</div><div><strong>Canonical ID-k:</strong> ${escapeHtml((cluster.canonicalIds||[]).join(', ')||'–')}</div><div><strong>Reprezentatív kérdés:</strong> ${escapeHtml(cluster.representativeQuestion||'')}</div><div><strong>Javasolt teendő:</strong> ${escapeHtml(cluster.suggestedAction||'')}</div><details class="cluster-tasks"><summary>Kapcsolódó taskok megnyitása</summary><div>${(cluster.taskIds||[]).map(id=>{const task=knowledgeTasks.find(item=>item.id===id);return task?`<article><strong>${escapeHtml(task.question||id)}</strong><br><small>${escapeHtml(task.classification||'')} · ${escapeHtml(task.topic||'')}</small></article>`:`<article>${escapeHtml(id)}</article>`;}).join('')}</div></details><div class="task-editor"><label>Státusz<select class="cluster-status">${['open','in_review','draft_ready','resolved','dismissed'].map(status=>`<option ${status===cluster.status?'selected':''}>${status}</option>`).join('')}</select></label><label>Reviewer note<textarea class="cluster-note">${escapeHtml(cluster.reviewerNote||'')}</textarea></label><button class="cluster-save" type="button">Mentés</button></div></div>`;
+    card.querySelector('.cluster-save').addEventListener('click',async()=>{const button=card.querySelector('.cluster-save');button.disabled=true;try{const data=await adminFetch('/api/admin/knowledge-clusters/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:cluster.id,status:card.querySelector('.cluster-status').value,reviewerNote:card.querySelector('.cluster-note').value})});Object.assign(cluster,{status:data.status,reviewerNote:data.reviewerNote});knowledgeClusterStatus.textContent='A klaszter mentve.';renderKnowledgeClusters();}catch(error){knowledgeClusterStatus.textContent=`Mentési hiba: ${error.message}`;}finally{button.disabled=false;}});
+    knowledgeClusterList.appendChild(card);
+  });
+}
+
+function refreshClusterTopicFilter(){
+  const select=knowledgeClusterFilters?.querySelector('[data-cluster-filter="topic"]');if(!select)return;
+  const selected=select.value;select.innerHTML='<option value="">Mind</option>'+[...new Set(knowledgeClusters.map(cluster=>cluster.topic).filter(Boolean))].sort().map(topic=>`<option value="${escapeHtml(topic)}">${escapeHtml(topic)}</option>`).join('');select.value=selected;
+}
+
+async function loadKnowledgeClusters(){
+  if(!knowledgeClusterStatus)return;knowledgeClusterStatus.textContent='Knowledge Clusters betöltése...';
+  try{const data=await adminFetch('/api/admin/knowledge-clusters');knowledgeClusters=data.items||[];refreshClusterTopicFilter();renderKnowledgeClusters();knowledgeClusterStatus.textContent=`${knowledgeClusters.length} klaszter betöltve (${data.storage}).`;}
+  catch(error){knowledgeClusterStatus.textContent=`Knowledge Clusters betöltési hiba: ${error.message}`;}
+}
+
+if(knowledgeClusterFilters)knowledgeClusterFilters.addEventListener('change',event=>{const key=event.target.dataset.clusterFilter;if(!key)return;knowledgeClusterFilter[key]=event.target.value;renderKnowledgeClusters();});
+if(loadKnowledgeClustersButton)loadKnowledgeClustersButton.addEventListener('click',loadKnowledgeClusters);
+if(rebuildKnowledgeClustersButton)rebuildKnowledgeClustersButton.addEventListener('click',async()=>{rebuildKnowledgeClustersButton.disabled=true;try{const preview=await adminFetch('/api/admin/knowledge-clusters/rebuild',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});knowledgeClusterStatus.textContent=`Dry-run: ${preview.tasksRead} taskból ${preview.clustersGenerated} klaszter; új ${preview.clustersCreated}, frissül ${preview.clustersUpdated}, változatlan ${preview.clustersUnchanged}.`;if(!window.confirm(`${knowledgeClusterStatus.textContent}\n\nBiztosan elmented az újraépítést?`))return;const result=await adminFetch('/api/admin/knowledge-clusters/rebuild',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({write:true})});knowledgeClusterStatus.textContent=`Mentve: ${result.clustersGenerated} klaszter.`;await loadKnowledgeClusters();}catch(error){knowledgeClusterStatus.textContent=`Újraépítési hiba: ${error.message}`;}finally{rebuildKnowledgeClustersButton.disabled=false;}});
+
 if (
   searchInput
 ) {
@@ -1685,3 +1721,4 @@ if (
 
 refreshEverything();
 loadKnowledgeTasks();
+loadKnowledgeClusters();

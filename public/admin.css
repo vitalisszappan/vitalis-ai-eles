@@ -390,6 +390,16 @@ button:disabled {
 .draft-panel textarea { min-height:90px; resize:vertical; }
 .draft-actions { display:flex; flex-wrap:wrap; gap:8px; }
 .draft-sources { font-size:13px; color:var(--muted); }
+.cluster-filters { display:grid; grid-template-columns:repeat(4,minmax(140px,1fr)); gap:10px; margin:0 0 16px; }
+.cluster-filters label { display:grid; gap:5px; font-weight:600; }
+.knowledge-cluster-list { display:grid; gap:14px; margin-bottom:32px; }
+.knowledge-cluster-card { background:var(--panel); border:1px solid var(--border); border-left:6px solid #53796c; border-radius:var(--radius); padding:18px; }
+.knowledge-cluster-card[data-safety="high"] { border-left-color:#b42318; }
+.knowledge-cluster-card[data-safety="caution"] { border-left-color:#d97706; }
+.knowledge-cluster-card > summary { cursor:pointer; font-weight:700; }
+.cluster-badges { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0; color:var(--muted); font-size:13px; }
+.cluster-detail { display:grid; gap:10px; margin-top:14px; }
+.cluster-tasks article { padding:8px 0; border-bottom:1px solid var(--border); }
 
 /* =========================================================
    MOBIL / TABLET
@@ -432,6 +442,7 @@ button:disabled {
 
 @media (max-width: 560px) {
   .draft-grid { grid-template-columns:1fr; }
+  .cluster-filters { grid-template-columns:1fr; }
   .brand img {
     width: 60px;
   }

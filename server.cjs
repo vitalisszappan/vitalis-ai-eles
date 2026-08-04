@@ -45,10 +45,12 @@ const KNOWLEDGE_GAP_LOG = path.join(
 
 const KNOWLEDGE_TASK_LOG = path.join(LOG_DIR, 'knowledge-tasks.jsonl');
 const KNOWLEDGE_DRAFT_LOG = path.join(LOG_DIR, 'knowledge-drafts.jsonl');
+const KNOWLEDGE_CLUSTER_LOG = path.join(LOG_DIR, 'knowledge-clusters.jsonl');
 const CANONICAL_MAPPING_PATH = path.join(DATA_DIR, 'canonical-unas-mapping.json');
 
 const { STATUSES: KNOWLEDGE_TASK_STATUSES, taskFromConversation, mergeTasks, sortKnowledgeTasks, calculateEstimatedImpact } = require('./engine/knowledge-tasks.cjs');
 const { DRAFT_TYPES, GENERATION_STATUSES, SAFETY_STATUSES, contentHash, generateKnowledgeDraft, validateDraft, buildKnowledgeExport } = require('./engine/knowledge-drafts.cjs');
+const { STATUSES: KNOWLEDGE_CLUSTER_STATUSES, clusterKnowledgeTasks } = require('./engine/knowledge-clusters.cjs');
 const { resolveAdministrativeIntent } = require('./engine/admin-intents.cjs');
 
 function readCanonicalProductStatuses() {
@@ -2808,6 +2810,120 @@ async function handleKnowledgeTaskBackfill(req, res, url) {
 }
 
 /* =========================================================
+   KNOWLEDGE CLUSTERS
+========================================================= */
+
+const KNOWLEDGE_CLUSTER_TABLE = 'knowledge_clusters';
+let knowledgeClusterRebuildInFlight = false;
+
+function readLocalKnowledgeClusters() {
+  if (!fs.existsSync(KNOWLEDGE_CLUSTER_LOG)) return [];
+  return fs.readFileSync(KNOWLEDGE_CLUSTER_LOG, 'utf8').split(/\r?\n/).filter(Boolean).map(line => {
+    try { return JSON.parse(line); } catch { return null; }
+  }).filter(Boolean);
+}
+
+function writeLocalKnowledgeClusters(items) {
+  fs.writeFileSync(KNOWLEDGE_CLUSTER_LOG, items.map(item => JSON.stringify(item)).join('\n') + (items.length ? '\n' : ''), 'utf8');
+}
+
+function clusterToRow(cluster) {
+  return {
+    id:cluster.id, cluster_key:cluster.clusterKey, title:cluster.title, summary:cluster.summary, topic:cluster.topic,
+    product_family:cluster.productFamily, classification_summary:cluster.classificationSummary, priority:cluster.priority,
+    business_value:cluster.businessValue, estimated_impact:cluster.estimatedImpact, safety_level:cluster.safetyLevel,
+    task_count:cluster.taskCount, occurrence_count:cluster.occurrenceCount, task_ids:cluster.taskIds,
+    canonical_ids:cluster.canonicalIds, representative_question:cluster.representativeQuestion,
+    suggested_action:cluster.suggestedAction, status:cluster.status, reviewer_note:cluster.reviewerNote,
+    created_at:cluster.createdAt, updated_at:cluster.updatedAt
+  };
+}
+
+async function readKnowledgeClusters() {
+  if (!supabaseConfigured()) return { storage:'local', items:readLocalKnowledgeClusters() };
+  const rows = await readAllSupabaseRows('/rest/v1/knowledge_clusters?select=*', { operation:'knowledge_clusters_read', table:KNOWLEDGE_CLUSTER_TABLE });
+  return { storage:'supabase', items:rows.map(rowToTask) };
+}
+
+function clusterComparable(cluster) {
+  const copy = { ...cluster }; delete copy.status; delete copy.reviewerNote; delete copy.createdAt; delete copy.updatedAt;
+  return JSON.stringify(copy);
+}
+
+function mergeGeneratedClusters(generated, existing, now) {
+  const existingById = new Map(existing.map(item => [item.id, item]));
+  const generatedIds = new Set(generated.map(item => item.id));
+  const merged = generated.map(cluster => {
+    const old = existingById.get(cluster.id);
+    if (!old) return cluster;
+    return { ...cluster, status:old.status || 'open', reviewerNote:old.reviewerNote || '', createdAt:old.createdAt || cluster.createdAt,
+      updatedAt:clusterComparable(old) === clusterComparable(cluster) ? (old.updatedAt || now) : now };
+  });
+  for (const old of existing) if (!generatedIds.has(old.id)) merged.push({ ...old, status:'dismissed', updatedAt:old.status === 'dismissed' ? old.updatedAt : now });
+  return merged.sort((a,b) => String(a.id).localeCompare(String(b.id)));
+}
+
+async function executeKnowledgeClusterRebuild(write) {
+  const now = new Date().toISOString();
+  let tasks, existing, storageUsed;
+  if (supabaseConfigured()) {
+    const taskRows = await readAllSupabaseRows('/rest/v1/knowledge_tasks?select=*', { operation:'knowledge_cluster_tasks_read', table:KNOWLEDGE_TASK_TABLE });
+    tasks = taskRows.map(rowToTask);
+    const clusterRows = await readAllSupabaseRows('/rest/v1/knowledge_clusters?select=*', { operation:'knowledge_clusters_existing_read', table:KNOWLEDGE_CLUSTER_TABLE });
+    existing = clusterRows.map(rowToTask); storageUsed = 'supabase';
+  } else { tasks = readLocalKnowledgeTasks(); existing = readLocalKnowledgeClusters(); storageUsed = 'local'; }
+  const generated = clusterKnowledgeTasks(tasks, { now });
+  const existingById = new Map(existing.map(item => [item.id, item]));
+  let clustersCreated = 0, clustersUpdated = 0, clustersUnchanged = 0;
+  for (const cluster of generated) {
+    const old = existingById.get(cluster.id);
+    if (!old) clustersCreated += 1;
+    else if (clusterComparable(old) === clusterComparable(cluster)) clustersUnchanged += 1;
+    else clustersUpdated += 1;
+  }
+  clustersUpdated += existing.filter(item => !generated.some(cluster => cluster.id === item.id) && item.status !== 'dismissed').length;
+  const merged = mergeGeneratedClusters(generated, existing, now);
+  if (write) {
+    if (storageUsed === 'supabase') await supabaseRequest({ method:'POST', pathname:'/rest/v1/knowledge_clusters?on_conflict=id', body:merged.map(clusterToRow), headers:{ Prefer:'resolution=merge-duplicates' }, operation:'knowledge_clusters_upsert', table:KNOWLEDGE_CLUSTER_TABLE });
+    else writeLocalKnowledgeClusters(merged);
+  }
+  return { storageUsed, tasksRead:tasks.length, clustersGenerated:generated.length, clustersCreated, clustersUpdated,
+    clustersUnchanged, singleTaskClusters:generated.filter(cluster => cluster.taskCount === 1).length,
+    classificationSummary:summarizeTaskClassifications(tasks), topicSummary:summarizeTaskClassifications(tasks.map(task => ({ classification:task.topic || 'egyéb' }))), dryRun:!write };
+}
+
+async function handleKnowledgeClusterRebuild(req, res, url) {
+  if (!authorizeAdmin(req, res, url, { allowQueryToken:false })) return;
+  let parsed = {}; try { parsed = JSON.parse((await parseBody(req)) || '{}'); } catch { return sendJson(res, 400, { ok:false, error:'Hibás JSON.' }); }
+  if (knowledgeClusterRebuildInFlight) return sendJson(res, 409, { ok:false, error:'A klaszterek újraépítése már folyamatban van.' });
+  knowledgeClusterRebuildInFlight = true;
+  try { sendJson(res, 200, { ok:true, ...(await executeKnowledgeClusterRebuild(parsed.write === true && Object.keys(parsed).length === 1)) }); }
+  catch (error) { logSafeTechnicalError('Knowledge Cluster rebuild failed.', error); sendJson(res, 500, { ok:false, error:'A Knowledge Clusters újraépítése jelenleg nem futtatható.' }); }
+  finally { knowledgeClusterRebuildInFlight = false; }
+}
+
+async function handleAdminKnowledgeClusters(req, res, url) {
+  if (!authorizeAdmin(req, res, url, { allowQueryToken:false })) return;
+  try { sendJson(res, 200, { ok:true, ...(await readKnowledgeClusters()) }); }
+  catch (error) { logSafeTechnicalError('Knowledge Cluster read failed.', error); sendJson(res, 500, { ok:false, error:'A Knowledge Clusters jelenleg nem tölthető be.' }); }
+}
+
+async function handleUpdateKnowledgeCluster(req, res, url) {
+  if (!authorizeAdmin(req, res, url, { allowQueryToken:false })) return;
+  let parsed; try { parsed = JSON.parse((await parseBody(req)) || '{}'); } catch { return sendJson(res, 400, { ok:false, error:'Hibás JSON.' }); }
+  const allowed = new Set(['id','status','reviewerNote']);
+  if (Object.keys(parsed).some(key => !allowed.has(key))) return sendJson(res, 400, { ok:false, error:'Csak a státusz és a reviewerNote módosítható.' });
+  const id = cleanText(parsed.id, 80), status = cleanText(parsed.status, 30), reviewerNote = cleanText(parsed.reviewerNote, 4000) || '';
+  if (!id || !KNOWLEDGE_CLUSTER_STATUSES.includes(status)) return sendJson(res, 400, { ok:false, error:'Érvénytelen id vagy státusz.' });
+  const updatedAt = new Date().toISOString();
+  try {
+    if (supabaseConfigured()) await supabaseRequest({ method:'PATCH', pathname:`/rest/v1/knowledge_clusters?id=eq.${encodeURIComponent(id)}`, body:{ status, reviewer_note:reviewerNote, updated_at:updatedAt }, operation:'knowledge_cluster_update', table:KNOWLEDGE_CLUSTER_TABLE });
+    else { const items=readLocalKnowledgeClusters(), item=items.find(entry=>entry.id===id); if(!item)return sendJson(res,404,{ok:false,error:'A klaszter nem található.'}); Object.assign(item,{status,reviewerNote,updatedAt}); writeLocalKnowledgeClusters(items); }
+    sendJson(res, 200, { ok:true, id, status, reviewerNote });
+  } catch (error) { logSafeTechnicalError('Knowledge Cluster update failed.', error); sendJson(res, 500, { ok:false, error:'A Knowledge Cluster jelenleg nem menthető.' }); }
+}
+
+/* =========================================================
    KNOWLEDGE DRAFTS
 ========================================================= */
 
@@ -3176,6 +3292,16 @@ const server =
         if (req.method === 'POST' && url.pathname === '/api/admin/knowledge-tasks/backfill') {
           await handleKnowledgeTaskBackfill(req, res, url);
           return;
+        }
+
+        if (req.method === 'GET' && url.pathname === '/api/admin/knowledge-clusters') {
+          await handleAdminKnowledgeClusters(req, res, url); return;
+        }
+        if (req.method === 'POST' && url.pathname === '/api/admin/knowledge-clusters/rebuild') {
+          await handleKnowledgeClusterRebuild(req, res, url); return;
+        }
+        if (req.method === 'POST' && url.pathname === '/api/admin/knowledge-clusters/update') {
+          await handleUpdateKnowledgeCluster(req, res, url); return;
         }
 
         if (req.method === 'GET' && url.pathname === '/api/admin/knowledge-drafts') {
