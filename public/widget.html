@@ -3,27 +3,25 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>Vitalis valós idejű chat</title>
-  <link rel="stylesheet" href="/widget.css?v=1.9.0">
+  <title>Vitalis AI Asszisztens</title>
+  <link rel="stylesheet" href="/widget.css?v=2.0.0">
 </head>
 <body class="widget-page">
-  <section class="chat-card" aria-label="Kérdezd a készítőt – azonnali válaszok">
+  <section class="chat-card" aria-label="Vitalis AI Asszisztens">
     <header class="chat-header">
       <div class="brand-logo"><img src="/vitalis-logo.jpg" alt="Vitalis natúr kozmetikum"></div>
       <div class="brand-copy">
-        <h1>Kérdezd a készítőt!</h1>
-        <p class="owner">Szalacsi Zoltán · v1.9</p>
-        <p><span class="online-dot"></span>Azonnali válaszok</p>
+        <h1>Vitalis AI Asszisztens</h1>
+        <p class="ai-disclosure">Mesterséges intelligenciával működő virtuális asszisztens, nem élő ügyintéző.</p>
       </div>
       <button id="minimize" class="minimize" type="button" aria-label="Chat bezárása" title="Bezárás">×</button>
     </header>
 
     <div id="messages" class="messages" aria-live="polite" aria-relevant="additions">
       <article class="bubble bot welcome">
-        <strong>Üdvözöllek!</strong>
-        <p><strong>Szalacsi Zoltán vagyok, a Vitalis natúrkozmetikumok fejlesztője és készítője.</strong></p>
-        <p>Ez a chat a Vitalis termékekről, azok használatáról és a sok év alatt felépített szakmai tapasztalataimra és tudásomra épülő válaszokkal segít eligazodni.</p>
-        <p><strong>Írd meg a kérdésedet, és örömmel segítek!</strong></p>
+        <strong>Üdvözöllek! A Vitalis mesterséges intelligenciával működő virtuális asszisztense vagyok.</strong>
+        <p>Segítek a termékekkel, használattal, rendeléssel és szállítással kapcsolatos kérdésekben.</p>
+        <p>A válaszaim Szalacsi Zoltán, a Vitalis termékek készítőjének szakmai tudására épülnek.</p>
       </article>
     </div>
 
@@ -43,14 +41,16 @@
       </div>
     </div>
 
+    <div id="restore-notice" class="restore-notice" hidden>Az előző beszélgetést most nem sikerült visszaállítani, de itt továbbra is kérdezhetsz.</div>
+
     <form id="form" class="composer">
       <label class="sr-only" for="input">Kérdés</label>
       <textarea id="input" rows="1" autocomplete="off" placeholder="Írd ide a kérdésed…" maxlength="1200"></textarea>
       <button id="send" type="submit" aria-label="Kérdés elküldése">Küldés</button>
     </form>
 
-    <footer>A chat kozmetikai tájékoztatást ad, és nem helyettesít orvosi diagnózist vagy kezelést.</footer>
+    <footer><button id="new-conversation" type="button">Új beszélgetés</button><span>A chat kozmetikai tájékoztatást ad, és nem helyettesít orvosi diagnózist vagy kezelést.</span></footer>
   </section>
-  <script src="/widget.js?v=1.9.0"></script>
+  <script src="/widget.js?v=2.0.0"></script>
 </body>
 </html>

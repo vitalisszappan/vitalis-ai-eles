@@ -4,21 +4,75 @@ const input = document.getElementById('input');
 const send = document.getElementById('send');
 const typing = document.getElementById('typing');
 const suggestionsEl = document.getElementById('suggestions');
+const restoreNotice = document.getElementById('restore-notice');
 const history = [];
-const sessionId = (() => {
-  try {
-    const key = 'vitalis-chat-session-id';
-    let value = localStorage.getItem(key);
-    if (!value) {
-      value = (crypto.randomUUID ? crypto.randomUUID() : `session-${Date.now()}-${Math.random().toString(16).slice(2)}`);
-      localStorage.setItem(key, value);
-    }
-    return value;
-  } catch {
-    return `session-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  }
+const STORAGE_KEY = 'vitalis-chat-state/v2';
+const STATE_VERSION = 2;
+const STATE_TTL_MS = 24 * 60 * 60 * 1000;
+const MAX_STORED_MESSAGES = 40;
+const parentOrigin = (() => {
+  try { return document.referrer ? new URL(document.referrer).origin : ''; } catch { return ''; }
 })();
+let sessionId = createSessionId();
+let storedMessages = [];
+let stateReady = false;
 let pending = false;
+
+function createSessionId() {
+  return crypto.randomUUID ? crypto.randomUUID() : `session-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function normalizeState(value) {
+  if (!value || typeof value !== 'object' || value.version !== STATE_VERSION) return null;
+  if (!Number.isFinite(value.updatedAt) || Date.now() - value.updatedAt > STATE_TTL_MS) return null;
+  if (typeof value.sessionId !== 'string' || !/^[a-zA-Z0-9-]{16,100}$/.test(value.sessionId)) return null;
+  if (!Array.isArray(value.messages)) return null;
+  const messages = value.messages.slice(-MAX_STORED_MESSAGES).filter((item) =>
+    item && (item.role === 'user' || item.role === 'bot') && typeof item.content === 'string' && item.content.length <= 5000
+  ).map((item) => ({
+    role: item.role,
+    content: item.content,
+    links: Array.isArray(item.links) ? item.links.slice(0, 3).map(normalizeProduct).filter(Boolean) : []
+  }));
+  return { version: STATE_VERSION, updatedAt: value.updatedAt, sessionId: value.sessionId, messages };
+}
+
+function readFallbackState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const state = normalizeState(JSON.parse(raw));
+    if (!state) localStorage.removeItem(STORAGE_KEY);
+    return state;
+  } catch {
+    try { localStorage.removeItem(STORAGE_KEY); } catch {}
+    return null;
+  }
+}
+
+function currentState() {
+  return { version: STATE_VERSION, updatedAt: Date.now(), sessionId, messages: storedMessages.slice(-MAX_STORED_MESSAGES) };
+}
+
+function persistState() {
+  const state = currentState();
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
+  if (parentOrigin && window.parent !== window) {
+    window.parent.postMessage({ type: 'vitalis-chat-state-save', state }, parentOrigin);
+  }
+}
+
+function restoreState(value) {
+  const state = normalizeState(value);
+  if (!state) return false;
+  sessionId = state.sessionId;
+  storedMessages = [];
+  history.length = 0;
+  messagesEl.querySelectorAll('.bubble:not(.welcome)').forEach((item) => item.remove());
+  for (const item of state.messages) add(item.content, item.role, { links: item.links, persist: false });
+  stateReady = true;
+  return true;
+}
 
 function scrollToBottom() {
   messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -31,11 +85,16 @@ function addTextWithLinks(container, text) {
   while ((match = regex.exec(text)) !== null) {
     container.append(document.createTextNode(text.slice(last, match.index)));
     const link = document.createElement('a');
-    link.href = match[0];
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    link.textContent = 'Termék megtekintése';
-    container.append(link);
+    const safeUrl = safeProductUrl(match[0]);
+    if (safeUrl) {
+      link.href = safeUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = 'Termék megtekintése';
+      container.append(link);
+    } else {
+      container.append(document.createTextNode(match[0]));
+    }
     last = regex.lastIndex;
   }
   container.append(document.createTextNode(text.slice(last)));
@@ -54,7 +113,9 @@ function safeProductUrl(value) {
 
   try {
     const url = new URL(text, window.location.href);
-    return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : '';
+    const host = url.hostname.toLowerCase();
+    const approvedHost = host === 'vitalis-szappan.hu' || host.endsWith('.vitalis-szappan.hu');
+    return url.protocol === 'https:' && approvedHost ? url.href : '';
   } catch {
     return '';
   }
@@ -154,6 +215,13 @@ function add(text, role, options = {}) {
   messagesEl.appendChild(article);
   scrollToBottom();
   history.push({ role: role === 'user' ? 'user' : 'assistant', content: text });
+  storedMessages.push({
+    role: role === 'user' ? 'user' : 'bot',
+    content: String(text),
+    links: Array.isArray(options.links) ? options.links.map(normalizeProduct).filter(Boolean).slice(0, 3) : []
+  });
+  storedMessages = storedMessages.slice(-MAX_STORED_MESSAGES);
+  if (options.persist !== false) persistState();
 }
 
 function setSuggestions(items) {
@@ -331,13 +399,44 @@ document.querySelectorAll('.suggestions button').forEach((button) => {
 });
 
 document.getElementById('minimize').addEventListener('click', () => {
-  window.parent.postMessage({ type: 'vitalis-chat-close' }, '*');
+  if (parentOrigin) window.parent.postMessage({ type: 'vitalis-chat-close' }, parentOrigin);
 });
 
 window.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'vitalis-chat-focus') {
+  if (event.source !== window.parent || (parentOrigin && event.origin !== parentOrigin) || !event.data) return;
+  if (event.data.type === 'vitalis-chat-focus') {
     setTimeout(() => input.focus(), 80);
   }
+  if (event.data.type === 'vitalis-chat-state') {
+    if (!restoreState(event.data.state) && !stateReady) {
+      const fallback = readFallbackState();
+      if (fallback) restoreState(fallback);
+      else stateReady = true;
+    }
+    if (event.data.restoreFailed) restoreNotice.hidden = false;
+  }
 });
+
+document.getElementById('new-conversation').addEventListener('click', () => {
+  if (!window.confirm('Biztosan új beszélgetést indítasz? A jelenlegi helyi előzmény törlődik.')) return;
+  sessionId = createSessionId();
+  storedMessages = [];
+  history.length = 0;
+  messagesEl.querySelectorAll('.bubble:not(.welcome)').forEach((item) => item.remove());
+  suggestionsEl.replaceChildren();
+  restoreNotice.hidden = true;
+  try { localStorage.removeItem(STORAGE_KEY); } catch {}
+  if (parentOrigin) window.parent.postMessage({ type: 'vitalis-chat-state-clear' }, parentOrigin);
+  persistState();
+  input.focus();
+});
+
+const fallbackState = readFallbackState();
+if (fallbackState) restoreState(fallbackState);
+if (parentOrigin && window.parent !== window) {
+  window.parent.postMessage({ type: 'vitalis-chat-state-ready' }, parentOrigin);
+} else {
+  stateReady = true;
+}
 
 autoResize();

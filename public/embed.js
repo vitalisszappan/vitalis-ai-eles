@@ -4,6 +4,46 @@
 
   const current = document.currentScript;
   const base = current && current.src ? new URL(current.src).origin : window.location.origin;
+  const STORAGE_KEY = 'vitalis-chat-state/v2';
+  const STATE_TTL_MS = 24 * 60 * 60 * 1000;
+  let chatOpen = false;
+  let startupStateResult = null;
+
+  function readState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return { state: null, restoreFailed: false };
+      const value = JSON.parse(raw);
+      if (!value || value.version !== 2 || !Number.isFinite(value.updatedAt) || Date.now() - value.updatedAt > STATE_TTL_MS) {
+        localStorage.removeItem(STORAGE_KEY);
+        return { state: null, restoreFailed: false };
+      }
+      return { state: value, restoreFailed: false };
+    } catch {
+      try { localStorage.removeItem(STORAGE_KEY); } catch {}
+      return { state: null, restoreFailed: true };
+    }
+  }
+
+  function saveState(value) {
+    if (!value || value.version !== 2 || typeof value.sessionId !== 'string' || !Array.isArray(value.messages)) return;
+    const safe = {
+      version: 2,
+      updatedAt: Date.now(),
+      sessionId: value.sessionId,
+      messages: value.messages.slice(-40),
+      open: chatOpen
+    };
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(safe)); } catch {}
+  }
+
+  function saveOpenState(open) {
+    const currentState = readState().state;
+    if (!currentState) return;
+    currentState.updatedAt = Date.now();
+    currentState.open = open;
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(currentState)); } catch {}
+  }
 
   const style = document.createElement('style');
   style.textContent = `
@@ -151,20 +191,20 @@
   const launcher = document.createElement('button');
   launcher.id = 'vitalis-chat-launcher';
   launcher.type = 'button';
-  launcher.setAttribute('aria-label', 'Kérdezd a készítőt chat megnyitása');
+  launcher.setAttribute('aria-label', 'Vitalis AI Asszisztens megnyitása');
   launcher.setAttribute('aria-expanded', 'false');
   launcher.innerHTML = `
     <img src="${base}/vitalis-logo.jpg" alt="">
     <span class="vitalis-chat-label">
-      Kérdezd a készítőt!
-      <small>Azonnali válaszok</small>
+      Vitalis AI Asszisztens
+      <small>Virtuális asszisztens, nem élő ügyintéző</small>
     </span>
   `;
 
   const wrap = document.createElement('div');
   wrap.id = 'vitalis-chat-frame-wrap';
   wrap.setAttribute('aria-hidden', 'true');
-  wrap.innerHTML = `<iframe id="vitalis-chat-frame" title="Kérdezd a készítőt – azonnali válaszok" src="${base}/widget" loading="lazy" allow="clipboard-write"></iframe>`;
+  wrap.innerHTML = '<iframe id="vitalis-chat-frame" title="Vitalis AI Asszisztens" src="about:blank" loading="lazy" allow="clipboard-write"></iframe>';
 
   document.body.appendChild(wrap);
   document.body.appendChild(launcher);
@@ -173,22 +213,38 @@
 
   function toggle(force) {
     const open = typeof force === 'boolean' ? force : !wrap.classList.contains('open');
+    chatOpen = open;
     wrap.classList.toggle('open', open);
     wrap.setAttribute('aria-hidden', String(!open));
     launcher.setAttribute('aria-expanded', String(open));
     launcher.style.display = open ? 'none' : 'flex';
+    saveOpenState(open);
     if (open) {
       setTimeout(() => {
-        try { frame.contentWindow.postMessage({ type: 'vitalis-chat-focus' }, '*'); } catch (_) {}
+        try { frame.contentWindow.postMessage({ type: 'vitalis-chat-focus' }, base); } catch (_) {}
       }, 180);
     }
   }
 
   launcher.addEventListener('click', () => toggle(true));
   window.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'vitalis-chat-close') toggle(false);
+    if (event.source !== frame.contentWindow || event.origin !== base || !event.data) return;
+    if (event.data.type === 'vitalis-chat-close') toggle(false);
+    if (event.data.type === 'vitalis-chat-state-ready') {
+      const restored = startupStateResult || readState();
+      startupStateResult = null;
+      frame.contentWindow.postMessage({ type: 'vitalis-chat-state', ...restored }, base);
+    }
+    if (event.data.type === 'vitalis-chat-state-save') saveState(event.data.state);
+    if (event.data.type === 'vitalis-chat-state-clear') {
+      try { localStorage.removeItem(STORAGE_KEY); } catch {}
+    }
   });
   window.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && wrap.classList.contains('open')) toggle(false);
   });
+
+  startupStateResult = readState();
+  frame.src = `${base}/widget`;
+  if (startupStateResult.state?.open === true) toggle(true);
 })();

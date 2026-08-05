@@ -3668,7 +3668,7 @@ async function startServer() {
       );
 
       console.log(
-        ' Kérdezd a készítőt! – Éles 2.3 elindult'
+        ' Vitalis AI Asszisztens – Éles 2.3 elindult'
       );
 
       console.log(
