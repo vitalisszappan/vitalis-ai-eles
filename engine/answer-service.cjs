@@ -39,6 +39,7 @@ const {
 const { routeAnswer } = require('./answer-router.cjs');
 const { createCatalogSearch } = require('./catalog-search.cjs');
 const { childAnswer } = require('./product-faq.cjs');
+const { composeCommunication } = require('./communication-engine.cjs');
 
 const decisionCatalog = createCatalogSearch();
 
@@ -1360,7 +1361,8 @@ function createAnswer({
 }) {
 
   const routing = routeAnswer({ question, history, knowledge, ruleEngine });
-  return materializeDecision({ routing, question, history, knowledge, ruleEngine, logGap });
+  const draft = materializeDecision({ routing, question, history, knowledge, ruleEngine, logGap });
+  return composeCommunication({ decision: routing, draft, question, history });
 
   /* Legacy pipeline retained temporarily as a rollback reference during the
      incremental Decision Engine migration. */

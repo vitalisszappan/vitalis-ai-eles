@@ -155,7 +155,11 @@ function normalizeProduct(item, index) {
     image: safeText(item.image),
     price: safeProductPrice(item.price),
     currency: safeText(item.currency),
-    recommendationType: item.recommendationType === 'secondary' ? 'secondary' : (index === 0 ? 'primary' : 'secondary')
+    recommendationType: item.recommendationType === 'related'
+      ? 'related'
+      : item.recommendationType === 'secondary' ? 'secondary' : (index === 0 ? 'primary' : 'secondary'),
+    recommendationLabel: safeText(item.recommendationLabel),
+    reason: safeText(item.reason)
   };
 }
 
@@ -179,7 +183,7 @@ function addProductCards(article, links = []) {
   for (const item of validItems.slice(0, 3)) {
     const hasUrl = Boolean(item.url);
     const card = document.createElement(hasUrl ? 'a' : 'div');
-    card.className = `product-card ${item.recommendationType === 'primary' ? 'is-primary' : 'is-secondary'}`;
+    card.className = `product-card ${item.recommendationType === 'primary' ? 'is-primary' : item.recommendationType === 'related' ? 'is-related' : 'is-secondary'}`;
 
     if (hasUrl) {
       card.href = item.url;
@@ -190,7 +194,9 @@ function addProductCards(article, links = []) {
       card.setAttribute('aria-label', item.name);
     }
 
-    const badgeText = item.recommendationType === 'primary' ? 'Elsődleges ajánlás' : 'Kiegészítő lehetőség';
+    const badgeText = item.recommendationLabel || (item.recommendationType === 'primary'
+      ? 'Vitalis ajánlása'
+      : item.recommendationType === 'related' ? 'Kapcsolódó termék' : 'Alternatíva');
     const media = item.image
       ? `<img class="product-image" src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}">`
       : `<span class="product-mark" aria-hidden="true">V</span>`;
@@ -202,6 +208,7 @@ function addProductCards(article, links = []) {
         <span class="product-badge">${badgeText}</span>
         <strong>${escapeHtml(item.name)}</strong>
         ${item.description ? `<small>${escapeHtml(item.description)}</small>` : ''}
+        ${item.reason ? `<small class="product-reason"><b>Miért ezt?</b> ${escapeHtml(item.reason)}</small>` : ''}
         ${priceText ? `<small class="product-price">Ár: ${escapeHtml(priceText)}</small>` : ''}
         ${hasUrl
           ? '<small class="product-open">Termékoldal megnyitása →</small>'
