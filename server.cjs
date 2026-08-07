@@ -1128,7 +1128,24 @@ async function persistConversation(
       cleanText(
         record.page_url,
         1000
-      )
+      ),
+
+    routing_trace:
+      record.routing_trace && typeof record.routing_trace === 'object'
+        ? {
+            route: cleanText(record.routing_trace.route, 40),
+            goal: cleanText(record.routing_trace.goal, 60),
+            intent: cleanText(record.routing_trace.intent, 80),
+            domain: cleanText(record.routing_trace.domain, 80),
+            safetyClass: cleanText(record.routing_trace.safetyClass, 40),
+            responseSource: cleanText(record.routing_trace.responseSource, 80),
+            matchedRuleId: cleanText(record.routing_trace.matchedRuleId, 120),
+            matchedCanonicalIds: Array.isArray(record.routing_trace.matchedCanonicalIds) ? record.routing_trace.matchedCanonicalIds.filter(Boolean).slice(0, 20) : [],
+            matchedKnowledgeIds: Array.isArray(record.routing_trace.matchedKnowledgeIds) ? record.routing_trace.matchedKnowledgeIds.filter(Boolean).slice(0, 20) : [],
+            confidence: Number.isFinite(Number(record.routing_trace.confidence)) ? Number(record.routing_trace.confidence) : null,
+            rejectionReasons: Array.isArray(record.routing_trace.rejectionReasons) ? record.routing_trace.rejectionReasons.filter(Boolean).slice(0, 20) : []
+          }
+        : null
   };
 
   try {
@@ -1162,6 +1179,8 @@ async function persistConversation(
 
   try {
 
+    const { routing_trace, ...supabaseSafe } = safe;
+
     await supabaseRequest({
 
       method:
@@ -1171,7 +1190,7 @@ async function persistConversation(
         conversationTablePath(),
 
       body:
-        safe,
+        supabaseSafe,
       operation: 'conversation_write',
       table: CONVERSATION_TABLE
     });
@@ -2026,6 +2045,10 @@ async function handleChat(
 
     page_url:
       parsed.pageUrl
+    ,
+
+    routing_trace:
+      result.routing
 
   }).catch(
     (

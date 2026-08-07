@@ -36,6 +36,141 @@ const {
   resolveMetaIntent
 } = require('./meta-intents.cjs');
 
+const { routeAnswer } = require('./answer-router.cjs');
+const { createCatalogSearch } = require('./catalog-search.cjs');
+const { childAnswer } = require('./product-faq.cjs');
+
+const decisionCatalog = createCatalogSearch();
+
+function attachDecision(answer, routing) {
+  return {
+    ...answer,
+    route: routing.route,
+    goal: routing.goal,
+    domain: routing.domain,
+    safetyClass: routing.safetyClass,
+    contextUsed: routing.contextUsed,
+    contextTarget: routing.contextTarget,
+    responseSource: routing.responseSource,
+    routing
+  };
+}
+
+function catalogCard(item, index = 0) {
+  return {
+    id: item.id,
+    name: item.name,
+    title: item.name,
+    label: item.name,
+    description: '',
+    url: item.url,
+    image: item.image,
+    price: item.price,
+    currency: item.currency,
+    rank: index + 1,
+    recommendationType: index === 0 ? 'primary' : 'secondary'
+  };
+}
+
+function materializeDecision({ routing, question, history, knowledge, ruleEngine, logGap }) {
+  if (routing.responseSource === 'meta-intent') return attachDecision(resolveMetaIntent(question), routing);
+  if (routing.matchedRuleId === 'sls-sles-free') return attachDecision(answerSlsSlesQuestion(question), routing);
+
+  if (routing.route === 'safety') {
+    const urgent = routing.safetyClass === 'medical_escalation';
+    const vascular = routing.domain === 'varicose_cosmetic';
+    const answer = urgent
+      ? 'Ezt a tünetet nem biztonságos kozmetikai kérdésként kezelni. Kérj mielőbb orvosi segítséget; hirtelen rosszabbodás, nehézlégzés, mellkasi fájdalom vagy erős fájdalom esetén sürgős ellátás szükséges.'
+      : vascular
+        ? 'Visszeres, fáradt láb bőrének kozmetikai ápolására található Vitalis balzsam, de visszérgyulladást, ödémát vagy keringési betegséget kozmetikum nem kezel. Fájdalom, melegség, pirosság vagy egyoldali duzzanat esetén kérj orvosi tanácsot.'
+        : 'Ödéma, gyulladás vagy keringési panasz okát nem lehet kozmetikai tanácsadással megállapítani. Ilyen tünetnél kérj orvosi tanácsot; kozmetikum legfeljebb az ép bőr komfortápolására használható.';
+    return attachDecision({ source: 'safety-gate', answer, confidence: 100, links: [], suggestions: [], ruleId: null, intent: routing.intent, matchedKnowledgeIds: [] }, routing);
+  }
+
+  if (routing.route === 'commerce') {
+    if (routing.responseSource === 'admin-intent') return attachDecision(ruleEngine.resolve(question, history), routing);
+    const target = routing.contextTarget;
+    const cards = target ? productCards([target]) : [];
+    const byIntent = {
+      order_start: 'A kiválasztott terméket a termékoldalán tudod kosárba tenni és megrendelni. Ha még nem választottál terméket, írd meg, mit keresel, és segítek.',
+      purchase_location: 'A Vitalis termékeket a vitalis-szappan.hu webshopban tudod megvásárolni.',
+      price_query: cards[0]?.price != null ? `A ${cards[0].name} jelenlegi ára ${Math.round(cards[0].price).toLocaleString('hu-HU')} Ft.` : 'A pontos aktuális árat a termékoldalon látod.',
+      availability_query: cards[0]?.availability?.orderable === false ? 'Ez a termék a jelenlegi katalógusadat szerint nem rendelhető.' : 'A termék aktuális rendelhetőségét a termékoldalon tudod ellenőrizni.',
+      shipping_general: 'A rendelés szállítási módjait és aktuális díját a pénztárban tudod kiválasztani és ellenőrizni.',
+      shipping_cost: 'A szállítás díja a választott szállítási és fizetési módtól függ; az aktuális összeget a pénztár mutatja.',
+      shipping_time: 'A kiszállítás általában körülbelül 2 munkanap, a pontos idő a választott szállítási módtól függ.',
+      payment: 'Az elérhető fizetési módokat a pénztárban tudod kiválasztani.',
+      order_status: 'A rendelés állapotáról a rendelési visszaigazolás és az ügyfélszolgálat tud pontos tájékoztatást adni.'
+    };
+    return attachDecision({ source: 'commerce-intent', answer: byIntent[routing.intent] || 'Miben segíthetek a rendeléssel kapcsolatban?', confidence: 100, links: cards, suggestions: [], ruleId: routing.matchedRuleId, intent: routing.intent, matchedKnowledgeIds: [] }, routing);
+  }
+
+  if (routing.route === 'clarification') {
+    if (routing.matchedCanonicalIds?.length) {
+      return attachDecision(clarificationAnswer(buildConversationContext(history, normalize), routing.matchedCanonicalIds), routing);
+    }
+    const answer = routing.contextTarget === 'product'
+      ? 'Melyik termékre gondolsz? Írd meg a termék nevét, és pontosan válaszolok.'
+      : 'Kérlek, pontosítsd, mire gondolsz.';
+    return attachDecision({ source: routing.responseSource, answer, confidence: 100, links: [], suggestions: [], ruleId: 'clarify-missing-argument', intent: routing.intent, matchedKnowledgeIds: [] }, routing);
+  }
+
+  if (routing.route === 'context_followup') {
+    const target = routing.contextTarget;
+    if (routing.goal === 'clarify_previous_answer') {
+      const previous = [...history].reverse().find((item) => item?.role === 'assistant')?.content || '';
+      return attachDecision({ source: 'conversation-context', answer: previous ? `Az előző válasz lényege röviden: ${shorten(previous, 260)}` : 'Írd meg, melyik rész nem volt világos, és másképp megfogalmazom.', confidence: 100, links: target && PRODUCTS[target] ? productCards([target]) : [], suggestions: [], ruleId: 'clarify-previous-answer', intent: routing.intent, matchedKnowledgeIds: [] }, routing);
+    }
+    if (routing.goal === 'ask_child_usage') {
+      const answer = childAnswer(target);
+      if (answer) return attachDecision({ source: 'product-faq', answer, confidence: 100, links: productCards([target]), suggestions: [], ruleId: `child_${target}`, intent: 'child_usage', matchedKnowledgeIds: [] }, routing);
+    }
+    if (routing.goal === 'ask_usage') {
+      const expert = ruleEngine.resolve(question, history);
+      if (expert?.intent === 'product_usage') return attachDecision(expert, routing);
+    }
+    if (routing.goal === 'ask_variant') {
+      return attachDecision({ source: 'conversation-context', answer: 'A jelenlegi katalógusban ennél a terméknél nem találtam bizonyított nagyobb kiszerelést. Az aktuális változatokat a termékoldalon ellenőrizheted.', confidence: 100, links: productCards([target]), suggestions: [], ruleId: 'variant-query', intent: 'variant_query', matchedKnowledgeIds: [] }, routing);
+    }
+    return attachDecision(buildProductReferenceAnswer(target, knowledge), routing);
+  }
+
+  if (routing.route === 'expert_rule') return attachDecision(ruleEngine.resolve(question, history), routing);
+
+  if (routing.route === 'exact_product') {
+    const canonical = routing.matchedCanonicalIds[0];
+    if (canonical) return attachDecision(buildProductReferenceAnswer(canonical, knowledge), routing);
+    const item = decisionCatalog.all().find((product) => product.id === routing.matchedProductIds[0]);
+    return attachDecision({ source: 'unas-catalog', answer: item ? `${item.name} megtalálható a jelenlegi Vitalis kínálatban.` : 'A termék megtalálható a Vitalis kínálatban.', confidence: 100, links: item ? [catalogCard(item)] : [], suggestions: [], ruleId: null, intent: 'product_detail', matchedKnowledgeIds: [] }, routing);
+  }
+
+  if (routing.route === 'product_category') {
+    const found = decisionCatalog.searchCategory(routing.domain);
+    if (!found.products.length) return attachDecision({ source: 'catalog-absent', answer: `A jelenlegi kínálatban nem találok ${found.category?.label || 'ilyen terméket'}.`, confidence: 100, links: [], suggestions: [], ruleId: null, intent: 'catalog_category_absent', matchedKnowledgeIds: [] }, routing);
+    const names = found.products.slice(0, 3).map((item) => item.name).join(', ');
+    const distinction = routing.domain === 'deodorant' ? ' Ezek dezodorok: a testszag kialakulását segítenek megelőzni, de nem állítjuk róluk, hogy az izzadást megszüntetik.' : '';
+    return attachDecision({ source: 'unas-catalog', answer: `Igen, a jelenlegi kínálatban található ${found.category.label}. Például: ${names}.${distinction}`, confidence: 100, links: found.products.slice(0, 3).map(catalogCard), suggestions: [], ruleId: null, intent: 'catalog_category_found', matchedKnowledgeIds: [] }, routing);
+  }
+
+  if (routing.route === 'problem_domain') {
+    const legacyDomain = { itchy_scalp: 'scalp', psoriasis: 'psoriasis', eczema: 'eczema', acne: 'acne', dry_skin: 'dry_skin', rosacea: 'rosacea', couperose: 'couperose' }[routing.domain];
+    if (legacyDomain) return attachDecision(attachProductLinks(buildProblemAnswer(legacyDomain), knowledge), routing);
+    if (['cracked_heel', 'dry_heel'].includes(routing.domain)) {
+      const found = decisionCatalog.searchCategory('heel_care');
+      return attachDecision({ source: 'problem-domain', answer: 'Repedt vagy nagyon száraz sarok kozmetikai ápolására kímélő tisztítást és rendszeres, zsírosabb hidratáló ápolást javaslok. Nyílt, vérző vagy gyulladt repedésnél ne használj irritáló kozmetikumot, és kérj szakembertől tanácsot.', confidence: 100, links: found.products.slice(0, 3).map(catalogCard), suggestions: [], ruleId: 'problem-cracked-heel', intent: 'problem_recommendation', matchedKnowledgeIds: [] }, routing);
+    }
+  }
+
+  if (routing.route === 'knowledge') {
+    const matches = searchKnowledge(knowledge, question);
+    const selected = matches.find((item) => item.item.id === routing.matchedKnowledgeIds[0]);
+    if (selected) return attachDecision(buildSingleAnswer(selected.item, Math.round(routing.confidence * 100)), routing);
+  }
+
+  logGap(question, Math.round(routing.confidence * 100), history);
+  return attachDecision({ source: 'hard-fallback', answer: 'Ehhez nem találtam elég pontos, jóváhagyott Vitalis-információt. Írd meg kérlek részletesebben, melyik termékről vagy témáról van szó.', confidence: Math.round(routing.confidence * 100), links: [], suggestions: [], ruleId: null, intent: routing.intent, matchedKnowledgeIds: [] }, routing);
+}
+
 /* =========================================================
    SEGÉDFÜGGVÉNYEK
 ========================================================= */
@@ -1223,6 +1358,12 @@ function createAnswer({
   ruleEngine,
   logGap
 }) {
+
+  const routing = routeAnswer({ question, history, knowledge, ruleEngine });
+  return materializeDecision({ routing, question, history, knowledge, ruleEngine, logGap });
+
+  /* Legacy pipeline retained temporarily as a rollback reference during the
+     incremental Decision Engine migration. */
 
   const metaAnswer = resolveMetaIntent(question);
   if (metaAnswer) return metaAnswer;

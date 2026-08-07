@@ -393,6 +393,24 @@ function buildConversationContext(
 
     mentionedProducts:
       []
+    ,
+    lastFocusProduct:
+      null,
+
+    primaryRecommendedProduct:
+      null,
+
+    lastProblemDomain:
+      null,
+
+    lastResponseType:
+      null,
+
+    missingArgument:
+      null,
+
+    lastCommerceIntent:
+      null
   };
 
   for (
@@ -458,6 +476,8 @@ function buildConversationContext(
 
       context.lastAssistantMessage =
         text;
+
+      context.lastResponseType = message.responseType || message.route || message.source || 'answer';
     }
 
     /* -------------------------
@@ -510,6 +530,8 @@ function buildConversationContext(
 
         context.lastRecommendedProducts =
           products;
+
+        context.primaryRecommendedProduct = products[0] || null;
       }
 
       context.lastProduct =
@@ -531,6 +553,8 @@ function buildConversationContext(
 
       context.lastProblem =
         problem;
+
+      context.lastProblemDomain = problem;
     }
   }
 
@@ -538,6 +562,20 @@ function buildConversationContext(
     context.lastUserProduct ||
     context.lastAssistantProduct ||
     context.lastProduct;
+
+  context.lastFocusProduct = context.lastSelectedProduct || context.lastUserProduct || context.primaryRecommendedProduct || context.lastProduct;
+
+  const lastUserText = context.lastUserMessage || '';
+  if (/\b(mennyibe kerul|keszleten|nagyobb|kisebb)\b/.test(lastUserText) && !context.lastFocusProduct) {
+    context.missingArgument = 'product';
+  }
+
+  for (const message of [...history].reverse()) {
+    if (message?.role === 'assistant' && message.intent && /order|shipping|payment|price|availability/.test(message.intent)) {
+      context.lastCommerceIntent = message.intent;
+      break;
+    }
+  }
 
   return context;
 }

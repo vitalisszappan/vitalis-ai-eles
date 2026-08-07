@@ -32,7 +32,11 @@ function normalizeState(value) {
   ).map((item) => ({
     role: item.role,
     content: item.content,
-    links: Array.isArray(item.links) ? item.links.slice(0, 3).map(normalizeProduct).filter(Boolean) : []
+    links: Array.isArray(item.links) ? item.links.slice(0, 3).map(normalizeProduct).filter(Boolean) : [],
+    route: safeText(item.route),
+    intent: safeText(item.intent),
+    domain: safeText(item.domain),
+    responseType: safeText(item.responseType)
   }));
   return { version: STATE_VERSION, updatedAt: value.updatedAt, sessionId: value.sessionId, messages };
 }
@@ -69,7 +73,14 @@ function restoreState(value) {
   storedMessages = [];
   history.length = 0;
   messagesEl.querySelectorAll('.bubble:not(.welcome)').forEach((item) => item.remove());
-  for (const item of state.messages) add(item.content, item.role, { links: item.links, persist: false });
+  for (const item of state.messages) add(item.content, item.role, {
+    links: item.links,
+    route: item.route,
+    intent: item.intent,
+    domain: item.domain,
+    responseType: item.responseType,
+    persist: false
+  });
   stateReady = true;
   return true;
 }
@@ -214,11 +225,24 @@ function add(text, role, options = {}) {
   if (role === 'bot') addProductCards(article, options.links);
   messagesEl.appendChild(article);
   scrollToBottom();
-  history.push({ role: role === 'user' ? 'user' : 'assistant', content: text });
+  history.push({
+    role: role === 'user' ? 'user' : 'assistant',
+    content: text,
+    ...(role === 'bot' ? {
+      route: safeText(options.route),
+      intent: safeText(options.intent),
+      domain: safeText(options.domain),
+      responseType: safeText(options.responseType, options.route)
+    } : {})
+  });
   storedMessages.push({
     role: role === 'user' ? 'user' : 'bot',
     content: String(text),
-    links: Array.isArray(options.links) ? options.links.map(normalizeProduct).filter(Boolean).slice(0, 3) : []
+    links: Array.isArray(options.links) ? options.links.map(normalizeProduct).filter(Boolean).slice(0, 3) : [],
+    route: safeText(options.route),
+    intent: safeText(options.intent),
+    domain: safeText(options.domain),
+    responseType: safeText(options.responseType, options.route)
   });
   storedMessages = storedMessages.slice(-MAX_STORED_MESSAGES);
   if (options.persist !== false) persistState();
@@ -371,7 +395,13 @@ async function ask(question) {
     const minimumWait = 550;
     const remaining = minimumWait - (Date.now() - started);
     if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, remaining));
-    add(data.answer || 'Nem érkezett válasz.', 'bot', { links: data.links });
+    add(data.answer || 'Nem érkezett válasz.', 'bot', {
+      links: data.links,
+      route: data.route,
+      intent: data.intent,
+      domain: data.domain,
+      responseType: data.responseSource || data.route
+    });
     setSuggestions(data.suggestions);
   } catch (error) {
     add('A chat most nem érhető el. Kérlek, próbáld meg egy kicsit később.', 'bot');
