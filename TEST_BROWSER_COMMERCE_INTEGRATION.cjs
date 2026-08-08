@@ -26,5 +26,7 @@ assert.doesNotMatch(widget + embed, /purchase_attributed|cart_detected|checkout_
 assert.doesNotMatch(widget + embed, /\b(?:email|phone|address|revenue)\b/i);
 assert.match(bridge, /UNAS\.getOrder/);
 assert.match(bridge, /orderKey/);
+assert.match(bridge, /document\.currentScript/);
+assert.match(bridge, /scriptOrigin.*order-proof/);
 assert.doesNotMatch(bridge, /purchase_attributed|revenue|SumPriceGross|priceGross/);
 console.log('Browser commerce event wiring és adatminimalizálási tesztek: OK');

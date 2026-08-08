@@ -1998,26 +1998,36 @@ async function handleCommerceEvent(req, res) {
 }
 
 async function handleOrderProof(req, res) {
-  if (!commerceOriginAllowed(req)) return sendJson(res, 403, { ok: false, error: 'origin_not_allowed' });
-  if (!/^application\/json(?:;|$)/i.test(String(req.headers['content-type'] || ''))) return sendJson(res, 415, { ok: false, error: 'content_type_required' });
+  const reject = (status, error) => {
+    console.warn('[order-proof] rejected', JSON.stringify({
+      status,
+      error,
+      originPresent: Boolean(String(req.headers.origin || '').trim()),
+      contentTypeJson: /^application\/json(?:;|$)/i.test(String(req.headers['content-type'] || ''))
+    }));
+    return sendJson(res, status, { ok: false, error });
+  };
+  if (!commerceOriginAllowed(req)) return reject(403, 'origin_not_allowed');
+  if (!/^application\/json(?:;|$)/i.test(String(req.headers['content-type'] || ''))) return reject(415, 'content_type_required');
   const declaredLength = Number(req.headers['content-length']);
-  if (Number.isFinite(declaredLength) && declaredLength > 2048) return sendJson(res, 413, { ok: false, error: 'payload_too_large' });
+  if (Number.isFinite(declaredLength) && declaredLength > 2048) return reject(413, 'payload_too_large');
   const rateKey = `${req.socket.remoteAddress || 'unknown'}:${req.headers.origin}:order-proof`;
-  if (!allowOrderProof(rateKey)) return sendJson(res, 429, { ok: false, error: 'rate_limited' });
+  if (!allowOrderProof(rateKey)) return reject(429, 'rate_limited');
   let parsed;
   try { parsed = JSON.parse((await parseBody(req, 2048)) || '{}'); }
   catch (error) {
     const tooLarge = /nagy/i.test(String(error?.message));
-    return sendJson(res, tooLarge ? 413 : 400, { ok: false, error: tooLarge ? 'payload_too_large' : 'invalid_json' });
+    return reject(tooLarge ? 413 : 400, tooLarge ? 'payload_too_large' : 'invalid_json');
   }
   const validation = validateOrderProof(parsed, { clockDriftMs: orderProofClockDriftMs });
-  if (!validation.ok) return sendJson(res, 400, { ok: false, error: validation.error });
+  if (!validation.ok) return reject(400, validation.error);
   const result = await processOrderProof(validation.proof, {
     eventLogPath: COMMERCE_EVENT_LOG,
     proofStore: orderProofStore,
     verifyOrder: (orderKey) => verifyUnasOrder(orderKey)
   });
   const status = result.ok ? (result.duplicate ? 200 : 201) : (result.error === 'unas_verification_failed' ? 502 : 400);
+  if (!result.ok) console.warn('[order-proof] rejected', JSON.stringify({ status, error: result.error || 'proof_failed', originPresent: true, contentTypeJson: true }));
   return sendJson(res, status, result);
 }
 
