@@ -65,6 +65,7 @@ const { DEFAULT_CLOCK_DRIFT_MS, validateOrderProof, processOrderProof } = requir
 const { createOrderProofStore } = require('./engine/order-proof-store.cjs');
 const { createCommerceHealthTracker, buildCommerceHealth } = require('./engine/commerce-health.cjs');
 const { verifyUnasOrder } = require('./engine/unas-order-verifier.cjs');
+const { validatePreflightOrderKey, preflightUnasOrder } = require('./engine/unas-revenue-preflight.cjs');
 
 function readCanonicalProductStatuses() {
   try {
@@ -167,6 +168,10 @@ const allowCommerceEvent = createRateLimiter({
 });
 const allowOrderProof = createRateLimiter({
   limit: Number(process.env.ORDER_PROOF_RATE_LIMIT) || 20,
+  windowMs: 60_000
+});
+const allowUnasRevenuePreflight = createRateLimiter({
+  limit: Number(process.env.UNAS_REVENUE_PREFLIGHT_RATE_LIMIT) || 5,
   windowMs: 60_000
 });
 const orderProofClockDriftMs = Number.isFinite(Number(process.env.ORDER_PROOF_CLOCK_DRIFT_MS))
@@ -2564,6 +2569,27 @@ async function handleUnasTest(
   }
 }
 
+async function handleUnasRevenuePreflight(req, res, url) {
+  if (!authorizeAdmin(req, res, url, { allowQueryToken: false })) return;
+  const rateKey = `${req.socket.remoteAddress || 'unknown'}:unas-revenue-preflight`;
+  if (!allowUnasRevenuePreflight(rateKey)) {
+    sendJson(res, 429, { ok: false, error: 'rate_limited' });
+    return;
+  }
+  const orderKey = String(url.searchParams.get('orderKey') || '').trim();
+  if (!validatePreflightOrderKey(orderKey)) {
+    sendJson(res, 400, { ok: false, error: 'invalid_order_key' });
+    return;
+  }
+  try {
+    const evidence = await preflightUnasOrder(orderKey);
+    sendJson(res, 200, { ok: true, evidence });
+  } catch (_) {
+    // The upstream error and raw XML may contain order data, so neither is logged nor returned.
+    sendJson(res, 502, { ok: false, error: 'unas_preflight_failed' });
+  }
+}
+
 /* =========================================================
    UNAS TUDÁSSZINKRON
 ========================================================= */
@@ -3572,6 +3598,15 @@ const server =
             url
           );
 
+          return;
+        }
+
+        if (url.pathname === '/api/admin/commerce/unas-order-preflight') {
+          if (req.method !== 'GET') {
+            sendJson(res, 405, { ok: false, error: 'method_not_allowed' });
+            return;
+          }
+          await handleUnasRevenuePreflight(req, res, url);
           return;
         }
 
