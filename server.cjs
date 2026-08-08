@@ -57,11 +57,12 @@ const { STATUSES: KNOWLEDGE_CLUSTER_STATUSES, clusterKnowledgeTasks } = require(
 const { resolveAdministrativeIntent } = require('./engine/admin-intents.cjs');
 const {
   validateEvent: validateCommerceEvent,
-  createLocalPocEventStore,
   createRateLimiter,
   parseAllowedOrigins
 } = require('./engine/commerce-events.cjs');
-const { DEFAULT_CLOCK_DRIFT_MS, validateOrderProof, createLocalPocProofStore, processOrderProof } = require('./engine/order-proof.cjs');
+const { createCommerceEventStore } = require('./engine/commerce-event-store.cjs');
+const { DEFAULT_CLOCK_DRIFT_MS, validateOrderProof, processOrderProof } = require('./engine/order-proof.cjs');
+const { createOrderProofStore } = require('./engine/order-proof-store.cjs');
 const { verifyUnasOrder } = require('./engine/unas-order-verifier.cjs');
 
 function readCanonicalProductStatuses() {
@@ -149,8 +150,15 @@ for (const dir of [
   );
 }
 
-const commerceEventStore = createLocalPocEventStore(COMMERCE_EVENT_LOG);
-const orderProofStore = createLocalPocProofStore(ORDER_PROOF_LOG);
+const productionRuntime = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true' || Boolean(process.env.RENDER_SERVICE_ID);
+const commerceEventStore = createCommerceEventStore({
+  supabaseConfigured: supabaseConfigured(), productionRuntime,
+  request: supabaseRequest, filePath: COMMERCE_EVENT_LOG
+});
+const orderProofStore = createOrderProofStore({
+  supabaseConfigured: supabaseConfigured(), productionRuntime,
+  request: supabaseRequest, filePath: ORDER_PROOF_LOG
+});
 const allowCommerceEvent = createRateLimiter({
   limit: Number(process.env.COMMERCE_EVENT_RATE_LIMIT) || 60,
   windowMs: 60_000
@@ -1989,7 +1997,12 @@ async function handleCommerceEvent(req, res) {
   catch { return sendJson(res, 400, { ok: false, error: 'invalid_json' }); }
   const validation = validateCommerceEvent(parsed);
   if (!validation.ok) return sendJson(res, 400, { ok: false, error: validation.error });
-  const stored = commerceEventStore.append(validation.event);
+  let stored;
+  try { stored = await commerceEventStore.insertEvent(validation.event); }
+  catch (error) {
+    logSafeTechnicalError('Commerce event storage failed.', error, { operation: 'commerce_event_insert', table: 'commerce_events' });
+    return sendJson(res, 503, { ok: false, error: 'commerce_event_store_unavailable' });
+  }
   return sendJson(res, stored.duplicate ? 200 : 201, {
     ok: true,
     eventId: validation.event.event_id,
@@ -2022,11 +2035,12 @@ async function handleOrderProof(req, res) {
   const validation = validateOrderProof(parsed, { clockDriftMs: orderProofClockDriftMs });
   if (!validation.ok) return reject(400, validation.error);
   const result = await processOrderProof(validation.proof, {
-    eventLogPath: COMMERCE_EVENT_LOG,
+    eventStore: commerceEventStore,
     proofStore: orderProofStore,
     verifyOrder: (orderKey) => verifyUnasOrder(orderKey)
   });
-  const status = result.ok ? (result.duplicate ? 200 : 201) : (result.error === 'unas_verification_failed' ? 502 : 400);
+  const status = result.ok ? (result.duplicate ? 200 : 201)
+    : (result.error === 'commerce_event_store_unavailable' ? 503 : (result.error === 'unas_verification_failed' ? 502 : 400));
   if (!result.ok) console.warn('[order-proof] rejected', JSON.stringify({ status, error: result.error || 'proof_failed', originPresent: true, contentTypeJson: true }));
   return sendJson(res, status, result);
 }

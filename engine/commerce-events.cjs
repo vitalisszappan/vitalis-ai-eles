@@ -74,6 +74,10 @@ function validateEvent(input, options = {}) {
 // must never be treated as production-durable idempotency storage.
 function createLocalPocEventStore(filePath) {
   const seen = new Set();
+  const readRows = () => {
+    try { return fs.readFileSync(filePath, 'utf8').split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line)); }
+    catch (_) { return []; }
+  };
   try {
     for (const line of fs.readFileSync(filePath, 'utf8').split(/\r?\n/)) {
       if (!line) continue;
@@ -90,7 +94,16 @@ function createLocalPocEventStore(filePath) {
       fs.appendFileSync(filePath, `${JSON.stringify({ ...event, received_at: new Date().toISOString() })}\n`, 'utf8');
       seen.add(event.event_id);
       return { duplicate: false };
-    }
+    },
+    hasEventId(eventId) { return seen.has(eventId); },
+    findAttribution(attributionId, beforeIso) {
+      const before = beforeIso ? Date.parse(beforeIso) : Infinity;
+      return readRows().filter((row) => row.attribution_id === attributionId && Date.parse(row.occurred_at) <= before);
+    },
+    findProductClickedByAttribution(attributionId, beforeIso) {
+      return this.findAttribution(attributionId, beforeIso).filter((row) => row.event_type === 'product_clicked' && row.sku);
+    },
+    loadRecentEventIds(limit = 1000) { return readRows().slice(-limit).reverse().map((row) => row.event_id); }
   };
 }
 

@@ -52,13 +52,28 @@ function idempotencyKey(proof) { return `${proof.schemaVersion}:${proof.attribut
 
 async function processOrderProof(proof, options) {
   const key = idempotencyKey(proof);
-  const existing = options.proofStore.get(key);
+  let existing;
+  try { existing = options.proofStore.findProof
+    ? await options.proofStore.findProof({ schemaVersion: proof.schemaVersion, attributionId: proof.attributionId, orderKey: proof.orderKey })
+    : await options.proofStore.get(key); }
+  catch (_) { return { ok: false, verified: false, duplicate: false, error: 'proof_storage_failed' }; }
   if (existing) return { ok: true, verified: existing.verified === true, duplicate: true };
   const proofTime = Date.parse(proof.timestamp);
-  const events = (options.findEvents || readEvents)(options.eventLogPath, proof.attributionId)
-    .filter((row) => Number.isFinite(Date.parse(row.occurred_at)) && Date.parse(row.occurred_at) <= proofTime);
-  if (!events.length) return { ok: false, verified: false, duplicate: false, error: 'attribution_not_found' };
-  const clickedSkus = new Set(events.filter((row) => row.event_type === 'product_clicked' && row.sku).map((row) => String(row.sku)));
+  let events;
+  try {
+    events = options.eventStore
+      ? await options.eventStore.findAttribution(proof.attributionId, proof.timestamp)
+      : await (options.findEvents || readEvents)(options.eventLogPath, proof.attributionId);
+  } catch (_) { return { ok: false, verified: false, duplicate: false, error: 'commerce_event_store_unavailable' }; }
+  const priorEvents = events.filter((row) => Number.isFinite(Date.parse(row.occurred_at)) && Date.parse(row.occurred_at) <= proofTime);
+  if (!priorEvents.length) return { ok: false, verified: false, duplicate: false, error: 'attribution_not_found' };
+  let clickedEvents;
+  try {
+    clickedEvents = options.eventStore
+      ? await options.eventStore.findProductClickedByAttribution(proof.attributionId, proof.timestamp)
+      : priorEvents.filter((row) => row.event_type === 'product_clicked' && row.sku);
+  } catch (_) { return { ok: false, verified: false, duplicate: false, error: 'commerce_event_store_unavailable' }; }
+  const clickedSkus = new Set(clickedEvents.map((row) => String(row.sku)).filter(Boolean));
   if (!clickedSkus.size) return { ok: false, verified: false, duplicate: false, error: 'product_clicked_not_found' };
   let verification;
   try { verification = await options.verifyOrder(proof.orderKey); } catch (_) { return { ok: false, verified: false, duplicate: false, error: 'unas_verification_failed' }; }
@@ -66,9 +81,11 @@ async function processOrderProof(proof, options) {
   const order = verification.order;
   const orderSkus = Array.isArray(order?.items) ? order.items.filter((item) => item?.id && item?.sku).map((item) => String(item.sku)) : [];
   const verified = order?.key === proof.orderKey && Boolean(order?.id) && orderSkus.length > 0 && orderSkus.some((sku) => clickedSkus.has(sku));
-  const row = { idempotency_key: key, schema_version: proof.schemaVersion, attribution_id: proof.attributionId, order_key: proof.orderKey, order_id: order?.id || null, order_date: order?.date || null, skus: orderSkus, verified, received_at: new Date().toISOString() };
-  try { options.proofStore.append(row); } catch (_) { return { ok: false, verified: false, duplicate: false, error: 'proof_storage_failed' }; }
-  return { ok: true, verified, duplicate: false };
+  const row = { schema_version: proof.schemaVersion, attribution_id: proof.attributionId, order_key: proof.orderKey, verified, verified_at: verified ? new Date().toISOString() : null };
+  let stored;
+  try { stored = options.proofStore.insertProof ? await options.proofStore.insertProof(row) : await options.proofStore.append({ ...row, idempotency_key: key }); }
+  catch (_) { return { ok: false, verified: false, duplicate: false, error: 'proof_storage_failed' }; }
+  return { ok: true, verified: stored?.duplicate ? stored.row?.verified === true : verified, duplicate: stored?.duplicate === true };
 }
 
 module.exports = { SCHEMA_VERSION, DEFAULT_CLOCK_DRIFT_MS, ALLOWED_FIELDS, validateOrderProof, createLocalPocProofStore, idempotencyKey, processOrderProof, readEvents };
