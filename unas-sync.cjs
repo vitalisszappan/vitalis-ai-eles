@@ -473,4 +473,5 @@ module.exports = {
   writeSnapshotAtomic,
   deduplicateByUnasId,
   productRequestXml
+  ,unasRequest
 };

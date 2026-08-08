@@ -17,6 +17,8 @@ let sessionId = createSessionId();
 let storedMessages = [];
 let stateReady = false;
 let pending = false;
+let attributionId = '';
+const pendingCommerceEvents = [];
 
 function createSessionId() {
   return crypto.randomUUID ? crypto.randomUUID() : `session-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -149,6 +151,9 @@ function normalizeProduct(item, index) {
   const name = safeText(item.name) || safeText(item.title) || safeText(item.label) || 'Vitalis termék';
   return {
     id: safeText(item.id, `product-${index + 1}`),
+    canonicalProductId: safeText(item.canonicalProductId, safeText(item.id)),
+    unasProductId: safeText(item.unasProductId, safeText(item.commerce?.unasId)),
+    sku: safeText(item.sku, safeText(item.commerce?.sku)),
     name,
     description: safeText(item.description),
     url: safeProductUrl(item.url),
@@ -163,7 +168,27 @@ function normalizeProduct(item, index) {
   };
 }
 
-function addProductCards(article, links = []) {
+function sendCommerceEvent(eventType, details = {}) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(attributionId)) {
+    if (pendingCommerceEvents.length < 20) pendingCommerceEvents.push([eventType, details]);
+    return;
+  }
+  const payload = {
+    eventId: crypto.randomUUID(), attributionId, chatSessionId: sessionId,
+    eventType, route: safeText(details.route) || null, intent: safeText(details.intent) || null,
+    canonicalProductId: safeText(details.canonicalProductId) || null,
+    unasProductId: safeText(details.unasProductId) || null, sku: safeText(details.sku) || null,
+    recommendationType: safeText(details.recommendationType) || null,
+    recommendationRank: Number.isInteger(details.recommendationRank) ? details.recommendationRank : null,
+    occurredAt: new Date().toISOString(), schemaVersion: 1
+  };
+  fetch('/api/commerce/event', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload), keepalive: true
+  }).catch(() => {});
+}
+
+function addProductCards(article, links = [], context = {}) {
   if (!Array.isArray(links) || !links.length) return;
 
   const validItems = links.map(normalizeProduct).filter(Boolean);
@@ -180,7 +205,7 @@ function addProductCards(article, links = []) {
   const cards = document.createElement('div');
   cards.className = 'product-cards';
 
-  for (const item of validItems.slice(0, 3)) {
+  for (const [index, item] of validItems.slice(0, 3).entries()) {
     const hasUrl = Boolean(item.url);
     const card = document.createElement(hasUrl ? 'a' : 'div');
     card.className = `product-card ${item.recommendationType === 'primary' ? 'is-primary' : item.recommendationType === 'related' ? 'is-related' : 'is-secondary'}`;
@@ -189,6 +214,9 @@ function addProductCards(article, links = []) {
       card.href = item.url;
       card.target = '_blank';
       card.rel = 'noopener noreferrer';
+      card.addEventListener('click', () => sendCommerceEvent('product_clicked', {
+        ...context, ...item, recommendationRank: index + 1
+      }));
     } else {
       card.setAttribute('role', 'group');
       card.setAttribute('aria-label', item.name);
@@ -229,7 +257,7 @@ function add(text, role, options = {}) {
   const article = document.createElement('article');
   article.className = `bubble ${role}`;
   addTextWithLinks(article, text);
-  if (role === 'bot') addProductCards(article, options.links);
+  if (role === 'bot') addProductCards(article, options.links, options);
   messagesEl.appendChild(article);
   scrollToBottom();
   history.push({
@@ -386,7 +414,9 @@ async function ask(question) {
   if (!q || pending) return;
 
   const priorHistory = history.slice(-10);
+  const isFirstQuestion = !history.some((item) => item.role === 'user');
   add(q, 'user');
+  if (isFirstQuestion) sendCommerceEvent('chat_started');
   input.value = '';
   autoResize();
   setPending(true);
@@ -408,6 +438,12 @@ async function ask(question) {
       intent: data.intent,
       domain: data.domain,
       responseType: data.responseSource || data.route
+    });
+    (Array.isArray(data.links) ? data.links : []).slice(0, 3).forEach((item, index) => {
+      const product = normalizeProduct(item, index);
+      if (product) sendCommerceEvent('product_recommended', {
+        route: data.route, intent: data.intent, ...product, recommendationRank: index + 1
+      });
     });
     setSuggestions(data.suggestions);
   } catch (error) {
@@ -442,6 +478,7 @@ document.getElementById('minimize').addEventListener('click', () => {
 window.addEventListener('message', (event) => {
   if (event.source !== window.parent || (parentOrigin && event.origin !== parentOrigin) || !event.data) return;
   if (event.data.type === 'vitalis-chat-focus') {
+    sendCommerceEvent('chat_open');
     setTimeout(() => input.focus(), 80);
   }
   if (event.data.type === 'vitalis-chat-state') {
@@ -451,6 +488,11 @@ window.addEventListener('message', (event) => {
       else stateReady = true;
     }
     if (event.data.restoreFailed) restoreNotice.hidden = false;
+  }
+  if (event.data.type === 'vitalis-chat-attribution' &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(event.data.attributionId || '')) {
+    attributionId = event.data.attributionId;
+    pendingCommerceEvents.splice(0).forEach(([eventType, details]) => sendCommerceEvent(eventType, details));
   }
 });
 

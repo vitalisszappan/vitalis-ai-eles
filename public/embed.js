@@ -6,6 +6,23 @@
   const base = current && current.src ? new URL(current.src).origin : window.location.origin;
   const STORAGE_KEY = 'vitalis-chat-state/v2';
   const STATE_TTL_MS = 24 * 60 * 60 * 1000;
+  const attributionReady = new Promise((resolve) => {
+    const script = document.createElement('script');
+    script.src = `${base}/attribution-lifecycle.js`;
+    script.async = true;
+    script.onload = () => {
+      try {
+        resolve(window.VitalisAttributionLifecycle.createLifecycle({
+          storage: window.localStorage,
+          crypto: window.crypto,
+          eventTarget: window,
+          BroadcastChannel: window.BroadcastChannel
+        }));
+      } catch (_) { resolve(null); }
+    };
+    script.onerror = () => resolve(null);
+    document.head.appendChild(script);
+  });
   let chatOpen = false;
   let startupStateResult = null;
 
@@ -233,7 +250,12 @@
     if (event.data.type === 'vitalis-chat-state-ready') {
       const restored = startupStateResult || readState();
       startupStateResult = null;
-      frame.contentWindow.postMessage({ type: 'vitalis-chat-state', ...restored }, base);
+      attributionReady.then((lifecycle) => {
+        frame.contentWindow.postMessage({ type: 'vitalis-chat-state', ...restored }, base);
+        if (lifecycle) frame.contentWindow.postMessage({
+          type: 'vitalis-chat-attribution', attributionId: lifecycle.get().attributionId
+        }, base);
+      });
     }
     if (event.data.type === 'vitalis-chat-state-save') saveState(event.data.state);
     if (event.data.type === 'vitalis-chat-state-clear') {

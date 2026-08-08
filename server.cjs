@@ -38,6 +38,9 @@ const CONVERSATION_LOG = path.join(
   'conversations.jsonl'
 );
 
+const COMMERCE_EVENT_LOG = process.env.COMMERCE_EVENT_LOG || path.join(LOG_DIR, 'commerce-events.jsonl');
+const ORDER_PROOF_LOG = process.env.ORDER_PROOF_LOG || path.join(LOG_DIR, 'order-proofs-poc.jsonl');
+
 const KNOWLEDGE_GAP_LOG = path.join(
   LOG_DIR,
   'knowledge-gaps.jsonl'
@@ -52,6 +55,14 @@ const { STATUSES: KNOWLEDGE_TASK_STATUSES, taskFromConversation, mergeTasks, sor
 const { DRAFT_TYPES, GENERATION_STATUSES, SAFETY_STATUSES, contentHash, generateKnowledgeDraft, validateDraft, buildKnowledgeExport } = require('./engine/knowledge-drafts.cjs');
 const { STATUSES: KNOWLEDGE_CLUSTER_STATUSES, clusterKnowledgeTasks } = require('./engine/knowledge-clusters.cjs');
 const { resolveAdministrativeIntent } = require('./engine/admin-intents.cjs');
+const {
+  validateEvent: validateCommerceEvent,
+  createLocalPocEventStore,
+  createRateLimiter,
+  parseAllowedOrigins
+} = require('./engine/commerce-events.cjs');
+const { DEFAULT_CLOCK_DRIFT_MS, validateOrderProof, createLocalPocProofStore, processOrderProof } = require('./engine/order-proof.cjs');
+const { verifyUnasOrder } = require('./engine/unas-order-verifier.cjs');
 
 function readCanonicalProductStatuses() {
   try {
@@ -137,6 +148,25 @@ for (const dir of [
     }
   );
 }
+
+const commerceEventStore = createLocalPocEventStore(COMMERCE_EVENT_LOG);
+const orderProofStore = createLocalPocProofStore(ORDER_PROOF_LOG);
+const allowCommerceEvent = createRateLimiter({
+  limit: Number(process.env.COMMERCE_EVENT_RATE_LIMIT) || 60,
+  windowMs: 60_000
+});
+const allowOrderProof = createRateLimiter({
+  limit: Number(process.env.ORDER_PROOF_RATE_LIMIT) || 20,
+  windowMs: 60_000
+});
+const orderProofClockDriftMs = Number.isFinite(Number(process.env.ORDER_PROOF_CLOCK_DRIFT_MS))
+  ? Number(process.env.ORDER_PROOF_CLOCK_DRIFT_MS) : DEFAULT_CLOCK_DRIFT_MS;
+const configuredCommerceOrigins = parseAllowedOrigins([
+  'https://www.vitalis-szappan.hu',
+  'https://vitalis-szappan.hu',
+  process.env.RENDER_EXTERNAL_URL,
+  process.env.COMMERCE_ALLOWED_ORIGINS
+].filter(Boolean).join(','));
 
 /* =========================================================
    VÁLASZMOTOR
@@ -1930,6 +1960,67 @@ function parseBody(
   );
 }
 
+function commerceOriginAllowed(req) {
+  const origin = String(req.headers.origin || '').trim();
+  if (!origin) return false;
+  let normalized;
+  try { normalized = new URL(origin).origin; } catch { return false; }
+  if (configuredCommerceOrigins.has(normalized)) return true;
+  const forwardedProtocol = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
+  const protocol = forwardedProtocol || (req.socket.encrypted ? 'https' : 'http');
+  const ownOrigin = `${protocol}://${req.headers.host || ''}`;
+  return normalized === ownOrigin;
+}
+
+async function handleCommerceEvent(req, res) {
+  if (!commerceOriginAllowed(req)) return sendJson(res, 403, { ok: false, error: 'origin_not_allowed' });
+  if (!/^application\/json(?:;|$)/i.test(String(req.headers['content-type'] || ''))) {
+    return sendJson(res, 415, { ok: false, error: 'content_type_required' });
+  }
+  const declaredLength = Number(req.headers['content-length']);
+  if (Number.isFinite(declaredLength) && declaredLength > 4096) {
+    return sendJson(res, 413, { ok: false, error: 'payload_too_large' });
+  }
+  const rateKey = `${req.socket.remoteAddress || 'unknown'}:${req.headers.origin}`;
+  if (!allowCommerceEvent(rateKey)) return sendJson(res, 429, { ok: false, error: 'rate_limited' });
+
+  let parsed;
+  try { parsed = JSON.parse((await parseBody(req, 4096)) || '{}'); }
+  catch { return sendJson(res, 400, { ok: false, error: 'invalid_json' }); }
+  const validation = validateCommerceEvent(parsed);
+  if (!validation.ok) return sendJson(res, 400, { ok: false, error: validation.error });
+  const stored = commerceEventStore.append(validation.event);
+  return sendJson(res, stored.duplicate ? 200 : 201, {
+    ok: true,
+    eventId: validation.event.event_id,
+    duplicate: stored.duplicate
+  });
+}
+
+async function handleOrderProof(req, res) {
+  if (!commerceOriginAllowed(req)) return sendJson(res, 403, { ok: false, error: 'origin_not_allowed' });
+  if (!/^application\/json(?:;|$)/i.test(String(req.headers['content-type'] || ''))) return sendJson(res, 415, { ok: false, error: 'content_type_required' });
+  const declaredLength = Number(req.headers['content-length']);
+  if (Number.isFinite(declaredLength) && declaredLength > 2048) return sendJson(res, 413, { ok: false, error: 'payload_too_large' });
+  const rateKey = `${req.socket.remoteAddress || 'unknown'}:${req.headers.origin}:order-proof`;
+  if (!allowOrderProof(rateKey)) return sendJson(res, 429, { ok: false, error: 'rate_limited' });
+  let parsed;
+  try { parsed = JSON.parse((await parseBody(req, 2048)) || '{}'); }
+  catch (error) {
+    const tooLarge = /nagy/i.test(String(error?.message));
+    return sendJson(res, tooLarge ? 413 : 400, { ok: false, error: tooLarge ? 'payload_too_large' : 'invalid_json' });
+  }
+  const validation = validateOrderProof(parsed, { clockDriftMs: orderProofClockDriftMs });
+  if (!validation.ok) return sendJson(res, 400, { ok: false, error: validation.error });
+  const result = await processOrderProof(validation.proof, {
+    eventLogPath: COMMERCE_EVENT_LOG,
+    proofStore: orderProofStore,
+    verifyOrder: (orderKey) => verifyUnasOrder(orderKey)
+  });
+  const status = result.ok ? (result.duplicate ? 200 : 201) : (result.error === 'unas_verification_failed' ? 502 : 400);
+  return sendJson(res, status, result);
+}
+
 /* =========================================================
    CHAT
 ========================================================= */
@@ -3110,6 +3201,18 @@ function handleStatus(
       unasConfigured:
         unasConfigured(),
 
+      commerceEventStorage: {
+        kind: commerceEventStore.kind,
+        productionDurable: commerceEventStore.productionDurable,
+        idempotencyScope: commerceEventStore.idempotencyScope
+      },
+
+      orderProofStorage: {
+        kind: orderProofStore.kind,
+        productionDurable: orderProofStore.productionDurable,
+        idempotencyScope: orderProofStore.idempotencyScope
+      },
+
       ...unasSyncCoordinator.status()
     }
   );
@@ -3127,6 +3230,16 @@ const staticFiles = {
 
     type:
       'text/javascript; charset=utf-8'
+  },
+
+  '/attribution-lifecycle.js': {
+    file: 'attribution-lifecycle.js',
+    type: 'text/javascript; charset=utf-8'
+  },
+
+  '/unas-order-bridge.js': {
+    file: 'unas-order-bridge.js',
+    type: 'text/javascript; charset=utf-8'
   },
 
   '/widget.js': {
@@ -3226,6 +3339,17 @@ const server =
         /* -------------------------
            CHAT
         ------------------------- */
+
+        if (req.method === 'POST' && url.pathname === '/api/commerce/event') {
+          await handleCommerceEvent(req, res);
+          return;
+        }
+
+        if (url.pathname === '/api/commerce/order-proof') {
+          if (req.method !== 'POST') return sendJson(res, 405, { ok: false, error: 'method_not_allowed' });
+          await handleOrderProof(req, res);
+          return;
+        }
 
         if (
           req.method ===
