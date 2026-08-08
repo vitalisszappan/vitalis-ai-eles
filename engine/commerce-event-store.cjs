@@ -10,6 +10,7 @@ function parseRows(response) {
   if (!Array.isArray(rows)) throw new Error('invalid_commerce_event_store_response');
   return rows;
 }
+function parseCount(response) { const value=String(response?.headers?.['content-range']||'').split('/').pop(); const count=Number(value); if(!Number.isInteger(count)||count<0)throw new Error('invalid_commerce_event_count'); return count; }
 
 function createSupabaseCommerceEventStore(options = {}) {
   const request = options.request;
@@ -44,6 +45,15 @@ function createSupabaseCommerceEventStore(options = {}) {
       const safeLimit = Number.isInteger(limit) && limit > 0 && limit <= 5000 ? limit : 1000;
       const response = await request({ pathname: `/rest/v1/${TABLE}?select=event_id&order=received_at.desc&limit=${safeLimit}`, operation: 'commerce_recent_event_ids', table: TABLE });
       return parseRows(response).map((row) => row.event_id);
+    },
+    async getHealthSnapshot(sinceIso) {
+      const since=encodeURIComponent(sinceIso),countHeaders={Prefer:'count=exact',Range:'0-0'};
+      const [all,clicked,latest]=await Promise.all([
+        request({method:'HEAD',pathname:`/rest/v1/${TABLE}?select=event_id&received_at=gte.${since}`,headers:countHeaders,operation:'commerce_health_event_count',table:TABLE}),
+        request({method:'HEAD',pathname:`/rest/v1/${TABLE}?select=event_id&event_type=eq.product_clicked&received_at=gte.${since}`,headers:countHeaders,operation:'commerce_health_clicked_count',table:TABLE}),
+        request({pathname:`/rest/v1/${TABLE}?select=received_at&order=received_at.desc&limit=1`,operation:'commerce_health_latest_event',table:TABLE})
+      ]);
+      return {eventCount:parseCount(all),productClickedCount:parseCount(clicked),lastSuccessfulEventAt:parseRows(latest)[0]?.received_at||null};
     }
   };
 }
@@ -57,12 +67,13 @@ function createLocalCommerceEventStore(filePath) {
     async findAttribution(attributionId, beforeIso) { return local.findAttribution(attributionId, beforeIso); },
     async findProductClickedByAttribution(attributionId, beforeIso) { return local.findProductClickedByAttribution(attributionId, beforeIso); },
     async loadRecentEventIds(limit) { return local.loadRecentEventIds(limit); }
+    ,async getHealthSnapshot(sinceIso) { const rows=local.findAttribution ? (()=>{try{return require('node:fs').readFileSync(filePath,'utf8').split(/\r?\n/).filter(Boolean).map(JSON.parse);}catch{return [];}})() : []; const recent=rows.filter(row=>row.received_at>=sinceIso); return {eventCount:recent.length,productClickedCount:recent.filter(row=>row.event_type==='product_clicked').length,lastSuccessfulEventAt:rows.map(row=>row.received_at).filter(Boolean).sort().at(-1)||null}; }
   };
 }
 
 function createUnavailableProductionStore() {
   const unavailable = async () => { throw new Error('production_commerce_event_store_unavailable'); };
-  return { kind: 'unavailable', productionDurable: false, idempotencyScope: 'none', insertEvent: unavailable, hasEventId: unavailable, findAttribution: unavailable, findProductClickedByAttribution: unavailable, loadRecentEventIds: unavailable };
+  return { kind: 'unavailable', productionDurable: false, idempotencyScope: 'none', insertEvent: unavailable, hasEventId: unavailable, findAttribution: unavailable, findProductClickedByAttribution: unavailable, loadRecentEventIds: unavailable, getHealthSnapshot: unavailable };
 }
 
 function createCommerceEventStore(options = {}) {

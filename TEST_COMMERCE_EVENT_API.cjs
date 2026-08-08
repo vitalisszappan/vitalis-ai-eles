@@ -55,6 +55,10 @@ async function main() {
     assert.equal(status.body.commerceEventStorage.kind, 'local_poc_jsonl');
     assert.equal(status.body.commerceEventStorage.productionDurable, false);
     assert.equal(status.body.commerceEventStorage.idempotencyScope, 'available_local_file');
+    assert.equal(status.body.commerceHealth.eventStore.available, true);
+    assert.equal(status.body.commerceHealth.proofStore.available, true);
+    assert.equal(status.body.commerceHealth.windowHours, 24);
+    assert.equal(JSON.stringify(status.body.commerceHealth).match(/attributionId|orderKey|sku|chatSession/i), null);
     const event = {
       eventId: crypto.randomUUID(), attributionId: crypto.randomUUID(), chatSessionId: crypto.randomUUID(),
       eventType: 'chat_started', route: null, intent: null, canonicalProductId: null,

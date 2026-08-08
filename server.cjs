@@ -63,6 +63,7 @@ const {
 const { createCommerceEventStore } = require('./engine/commerce-event-store.cjs');
 const { DEFAULT_CLOCK_DRIFT_MS, validateOrderProof, processOrderProof } = require('./engine/order-proof.cjs');
 const { createOrderProofStore } = require('./engine/order-proof-store.cjs');
+const { createCommerceHealthTracker, buildCommerceHealth } = require('./engine/commerce-health.cjs');
 const { verifyUnasOrder } = require('./engine/unas-order-verifier.cjs');
 
 function readCanonicalProductStatuses() {
@@ -159,6 +160,7 @@ const orderProofStore = createOrderProofStore({
   supabaseConfigured: supabaseConfigured(), productionRuntime,
   request: supabaseRequest, filePath: ORDER_PROOF_LOG
 });
+const commerceHealthTracker = createCommerceHealthTracker();
 const allowCommerceEvent = createRateLimiter({
   limit: Number(process.env.COMMERCE_EVENT_RATE_LIMIT) || 60,
   windowMs: 60_000
@@ -947,7 +949,10 @@ function supabaseRequest({
                     status,
 
                     body:
-                      responseBody
+                      responseBody,
+
+                    headers:
+                      response.headers
                   });
 
                   return;
@@ -2000,6 +2005,7 @@ async function handleCommerceEvent(req, res) {
   let stored;
   try { stored = await commerceEventStore.insertEvent(validation.event); }
   catch (error) {
+    commerceHealthTracker.recordFailure('commerce_event_store_unavailable');
     logSafeTechnicalError('Commerce event storage failed.', error, { operation: 'commerce_event_insert', table: 'commerce_events' });
     return sendJson(res, 503, { ok: false, error: 'commerce_event_store_unavailable' });
   }
@@ -2041,7 +2047,10 @@ async function handleOrderProof(req, res) {
   });
   const status = result.ok ? (result.duplicate ? 200 : 201)
     : (result.error === 'commerce_event_store_unavailable' ? 503 : (result.error === 'unas_verification_failed' ? 502 : 400));
-  if (!result.ok) console.warn('[order-proof] rejected', JSON.stringify({ status, error: result.error || 'proof_failed', originPresent: true, contentTypeJson: true }));
+  if (!result.ok) {
+    commerceHealthTracker.recordFailure(result.error);
+    console.warn('[order-proof] rejected', JSON.stringify({ status, error: result.error || 'proof_failed', originPresent: true, contentTypeJson: true }));
+  }
   return sendJson(res, status, result);
 }
 
@@ -3182,10 +3191,11 @@ const unasSyncCoordinator = createUnasSyncCoordinator({
   apiConfigured: unasConfigured
 });
 
-function handleStatus(
+async function handleStatus(
   res
 ) {
 
+  const commerceHealth = await buildCommerceHealth({ eventStore: commerceEventStore, proofStore: orderProofStore, tracker: commerceHealthTracker });
   sendJson(
     res,
     200,
@@ -3236,6 +3246,8 @@ function handleStatus(
         productionDurable: orderProofStore.productionDurable,
         idempotencyScope: orderProofStore.idempotencyScope
       },
+
+      commerceHealth,
 
       ...unasSyncCoordinator.status()
     }
@@ -3614,7 +3626,7 @@ const server =
           '/api/status'
         ) {
 
-          handleStatus(
+          await handleStatus(
             res
           );
 

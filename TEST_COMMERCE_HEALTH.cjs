@@ -1,0 +1,14 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {createCommerceHealthTracker,buildCommerceHealth,WINDOW_MS}=require('./engine/commerce-health.cjs');
+(async()=>{let now=Date.parse('2026-08-08T16:00:00Z');const tracker=createCommerceHealthTracker({now:()=>now});
+ tracker.recordFailure('attribution_not_found');tracker.recordFailure('product_clicked_not_found');tracker.recordFailure('commerce_event_store_unavailable');tracker.recordFailure('ignored_error');
+ const eventStore={kind:'supabase',productionDurable:true,getHealthSnapshot:async()=>({eventCount:12,productClickedCount:3,lastSuccessfulEventAt:'2026-08-08T15:59:00.000Z'})};
+ const proofStore={kind:'supabase',productionDurable:true,getHealthSnapshot:async()=>({verifiedProofCount:2,lastVerifiedProofAt:'2026-08-08T15:58:00.000Z'})};
+ const health=await buildCommerceHealth({eventStore,proofStore,tracker,now:()=>now});
+ assert.equal(health.level,'ERROR');assert.equal(health.supabaseAuthoritative,true);assert.equal(health.productionDurable,true);assert.deepEqual(health.last24Hours,{commerceEvents:12,productClicked:3,verifiedProofs:2,attributionNotFound:1,productClickedNotFound:1,storageErrors:1});
+ assert.equal(JSON.stringify(health).match(/attributionId|orderKey|sku|session|customer|email/i),null);
+ now+=WINDOW_MS+1;assert.deepEqual(tracker.snapshot(),{attributionNotFound:0,productClickedNotFound:0,storageErrors:0});
+ const unavailable=await buildCommerceHealth({eventStore:{...eventStore,getHealthSnapshot:async()=>{throw Error('down')}},proofStore,tracker,now:()=>now});assert.equal(unavailable.level,'ERROR');assert.equal(unavailable.eventStore.available,false);
+ console.log('Commerce production health aggregation es privacy: OK');
+})().catch(error=>{console.error(error);process.exitCode=1});
