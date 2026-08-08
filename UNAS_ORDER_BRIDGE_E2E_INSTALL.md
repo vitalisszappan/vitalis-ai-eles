@@ -1,6 +1,6 @@
-# UNAS Browser → Order Bridge E2E telepítési csomag
+# UNAS Browser → Order Bridge E2E telepítési és rollback csomag
 
-Előkészített, de nem telepített PoC. A helyi/Render fájltárolás nem production persistence. Production gate: Supabase-tárolás és adatbázis `UNIQUE(schema_version, attribution_id, order_key)` constraint.
+Az integráció production E2E bizonyítása 2026-08-08-án sikeresen lezárult. Az authoritative storage Supabase; a JSONL adapter kizárólag local/test fallback. A végleges bizonyítási jegyzőkönyv: `BROWSER_ORDER_BRIDGE_POC_COMPLETE.md`.
 
 ## Konfiguráció és sorrend
 
@@ -26,4 +26,4 @@ Először tiltsd le/távolítsd el az `order_send` indító snippetet, majd a br
 - Ellenőrizd, hogy az `order_send` bridge egyszer fut, és csak `orderKey`, `attributionId`, `schemaVersion`, `timestamp` mezőt küld.
 - Első válasz: `ok:true, verified:true, duplicate:false`; ismétlés: `ok:true, verified:true, duplicate:true`, második rekord nélkül.
 - Ellenőrizd szerveroldalon az Order ID-t és legalább egy egyező SKU-t.
-- Ne értelmezd a tesztet revenue attributionként vagy production bizonyítékként.
+- Ne értelmezd a tesztet revenue attributionként; a bizonyított scope kizárólag a Browser → Order technikai korreláció.
