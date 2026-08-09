@@ -1,0 +1,11 @@
+'use strict';
+const assert=require('node:assert/strict'),crypto=require('node:crypto'),fs=require('node:fs'),http=require('node:http'),os=require('node:os'),path=require('node:path'),{spawn}=require('node:child_process');
+const PORT=3414,ROOT=__dirname,dir=fs.mkdtempSync(path.join(os.tmpdir(),'vitalis-outcome-api-')),token='outcome-admin-test';
+function request(pathname,headers={}){return new Promise((resolve,reject)=>{const req=http.request({hostname:'127.0.0.1',port:PORT,path:pathname,headers},res=>{let body='';res.on('data',c=>body+=c);res.on('end',()=>resolve({status:res.statusCode,body:body?JSON.parse(body):{}}));});req.on('error',reject);req.end();});}
+(async()=>{const outcomeLog=path.join(dir,'outcomes.jsonl'),outcomeId=crypto.randomUUID(),attributionId=crypto.randomUUID();fs.writeFileSync(outcomeLog,JSON.stringify({outcome_id:outcomeId,schema_version:1,attribution_id:attributionId,order_key:'99212-API',order_id:'ORDER-API',outcome_type:'verified_order',matched_skus:['SKU-1'],clicked_skus:['SKU-1'],conversation_session_ids:[],recommendation_evidence:[],click_evidence:[{eventId:crypto.randomUUID(),sku:'SKU-1'}],verified_at:new Date().toISOString(),source:'unas_server_verified'})+'\n');
+ const child=spawn(process.execPath,['server.cjs'],{cwd:ROOT,env:{...process.env,PORT:String(PORT),HOST:'127.0.0.1',ADMIN_TOKEN:token,SUPABASE_URL:'',SUPABASE_SERVICE_ROLE_KEY:'',UNAS_SYNC_INTERVAL_MS:'0',COMMERCE_OUTCOME_LOG:outcomeLog},stdio:'ignore'});
+ try{for(let i=0;i<50;i++){try{if((await request('/api/status')).status===200)break;}catch{}await new Promise(r=>setTimeout(r,100));}
+  assert.equal((await request('/api/admin/commerce/outcomes')).status,401);assert.equal((await request(`/api/admin/commerce/outcomes?token=${token}`)).status,401);
+  const response=await request('/api/admin/commerce/outcomes',{'X-Admin-Token':token});assert.equal(response.status,200);assert.equal(response.body.items.length,1);assert.equal(response.body.items[0].learningSignal.signalType,'recommendation_converted');assert.equal(JSON.stringify(response.body).match(/email|revenue|price/i),null);
+ }finally{child.kill('SIGTERM');await new Promise(r=>setTimeout(r,200));fs.rmSync(dir,{recursive:true,force:true});}console.log('Commerce outcome admin API auth es privacy: OK');
+})().catch(error=>{console.error(error);process.exitCode=1});

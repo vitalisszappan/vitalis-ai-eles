@@ -40,6 +40,7 @@ const CONVERSATION_LOG = path.join(
 
 const COMMERCE_EVENT_LOG = process.env.COMMERCE_EVENT_LOG || path.join(LOG_DIR, 'commerce-events.jsonl');
 const ORDER_PROOF_LOG = process.env.ORDER_PROOF_LOG || path.join(LOG_DIR, 'order-proofs-poc.jsonl');
+const COMMERCE_OUTCOME_LOG = process.env.COMMERCE_OUTCOME_LOG || path.join(LOG_DIR, 'commerce-outcomes-poc.jsonl');
 
 const KNOWLEDGE_GAP_LOG = path.join(
   LOG_DIR,
@@ -63,6 +64,8 @@ const {
 const { createCommerceEventStore } = require('./engine/commerce-event-store.cjs');
 const { DEFAULT_CLOCK_DRIFT_MS, validateOrderProof, processOrderProof } = require('./engine/order-proof.cjs');
 const { createOrderProofStore } = require('./engine/order-proof-store.cjs');
+const { createCommerceOutcomeStore } = require('./engine/commerce-outcome-store.cjs');
+const { learningSignalFromOutcome } = require('./engine/commerce-learning-signals.cjs');
 const { createCommerceHealthTracker, buildCommerceHealth } = require('./engine/commerce-health.cjs');
 const { verifyUnasOrder } = require('./engine/unas-order-verifier.cjs');
 const { validatePreflightOrderKey, preflightUnasOrder } = require('./engine/unas-revenue-preflight.cjs');
@@ -160,6 +163,10 @@ const commerceEventStore = createCommerceEventStore({
 const orderProofStore = createOrderProofStore({
   supabaseConfigured: supabaseConfigured(), productionRuntime,
   request: supabaseRequest, filePath: ORDER_PROOF_LOG
+});
+const commerceOutcomeStore = createCommerceOutcomeStore({
+  supabaseConfigured: supabaseConfigured(), productionRuntime,
+  request: supabaseRequest, filePath: COMMERCE_OUTCOME_LOG
 });
 const commerceHealthTracker = createCommerceHealthTracker();
 const allowCommerceEvent = createRateLimiter({
@@ -2048,15 +2055,30 @@ async function handleOrderProof(req, res) {
   const result = await processOrderProof(validation.proof, {
     eventStore: commerceEventStore,
     proofStore: orderProofStore,
+    outcomeStore: commerceOutcomeStore,
     verifyOrder: (orderKey) => verifyUnasOrder(orderKey)
   });
   const status = result.ok ? (result.duplicate ? 200 : 201)
-    : (result.error === 'commerce_event_store_unavailable' ? 503 : (result.error === 'unas_verification_failed' ? 502 : 400));
+    : (['commerce_event_store_unavailable','commerce_outcome_storage_failed'].includes(result.error) ? 503 : (result.error === 'unas_verification_failed' ? 502 : 400));
   if (!result.ok) {
     commerceHealthTracker.recordFailure(result.error);
     console.warn('[order-proof] rejected', JSON.stringify({ status, error: result.error || 'proof_failed', originPresent: true, contentTypeJson: true }));
   }
   return sendJson(res, status, result);
+}
+
+async function handleAdminCommerceOutcomes(req, res, url) {
+  if (!authorizeAdmin(req, res, url, { allowQueryToken: false })) return;
+  const limit = Math.min(Math.max(Number(url.searchParams.get('limit')) || 100, 1), 500);
+  try {
+    const outcomes = await commerceOutcomeStore.listOutcomes(limit);
+    return sendJson(res, 200, { ok: true, storage: commerceOutcomeStore.kind, items: outcomes.map((outcome) => ({
+      ...outcome, learningSignal: learningSignalFromOutcome(outcome), duplicate: false
+    })) });
+  } catch (error) {
+    logSafeTechnicalError('Commerce outcome listing failed.', error, { operation: 'commerce_outcome_list', table: 'commerce_outcomes' });
+    return sendJson(res, 503, { ok: false, error: 'commerce_outcome_store_unavailable' });
+  }
 }
 
 /* =========================================================
@@ -3273,6 +3295,12 @@ async function handleStatus(
         idempotencyScope: orderProofStore.idempotencyScope
       },
 
+      commerceOutcomeStorage: {
+        kind: commerceOutcomeStore.kind,
+        productionDurable: commerceOutcomeStore.productionDurable,
+        idempotencyScope: commerceOutcomeStore.idempotencyScope
+      },
+
       commerceHealth,
 
       ...unasSyncCoordinator.status()
@@ -3395,6 +3423,12 @@ const server =
 
           res.end();
 
+          return;
+        }
+
+        if (url.pathname === '/api/admin/commerce/outcomes') {
+          if (req.method !== 'GET') return sendJson(res, 405, { ok: false, error: 'method_not_allowed' });
+          await handleAdminCommerceOutcomes(req, res, url);
           return;
         }
 

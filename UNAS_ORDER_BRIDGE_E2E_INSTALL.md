@@ -1,29 +1,34 @@
-# UNAS Browser → Order Bridge E2E telepítési és rollback csomag
+# UNAS Browser → Order Bridge — telepítési és rollback csomag
 
-Az integráció production E2E bizonyítása 2026-08-08-án sikeresen lezárult. Az authoritative storage Supabase; a JSONL adapter kizárólag local/test fallback. A végleges bizonyítási jegyzőkönyv: `BROWSER_ORDER_BRIDGE_POC_COMPLETE.md`.
+Ez a jelenleg aktív, sikeres E2E rendelésben bizonyított konfiguráció. Aktív: Vitalis Attribution Lifecycle, Vitalis UNAS Order Bridge és Vitalis Order Bridge Runner. A két régi E2E TEST ScriptTag inaktív; az aktív telepítést ne bontsd vissza.
 
-## Konfiguráció és sorrend
+## Pontos script-konfiguráció és sorrend
 
-Az UNAS adminban külső JavaScriptként, `defer` betöltéssel add meg a Vitalis backend HTTPS URL-jeit. Az `attribution-lifecycle.js` a termékoldalon, kosárban, checkoutban és `order_send` oldalon fusson. Az `unas-order-bridge.js` és a `VitalisUnasOrderBridge.runOrderBridge()` hívás kizárólag az `order_send` oldalon fusson.
+Az UNAS admin külső JavaScript/script-oldal funkciójában HTTPS URL-lel, `defer` betöltéssel:
 
-1. `https://<VITALIS_BACKEND>/attribution-lifecycle.js`
-2. meglévő Vitalis embed/widget script
-3. csak `order_send`: `https://<VITALIS_BACKEND>/unas-order-bridge.js`
-4. csak `order_send`: `VitalisUnasOrderBridge.runOrderBridge()`
+1. Termékoldal, kosár, checkout és `order_send`: `https://<VITALIS_BACKEND>/attribution-lifecycle.js`
+2. Azokon az oldalakon, ahol a chatnak meg kell jelennie: a meglévő Vitalis embed/widget script, a lifecycle után.
+3. Kizárólag `order_send`: `https://<VITALIS_BACKEND>/unas-order-bridge.js`, a lifecycle után.
+4. Kizárólag `order_send`: a body-end runner `DOMContentLoaded` után hívja a `VitalisUnasOrderBridge.runOrderBridge()` függvényt, így a deferred lifecycle és bridge már inicializálódott.
 
-Az endpoint allowlistjének tartalmaznia kell a tényleges webshop origint. Ebben a körben Render environment változó nem módosítható.
+Más oldalon a bridge scriptet és az indító hívást ne add meg. Az endpoint origin allowlistjének tartalmaznia kell a tényleges webshop origint; Render environment változót ebben a körben nem módosítottunk.
 
-## Rollback
+## Rollback / eltávolítás
 
-Először tiltsd le/távolítsd el az `order_send` indító snippetet, majd a bridge ScriptTaget. A teljes PoC visszavonásakor utána távolítsd el a lifecycle és widget ScriptTaget is. A proof logot őrizd meg auditálásra.
+1. Tiltsd le az `order_send` indító hívást.
+2. Távolítsd el az `order_send` bridge ScriptTaget.
+3. Teljes visszavonáskor ezután távolítsd el a lifecycle és a kapcsolódó widget ScriptTaget.
+4. A meglévő proof/event adatot ne töröld automatikusan; megőrzéséről külön adatkezelési döntés szükséges.
 
-## Első valódi rendelés checklist
+## Első valódi tesztrendelés checklist
 
-- Minden automatikus teszt PASS; a backend HTTPS-en elérhető, az origin engedélyezett és a szerveroldali UNAS API-kulcs működik.
-- Privát böngészőben: chat megnyitása → ajánlás → termékkártya-kattintás.
-- Ellenőrizd, hogy a `product_clicked` esemény ugyanahhoz az `attributionId`-hoz és a kattintott SKU-hoz került be.
-- Pontosan ezt a terméket tedd kosárba, majd fejezd be az elkülöníthető tesztrendelést.
-- Ellenőrizd, hogy az `order_send` bridge egyszer fut, és csak `orderKey`, `attributionId`, `schemaVersion`, `timestamp` mezőt küld.
-- Első válasz: `ok:true, verified:true, duplicate:false`; ismétlés: `ok:true, verified:true, duplicate:true`, második rekord nélkül.
-- Ellenőrizd szerveroldalon az Order ID-t és legalább egy egyező SKU-t.
-- Ne értelmezd a tesztet revenue attributionként; a bizonyított scope kizárólag a Browser → Order technikai korreláció.
+- Minden automatikus teszt PASS, a backend HTTPS-en elérhető, a webshop origin engedélyezett, a szerveroldali UNAS hitelesítés működik.
+- Privát böngészőben: chat megnyitás → ajánlás → termékkártya-kattintás.
+- Ellenőrizd, hogy azonos `attributionId` alatt létrejött a SKU-t tartalmazó `product_clicked` esemény.
+- Pontosan a kattintott SKU-jú terméket tedd kosárba, és fejezd be az elkülöníthető tesztrendelést.
+- A böngésző Network paneljén ellenőrizd: az `order_send` callback egyszer fut, és pontosan a négy engedélyezett mezőt küldi.
+- Első válasz elvárt eredménye: `{ "ok": true, "verified": true, "duplicate": false }`.
+- Kontrollált ismétlés elvárt eredménye: `{ "ok": true, "verified": true, "duplicate": true }`, második proof rekord nélkül.
+- Szerveroldalon igazold az UNAS Order Key egyezést, a nem üres Order ID-t és legalább egy, a kattintott SKU-val egyező valódi rendelési tételt.
+- A rendelés után távolítsd el vagy tiltsd le a teszt bridge-et, ha nem maradhat aktív.
+- Az eredményt kizárólag Browser → Order technikai korrelációként dokumentáld; revenue attributionként ne.

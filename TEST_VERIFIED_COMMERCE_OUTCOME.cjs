@@ -1,0 +1,25 @@
+'use strict';
+const assert=require('node:assert/strict'),crypto=require('node:crypto'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
+const {processOrderProof}=require('./engine/order-proof.cjs');
+const {buildVerifiedOrderOutcome}=require('./engine/commerce-outcomes.cjs');
+const {createLocalCommerceOutcomeStore}=require('./engine/commerce-outcome-store.cjs');
+const {learningSignalFromOutcome}=require('./engine/commerce-learning-signals.cjs');
+(async()=>{const dir=fs.mkdtempSync(path.join(os.tmpdir(),'vitalis-outcome-'));try{
+ const attributionId=crypto.randomUUID(),sessionId=crypto.randomUUID(),timestamp=new Date().toISOString();
+ const events=[{event_id:crypto.randomUUID(),attribution_id:attributionId,chat_session_id:sessionId,event_type:'product_recommended',sku:'SKU-1',canonical_product_id:'soap',recommendation_type:'primary',recommendation_rank:1,occurred_at:new Date(Date.now()-2000).toISOString()},{event_id:crypto.randomUUID(),attribution_id:attributionId,chat_session_id:sessionId,event_type:'product_clicked',sku:'SKU-1',canonical_product_id:'soap',occurred_at:new Date(Date.now()-1000).toISOString()}];
+ const proof={schemaVersion:1,attributionId,orderKey:'99212-OUTCOME',timestamp};
+ const proofRows=new Map(),proofStore={get:key=>proofRows.get(key)||null,append:row=>{if(proofRows.has(row.idempotency_key))return{duplicate:true,row:proofRows.get(row.idempotency_key)};proofRows.set(row.idempotency_key,row);return{duplicate:false,row};}};
+ const outcomePath=path.join(dir,'outcomes.jsonl');fs.writeFileSync(outcomePath,'malformed\n');const outcomeStore=createLocalCommerceOutcomeStore(outcomePath);
+ const verifyOrder=async key=>({ok:true,order:{key,id:'ORDER-ID-1',items:[{id:'product-1',sku:'OTHER'},{id:'product-2',sku:'SKU-1'}],Customer:{Email:'pii@example.invalid'},revenue:999}});
+ const options={proofStore,outcomeStore,findEvents:()=>events,verifyOrder};
+ assert.deepEqual(await processOrderProof(proof,options),{ok:true,verified:true,duplicate:false});assert.deepEqual(await processOrderProof(proof,options),{ok:true,verified:true,duplicate:true});
+ const outcomes=await outcomeStore.listOutcomes();assert.equal(outcomes.length,1);const outcome=outcomes[0];assert.deepEqual(outcome.matchedSkus,['SKU-1']);assert.deepEqual(outcome.conversationSessionIds,[sessionId]);assert.equal(outcome.recommendationEvidence.length,1);assert.equal(outcome.clickEvidence.length,1);
+ const serialized=JSON.stringify(outcome);for(const forbidden of ['pii@example.invalid','Customer','revenue','price'])assert.equal(serialized.includes(forbidden),false);
+ const signal=learningSignalFromOutcome(outcome);assert.equal(signal.signalType,'recommendation_converted');assert.equal(signal.autonomousActionAllowed,false);assert.equal(learningSignalFromOutcome({...outcome,outcomeType:'unverified'}),null);assert.equal(learningSignalFromOutcome({...outcome,matchedSkus:[]}),null);
+ const noSession=buildVerifiedOrderOutcome({proof:{...proof,orderKey:'NO-SESSION'},order:{id:'2',items:[{id:'1',sku:'SKU-1'}]},priorEvents:events.map(e=>({...e,chat_session_id:null})),clickedEvents:[{...events[1],chat_session_id:null}]});assert.deepEqual(noSession.conversationSessionIds,[]);
+ assert.equal((await processOrderProof({...proof,orderKey:'MISMATCH'},{...options,verifyOrder:async key=>({ok:true,order:{key,id:'2',items:[{id:'1',sku:'NOPE'}]}})})).verified,false);assert.equal((await outcomeStore.listOutcomes()).length,1);
+ assert.equal((await processOrderProof({...proof,orderKey:'UNVERIFIED'},{...options,verifyOrder:async()=>({ok:false})})).error,'unas_verification_failed');assert.equal((await outcomeStore.listOutcomes()).length,1);
+ const failure=await processOrderProof({...proof,orderKey:'STORAGE-FAIL'},{...options,outcomeStore:{insertOutcome:async()=>{throw Error('disk')}},verifyOrder:async key=>({ok:true,order:{key,id:'3',items:[{id:'1',sku:'SKU-1'}]}})});assert.equal(failure.error,'commerce_outcome_storage_failed');
+ assert.throws(()=>buildVerifiedOrderOutcome({proof,order:{id:'1',items:[{sku:'NOPE'}]},priorEvents:events,clickedEvents:[events[1]]}),/verified_sku_match_required/);
+ console.log('Verified commerce outcome es learning signal regresszio: OK');
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}})().catch(error=>{console.error(error);process.exitCode=1});

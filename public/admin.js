@@ -1525,7 +1525,8 @@ async function refreshEverything() {
   try {
     await Promise.all([
       loadConversations(),
-      loadKnowledgeGaps()
+      loadKnowledgeGaps(),
+      loadCommerceOutcomes()
     ]);
 
   } finally {
@@ -1722,3 +1723,24 @@ if (
 refreshEverything();
 loadKnowledgeTasks();
 loadKnowledgeClusters();
+
+const loadCommerceOutcomesButton=document.getElementById('loadCommerceOutcomesButton');
+const commerceOutcomeStatus=document.getElementById('commerceOutcomeStatus');
+const commerceOutcomeList=document.getElementById('commerceOutcomeList');
+async function loadCommerceOutcomes(){
+  if(!commerceOutcomeStatus||!commerceOutcomeList)return;
+  commerceOutcomeStatus.textContent='Az igazolt eredmények betöltése...';
+  try{
+    const data=await adminFetch('/api/admin/commerce/outcomes?limit=100');
+    const items=data.items||[];commerceOutcomeList.innerHTML='';
+    if(!items.length)commerceOutcomeList.innerHTML='<div class="empty-state">Még nincs verified_order outcome.</div>';
+    for(const outcome of items){
+      const card=document.createElement('article');card.className='commerce-outcome-card';
+      card.innerHTML=`<h3>${escapeHtml(outcome.orderKey||'Ismeretlen rendelés')}</h3><div><strong>Outcome:</strong> ${escapeHtml(outcome.outcomeType||'')}</div><div><strong>Attribution:</strong> ${escapeHtml(outcome.attributionId||'')}</div><div><strong>Order ID:</strong> ${escapeHtml(outcome.orderId||'')}</div><div><strong>Egyező SKU:</strong> ${escapeHtml((outcome.matchedSkus||[]).join(', '))}</div><div><strong>Session:</strong> ${escapeHtml((outcome.conversationSessionIds||[]).join(', ')||'Nem ismert')}</div><div><strong>Ajánlási evidence:</strong> ${escapeHtml(String((outcome.recommendationEvidence||[]).length))} esemény</div><div><strong>Click evidence:</strong> ${escapeHtml(String((outcome.clickEvidence||[]).length))} esemény</div><div><strong>Learning signal:</strong> ${escapeHtml(outcome.learningSignal?.signalType||'Nincs')}</div><div><strong>Verified:</strong> ${escapeHtml(outcome.verifiedAt||'')}</div><div><strong>Idempotencia:</strong> ${escapeHtml(outcome.outcomeId||'')}</div>`;
+      commerceOutcomeList.appendChild(card);
+    }
+    commerceOutcomeStatus.textContent=`${items.length} igazolt outcome betöltve (${data.storage}).`;
+  }catch(error){commerceOutcomeStatus.textContent=`Outcome betöltési hiba: ${error.message}`;}
+}
+if(loadCommerceOutcomesButton)loadCommerceOutcomesButton.addEventListener('click',loadCommerceOutcomes);
+loadCommerceOutcomes();

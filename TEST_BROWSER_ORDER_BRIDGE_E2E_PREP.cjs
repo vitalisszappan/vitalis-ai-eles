@@ -16,6 +16,7 @@ const missing={...base}; delete missing.timestamp; assert.equal(valid(missing).e
 const xml='<Orders><Order><Key>ORDER-123</Key><Id>42</Id><Date>2026.08.08</Date><Items><Item><Id>1</Id><Sku>OTHER</Sku></Item><Item><Id>2</Id><Sku>SKU-CLICKED</Sku></Item></Items><Customer><Email>secret@example.com</Email></Customer></Order></Orders>';
 const orders=parseOrderResponse(xml); assert.equal(orders.length,1); assert.equal(JSON.stringify(orders).includes('secret@example.com'),false); assert.throws(()=>parseOrderResponse('<Orders>'));
 assert.equal(parseOrderResponse('<Orders><Order/><Order/></Orders>').length,2); assert.match(orderRequestXml('ORDER-123'),/<Key>ORDER-123<\/Key>/);
+for(const unsafe of ['<xml>','A&B','x'.repeat(101)]) assert.throws(()=>orderRequestXml(unsafe),/invalid_order_key/);
 (async()=>{const dir=fs.mkdtempSync(path.join(os.tmpdir(),'vitalis-proof-')); try {
  const store=createLocalPocProofStore(path.join(dir,'proofs.jsonl')), clicked=[{attribution_id:attributionId,event_type:'product_clicked',sku:'SKU-CLICKED',occurred_at:new Date(now-1000).toISOString()}];
  const opts={proofStore:store,findEvents:()=>clicked,verifyOrder:async key=>({ok:true,order:{...orders[0],key}})};
@@ -25,9 +26,11 @@ assert.equal(parseOrderResponse('<Orders><Order/><Order/></Orders>').length,2); 
  const proof=s=>({...valid(base).proof,orderKey:`ORDER-${s}`});
  assert.equal((await processOrderProof(proof('NONE'),{...opts,findEvents:()=>[]})).error,'attribution_not_found');
  assert.equal((await processOrderProof(proof('NOCLICK'),{...opts,findEvents:()=>[{event_type:'chat_started',occurred_at:new Date(now-1000).toISOString()}]})).error,'product_clicked_not_found');
+ assert.equal((await processOrderProof(proof('FUTURECLICK'),{...opts,findEvents:()=>clicked,eventStore:{findAttribution:async()=>clicked,findProductClickedByAttribution:async()=>[{...clicked[0],occurred_at:new Date(now+1000).toISOString()}]}})).error,'product_clicked_not_found');
  assert.equal((await processOrderProof(proof('MISMATCH'),{...opts,verifyOrder:async()=>({ok:true,order:{...orders[0],key:'ORDER-MISMATCH',items:[{id:'1',sku:'NOPE'}]}})})).verified,false);
  assert.equal((await processOrderProof(proof('BADKEY'),{...opts,verifyOrder:async()=>({ok:true,order:{...orders[0],key:'OTHER'}})})).verified,false);
  assert.equal((await processOrderProof(proof('NOID'),{...opts,verifyOrder:async()=>({ok:true,order:{...orders[0],key:'ORDER-NOID',id:null}})})).verified,false);
+ assert.equal((await processOrderProof(proof('FEE'),{...opts,findEvents:()=>[{...clicked[0],sku:'shipping-cost'}],verifyOrder:async()=>({ok:true,order:{key:'ORDER-FEE',id:'42',items:[{id:'shipping-cost',sku:'shipping-cost'}]}})})).verified,false);
  assert.equal((await processOrderProof(proof('FAIL'),{...opts,verifyOrder:async()=>{throw Error('down')}})).error,'unas_verification_failed');
  assert.equal((await processOrderProof(proof('DISK'),{...opts,proofStore:{get:()=>null,append:()=>{throw Error('disk')}},verifyOrder:async()=>({ok:true,order:{...orders[0],key:'ORDER-DISK'}})})).error,'proof_storage_failed');
  assert.equal((await verifyUnasOrder('ORDER-123',{loginFn:async()=>({token:'t'}),requestFn:async()=>({body:xml})})).ok,true);

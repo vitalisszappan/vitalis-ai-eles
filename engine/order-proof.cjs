@@ -2,6 +2,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { buildVerifiedOrderOutcome } = require('./commerce-outcomes.cjs');
 
 const SCHEMA_VERSION = 1;
 const DEFAULT_CLOCK_DRIFT_MS = 5 * 60 * 1000;
@@ -50,6 +51,12 @@ function createLocalPocProofStore(filePath) {
 
 function idempotencyKey(proof) { return `${proof.schemaVersion}:${proof.attributionId}:${proof.orderKey}`; }
 
+function isRealProductItem(item) {
+  if (!item?.id || !item?.sku) return false;
+  const id = String(item.id).toLowerCase();
+  return id !== 'shipping-cost' && id !== 'handel-cost' && id !== 'discount-amount' && id !== 'discount-percent';
+}
+
 async function processOrderProof(proof, options) {
   const key = idempotencyKey(proof);
   let existing;
@@ -57,7 +64,8 @@ async function processOrderProof(proof, options) {
     ? await options.proofStore.findProof({ schemaVersion: proof.schemaVersion, attributionId: proof.attributionId, orderKey: proof.orderKey })
     : await options.proofStore.get(key); }
   catch (_) { return { ok: false, verified: false, duplicate: false, error: 'proof_storage_failed' }; }
-  if (existing) return { ok: true, verified: existing.verified === true, duplicate: true };
+  if (existing && (!options.outcomeStore || existing.verified !== true)) return { ok: true, verified: existing.verified === true, duplicate: true };
+  const proofDuplicate = Boolean(existing);
   const proofTime = Date.parse(proof.timestamp);
   let events;
   try {
@@ -73,19 +81,33 @@ async function processOrderProof(proof, options) {
       ? await options.eventStore.findProductClickedByAttribution(proof.attributionId, proof.timestamp)
       : priorEvents.filter((row) => row.event_type === 'product_clicked' && row.sku);
   } catch (_) { return { ok: false, verified: false, duplicate: false, error: 'commerce_event_store_unavailable' }; }
+  clickedEvents = clickedEvents
+    .filter((row) => Number.isFinite(Date.parse(row.occurred_at)) && Date.parse(row.occurred_at) <= proofTime)
+    .filter((row) => row.sku);
   const clickedSkus = new Set(clickedEvents.map((row) => String(row.sku)).filter(Boolean));
   if (!clickedSkus.size) return { ok: false, verified: false, duplicate: false, error: 'product_clicked_not_found' };
   let verification;
   try { verification = await options.verifyOrder(proof.orderKey); } catch (_) { return { ok: false, verified: false, duplicate: false, error: 'unas_verification_failed' }; }
   if (!verification?.ok) return { ok: false, verified: false, duplicate: false, error: 'unas_verification_failed' };
   const order = verification.order;
-  const orderSkus = Array.isArray(order?.items) ? order.items.filter((item) => item?.id && item?.sku).map((item) => String(item.sku)) : [];
+  const productItems = Array.isArray(order?.items) ? order.items.filter(isRealProductItem) : [];
+  const orderSkus = productItems.map((item) => String(item.sku));
   const verified = order?.key === proof.orderKey && Boolean(order?.id) && orderSkus.length > 0 && orderSkus.some((sku) => clickedSkus.has(sku));
   const row = { schema_version: proof.schemaVersion, attribution_id: proof.attributionId, order_key: proof.orderKey, verified, verified_at: verified ? new Date().toISOString() : null };
-  let stored;
-  try { stored = options.proofStore.insertProof ? await options.proofStore.insertProof(row) : await options.proofStore.append({ ...row, idempotency_key: key }); }
-  catch (_) { return { ok: false, verified: false, duplicate: false, error: 'proof_storage_failed' }; }
-  return { ok: true, verified: stored?.duplicate ? stored.row?.verified === true : verified, duplicate: stored?.duplicate === true };
+  let stored = { duplicate: proofDuplicate, row: existing };
+  if (!proofDuplicate) {
+    try { stored = options.proofStore.insertProof ? await options.proofStore.insertProof(row) : await options.proofStore.append({ ...row, idempotency_key: key }); }
+    catch (_) { return { ok: false, verified: false, duplicate: false, error: 'proof_storage_failed' }; }
+  }
+  const effectiveVerified = stored?.duplicate ? stored.row?.verified === true : verified;
+  if (effectiveVerified && options.outcomeStore) {
+    let outcome;
+    try {
+      outcome = buildVerifiedOrderOutcome({ proof, order: { ...order, items: productItems }, priorEvents, clickedEvents, verifiedAt: row.verified_at || existing?.verified_at || new Date().toISOString() });
+      await options.outcomeStore.insertOutcome(outcome);
+    } catch (_) { return { ok: false, verified: true, duplicate: proofDuplicate || stored?.duplicate === true, error: 'commerce_outcome_storage_failed' }; }
+  }
+  return { ok: true, verified: effectiveVerified, duplicate: proofDuplicate || stored?.duplicate === true };
 }
 
-module.exports = { SCHEMA_VERSION, DEFAULT_CLOCK_DRIFT_MS, ALLOWED_FIELDS, validateOrderProof, createLocalPocProofStore, idempotencyKey, processOrderProof, readEvents };
+module.exports = { SCHEMA_VERSION, DEFAULT_CLOCK_DRIFT_MS, ALLOWED_FIELDS, validateOrderProof, createLocalPocProofStore, idempotencyKey, isRealProductItem, processOrderProof, readEvents };

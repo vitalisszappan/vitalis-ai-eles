@@ -3,7 +3,9 @@
 const { XMLParser, XMLValidator } = require('fast-xml-parser');
 const { loginToUnas, unasRequest } = require('../unas-sync.cjs');
 
-const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_', parseTagValue: false, trimValues: true });
+const MAX_XML_BYTES = 2 * 1024 * 1024;
+const SAFE_ORDER_KEY_RE = /^[A-Za-z0-9._:\/-]+$/;
+const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_', parseTagValue: false, trimValues: true, processEntities: false });
 
 function scalar(value) {
   if (value == null) return null;
@@ -15,12 +17,17 @@ function scalar(value) {
 function asArray(value) { return value == null ? [] : (Array.isArray(value) ? value : [value]); }
 
 function orderRequestXml(orderKey) {
+  if (typeof orderKey !== 'string' || !orderKey.length || orderKey.length > 100 || !SAFE_ORDER_KEY_RE.test(orderKey)) {
+    throw new Error('invalid_order_key');
+  }
   return `<?xml version="1.0" encoding="UTF-8"?>\n<Params><Key>${orderKey}</Key></Params>`;
 }
 
 function parseOrderResponse(xml) {
-  if (XMLValidator.validate(String(xml || '')) !== true) throw new Error('invalid_unas_xml');
-  const parsed = parser.parse(String(xml));
+  const source = String(xml || '');
+  if (Buffer.byteLength(source, 'utf8') > MAX_XML_BYTES) throw new Error('unas_response_too_large');
+  if (XMLValidator.validate(source) !== true) throw new Error('invalid_unas_xml');
+  const parsed = parser.parse(source);
   const orders = asArray(parsed?.Orders?.Order);
   return orders.map((order) => ({
     key: scalar(order?.Key),
@@ -40,4 +47,4 @@ async function verifyUnasOrder(orderKey, options = {}) {
   return { ok: true, order: orders[0] };
 }
 
-module.exports = { orderRequestXml, parseOrderResponse, verifyUnasOrder };
+module.exports = { MAX_XML_BYTES, orderRequestXml, parseOrderResponse, verifyUnasOrder };

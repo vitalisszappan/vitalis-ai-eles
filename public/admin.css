@@ -400,6 +400,9 @@ button:disabled {
 .cluster-badges { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0; color:var(--muted); font-size:13px; }
 .cluster-detail { display:grid; gap:10px; margin-top:14px; }
 .cluster-tasks article { padding:8px 0; border-bottom:1px solid var(--border); }
+.commerce-outcome-list { display:grid; gap:14px; margin-bottom:32px; }
+.commerce-outcome-card { background:var(--panel); border:1px solid var(--border); border-left:6px solid #2f7d5b; border-radius:var(--radius); padding:18px; display:grid; gap:7px; overflow-wrap:anywhere; }
+.commerce-outcome-card h3 { margin:0 0 6px; }
 
 /* =========================================================
    MOBIL / TABLET
