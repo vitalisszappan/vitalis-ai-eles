@@ -51,6 +51,13 @@ function createLocalPocProofStore(filePath) {
 
 function idempotencyKey(proof) { return `${proof.schemaVersion}:${proof.attributionId}:${proof.orderKey}`; }
 
+function orderProofHttpStatus(result) {
+  if (result?.ok) return result.duplicate ? 200 : 201;
+  if (result?.error === 'commerce_event_store_unavailable' || result?.error === 'commerce_outcome_storage_failed') return 503;
+  if (result?.error === 'unas_verification_failed') return 502;
+  return 400;
+}
+
 function isRealProductItem(item) {
   if (!item?.id || !item?.sku) return false;
   const id = String(item.id).toLowerCase();
@@ -105,9 +112,12 @@ async function processOrderProof(proof, options) {
     try {
       outcome = buildVerifiedOrderOutcome({ proof, order: { ...order, items: productItems }, priorEvents, clickedEvents, verifiedAt: row.verified_at || existing?.verified_at || new Date().toISOString() });
       await options.outcomeStore.insertOutcome(outcome);
-    } catch (_) { return { ok: false, verified: true, duplicate: proofDuplicate || stored?.duplicate === true, error: 'commerce_outcome_storage_failed' }; }
+    } catch (error) {
+      try { if (typeof options.onOutcomeError === 'function') options.onOutcomeError(error); } catch (_) {}
+      return { ok: false, verified: true, duplicate: proofDuplicate || stored?.duplicate === true, error: 'commerce_outcome_storage_failed' };
+    }
   }
   return { ok: true, verified: effectiveVerified, duplicate: proofDuplicate || stored?.duplicate === true };
 }
 
-module.exports = { SCHEMA_VERSION, DEFAULT_CLOCK_DRIFT_MS, ALLOWED_FIELDS, validateOrderProof, createLocalPocProofStore, idempotencyKey, isRealProductItem, processOrderProof, readEvents };
+module.exports = { SCHEMA_VERSION, DEFAULT_CLOCK_DRIFT_MS, ALLOWED_FIELDS, validateOrderProof, createLocalPocProofStore, idempotencyKey, orderProofHttpStatus, isRealProductItem, processOrderProof, readEvents };

@@ -62,10 +62,11 @@ const {
   parseAllowedOrigins
 } = require('./engine/commerce-events.cjs');
 const { createCommerceEventStore } = require('./engine/commerce-event-store.cjs');
-const { DEFAULT_CLOCK_DRIFT_MS, validateOrderProof, processOrderProof } = require('./engine/order-proof.cjs');
+const { DEFAULT_CLOCK_DRIFT_MS, validateOrderProof, processOrderProof, orderProofHttpStatus } = require('./engine/order-proof.cjs');
 const { createOrderProofStore } = require('./engine/order-proof-store.cjs');
 const { createCommerceOutcomeStore } = require('./engine/commerce-outcome-store.cjs');
 const { learningSignalFromOutcome } = require('./engine/commerce-learning-signals.cjs');
+const { formatSanitizedRequestError } = require('./engine/technical-error-sanitizer.cjs');
 const { createCommerceHealthTracker, buildCommerceHealth } = require('./engine/commerce-health.cjs');
 const { verifyUnasOrder } = require('./engine/unas-order-verifier.cjs');
 const { validatePreflightOrderKey, preflightUnasOrder } = require('./engine/unas-revenue-preflight.cjs');
@@ -1068,6 +1069,10 @@ function getSupabaseMissingColumn(error) {
 }
 
 function logSafeTechnicalError(label, error, metadata = {}) {
+  if (metadata.includeRequestContext) {
+    console.error(`${label} ${formatSanitizedRequestError(error, metadata)}`);
+    return;
+  }
   const parts = [
     label,
     `operation=${metadata.operation || error?.operation || 'unknown'}`,
@@ -1079,7 +1084,7 @@ function logSafeTechnicalError(label, error, metadata = {}) {
   const missingColumn = getSupabaseMissingColumn(error);
   if (missingColumn) parts.push(`missing_column=${missingColumn}`);
   console.error(parts.join(' '));
-  if (error?.stack) {
+  if (error?.stack && metadata.includeStack !== false) {
     const safeStack = String(error.stack)
       .split(/\r?\n/)
       .filter(line => !/SUPABASE|ADMIN_TOKEN|X-Admin-Token|session_id|question|answer/i.test(line))
@@ -2056,10 +2061,12 @@ async function handleOrderProof(req, res) {
     eventStore: commerceEventStore,
     proofStore: orderProofStore,
     outcomeStore: commerceOutcomeStore,
+    onOutcomeError: (error) => logSafeTechnicalError('Commerce outcome persistence failed.', error, {
+      operation: 'commerce_outcome_insert', table: 'commerce_outcomes', includeRequestContext: true, includeStack: false
+    }),
     verifyOrder: (orderKey) => verifyUnasOrder(orderKey)
   });
-  const status = result.ok ? (result.duplicate ? 200 : 201)
-    : (['commerce_event_store_unavailable','commerce_outcome_storage_failed'].includes(result.error) ? 503 : (result.error === 'unas_verification_failed' ? 502 : 400));
+  const status = orderProofHttpStatus(result);
   if (!result.ok) {
     commerceHealthTracker.recordFailure(result.error);
     console.warn('[order-proof] rejected', JSON.stringify({ status, error: result.error || 'proof_failed', originPresent: true, contentTypeJson: true }));
