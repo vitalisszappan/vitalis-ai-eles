@@ -24,7 +24,9 @@ A `recommendation_converted` signal kizárólag tárolt `verified_order` outcome
 
 ## Persistence és idempotencia
 
-Az outcome determinisztikus ID-t kap az Order Key alapján, és a production tábla `UNIQUE(schema_version, order_key)` kényszert használ. A JSONL adapter LOCAL/POC ONLY. A production SQL-t kézzel kell futtatni: `SUPABASE_VERIFIED_COMMERCE_OUTCOMES.sql`.
+Az outcome determinisztikus ID-t kap az Order Key alapján, és a production tábla `UNIQUE(schema_version, order_key)` kényszert használ. A JSONL adapter LOCAL/POC ONLY.
+
+A `public.commerce_outcomes` tartós production persistence PRODUCTION PROVEN a Render runtime tényleges, `pupbsyzijirixcvbjbgp` refű Supabase projektjében. A lezáró evidence: Order Key `99212-636298`, attribution ID `4738e0e8-315a-435a-9a7c-cf025c3e8992`, outcome ID `6a59f8a4-0bea-5ea0-be36-b5e3e712a542`, UNAS Order ID `365099806`, outcome type `verified_order`, matched SKU `VEM02`. A korábban vizsgált másik Supabase projekt nem a Render production adatbázisa.
 
 ## Admin ellenőrzés
 
