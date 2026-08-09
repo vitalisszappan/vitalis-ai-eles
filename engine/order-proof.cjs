@@ -2,7 +2,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { buildVerifiedOrderOutcome } = require('./commerce-outcomes.cjs');
+const { buildVerifiedOrderOutcome, validateVerifiedOrderOutcome } = require('./commerce-outcomes.cjs');
 
 const SCHEMA_VERSION = 1;
 const DEFAULT_CLOCK_DRIFT_MS = 5 * 60 * 1000;
@@ -65,6 +65,12 @@ function isRealProductItem(item) {
 }
 
 async function processOrderProof(proof, options) {
+  const emitOutcomeDiagnostic = (phase, error, outcome) => {
+    const event = { phase, error: error || null, outcomeId: outcome?.outcomeId || null, attributionId: proof.attributionId,
+      orderKey: proof.orderKey, schemaVersion: proof.schemaVersion, timestamp: new Date().toISOString() };
+    try { if (typeof options.onOutcomeDiagnostic === 'function') options.onOutcomeDiagnostic(event); } catch (_) {}
+    try { if (error && typeof options.onOutcomeError === 'function') options.onOutcomeError(error); } catch (_) {}
+  };
   const key = idempotencyKey(proof);
   let existing;
   try { existing = options.proofStore.findProof
@@ -110,12 +116,17 @@ async function processOrderProof(proof, options) {
   if (effectiveVerified && options.outcomeStore) {
     let outcome;
     try {
-      outcome = buildVerifiedOrderOutcome({ proof, order: { ...order, items: productItems }, priorEvents, clickedEvents, verifiedAt: row.verified_at || existing?.verified_at || new Date().toISOString() });
-      await options.outcomeStore.insertOutcome(outcome);
+      const buildOutcome = options.buildOutcome || buildVerifiedOrderOutcome;
+      outcome = buildOutcome({ proof, order: { ...order, items: productItems }, priorEvents, clickedEvents, verifiedAt: row.verified_at || existing?.verified_at || new Date().toISOString() });
     } catch (error) {
-      try { if (typeof options.onOutcomeError === 'function') options.onOutcomeError(error); } catch (_) {}
+      emitOutcomeDiagnostic('outcome_build_failed', error, outcome);
       return { ok: false, verified: true, duplicate: proofDuplicate || stored?.duplicate === true, error: 'commerce_outcome_storage_failed' };
     }
+    try { validateVerifiedOrderOutcome(outcome); }
+    catch (error) { emitOutcomeDiagnostic('outcome_validation_failed', error, outcome);return { ok:false,verified:true,duplicate:proofDuplicate||stored?.duplicate===true,error:'commerce_outcome_storage_failed' }; }
+    try { await options.outcomeStore.insertOutcome(outcome); }
+    catch (error) { emitOutcomeDiagnostic(error?.outcomePhase==='outcome_mapping_failed'?'outcome_mapping_failed':'supabase_insert_failed',error,outcome);return { ok:false,verified:true,duplicate:proofDuplicate||stored?.duplicate===true,error:'commerce_outcome_storage_failed' }; }
+    emitOutcomeDiagnostic('supabase_insert_succeeded', null, outcome);
   }
   return { ok: true, verified: effectiveVerified, duplicate: proofDuplicate || stored?.duplicate === true };
 }

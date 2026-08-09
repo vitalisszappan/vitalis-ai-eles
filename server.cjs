@@ -66,7 +66,7 @@ const { DEFAULT_CLOCK_DRIFT_MS, validateOrderProof, processOrderProof, orderProo
 const { createOrderProofStore } = require('./engine/order-proof-store.cjs');
 const { createCommerceOutcomeStore } = require('./engine/commerce-outcome-store.cjs');
 const { learningSignalFromOutcome } = require('./engine/commerce-learning-signals.cjs');
-const { formatSanitizedRequestError } = require('./engine/technical-error-sanitizer.cjs');
+const { formatSanitizedRequestError, formatCommerceOutcomeDiagnostic } = require('./engine/technical-error-sanitizer.cjs');
 const { createCommerceHealthTracker, buildCommerceHealth } = require('./engine/commerce-health.cjs');
 const { verifyUnasOrder } = require('./engine/unas-order-verifier.cjs');
 const { validatePreflightOrderKey, preflightUnasOrder } = require('./engine/unas-revenue-preflight.cjs');
@@ -2061,9 +2061,10 @@ async function handleOrderProof(req, res) {
     eventStore: commerceEventStore,
     proofStore: orderProofStore,
     outcomeStore: commerceOutcomeStore,
-    onOutcomeError: (error) => logSafeTechnicalError('Commerce outcome persistence failed.', error, {
-      operation: 'commerce_outcome_insert', table: 'commerce_outcomes', includeRequestContext: true, includeStack: false
-    }),
+    onOutcomeDiagnostic: (event) => {
+      const line=`[commerce-outcome] ${formatCommerceOutcomeDiagnostic(event)}`;
+      if(event.phase==='supabase_insert_succeeded')console.info(line);else console.error(line);
+    },
     verifyOrder: (orderKey) => verifyUnasOrder(orderKey)
   });
   const status = orderProofHttpStatus(result);

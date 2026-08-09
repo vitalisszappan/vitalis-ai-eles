@@ -27,4 +27,11 @@ function formatSanitizedRequestError(error, metadata = {}) {
   return fields.filter(([, value]) => value !== '').map(([key, value, limit]) => `${key}=${sanitizeTechnicalErrorText(value, limit)}`).join(' ');
 }
 
-module.exports = { sanitizeTechnicalErrorText, formatSanitizedRequestError };
+function formatCommerceOutcomeDiagnostic(event = {}) {
+  const allowedPhases=new Set(['outcome_build_failed','outcome_validation_failed','outcome_mapping_failed','supabase_insert_failed','supabase_insert_succeeded']);
+  const fields=[['phase',allowedPhases.has(event.phase)?event.phase:'unknown',40],['outcomeId',event.outcomeId||'n/a',50],['attributionId',event.attributionId||'n/a',50],['orderKey',event.orderKey||'n/a',100],['schemaVersion',event.schemaVersion??'n/a',10],['timestamp',event.timestamp||'n/a',40]];
+  const base=fields.map(([key,value,limit])=>`${key}=${sanitizeTechnicalErrorText(value,limit)}`).join(' ');
+  return event.error?`${base} ${formatSanitizedRequestError(event.error,{operation:'commerce_outcome_insert',table:'commerce_outcomes'})}`:base;
+}
+
+module.exports = { sanitizeTechnicalErrorText, formatSanitizedRequestError, formatCommerceOutcomeDiagnostic };

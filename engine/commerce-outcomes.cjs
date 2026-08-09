@@ -5,6 +5,7 @@ const crypto = require('node:crypto');
 const SCHEMA_VERSION = 1;
 const OUTCOME_TYPE = 'verified_order';
 const SOURCE = 'unas_server_verified';
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function uniqueStrings(values) {
   return [...new Set((values || []).map((value) => String(value || '').trim()).filter(Boolean))];
@@ -47,4 +48,18 @@ function buildVerifiedOrderOutcome({ proof, order, priorEvents, clickedEvents, v
   };
 }
 
-module.exports = { SCHEMA_VERSION, OUTCOME_TYPE, SOURCE, deterministicOutcomeId, buildVerifiedOrderOutcome };
+function validateVerifiedOrderOutcome(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('invalid_outcome');
+  if (value.schemaVersion !== SCHEMA_VERSION) throw new Error('invalid_outcome_schema_version');
+  if (!UUID_RE.test(value.outcomeId || '')) throw new Error('invalid_outcome_id');
+  if (!UUID_RE.test(value.attributionId || '')) throw new Error('invalid_outcome_attribution_id');
+  if (typeof value.orderKey !== 'string' || !value.orderKey || value.orderKey.length > 100) throw new Error('invalid_outcome_order_key');
+  if (typeof value.orderId !== 'string' || !value.orderId || value.orderId.length > 100) throw new Error('invalid_outcome_order_id');
+  if (value.outcomeType !== OUTCOME_TYPE || value.source !== SOURCE) throw new Error('invalid_outcome_type');
+  if (!Array.isArray(value.matchedSkus) || !value.matchedSkus.length || !Array.isArray(value.clickedSkus) || !value.clickedSkus.length) throw new Error('invalid_outcome_skus');
+  for (const field of ['conversationSessionIds','recommendationEvidence','clickEvidence']) if (!Array.isArray(value[field])) throw new Error(`invalid_outcome_${field}`);
+  if (typeof value.verifiedAt !== 'string' || !Number.isFinite(Date.parse(value.verifiedAt))) throw new Error('invalid_outcome_verified_at');
+  return value;
+}
+
+module.exports = { SCHEMA_VERSION, OUTCOME_TYPE, SOURCE, deterministicOutcomeId, buildVerifiedOrderOutcome, validateVerifiedOrderOutcome };
