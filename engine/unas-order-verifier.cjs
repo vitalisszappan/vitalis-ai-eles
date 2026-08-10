@@ -4,7 +4,7 @@ const { XMLParser, XMLValidator } = require('fast-xml-parser');
 const { loginToUnas, unasRequest } = require('../unas-sync.cjs');
 
 const MAX_XML_BYTES = 2 * 1024 * 1024;
-const SAFE_ORDER_KEY_RE = /^[A-Za-z0-9._:\/-]+$/;
+const SAFE_ORDER_KEY_RE = /^\d+(?:-\d+)?$/;
 const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_', parseTagValue: false, trimValues: true, processEntities: false });
 
 function scalar(value) {
@@ -16,11 +16,15 @@ function scalar(value) {
 
 function asArray(value) { return value == null ? [] : (Array.isArray(value) ? value : [value]); }
 
-function orderRequestXml(orderKey) {
+function normalizeOrderLookupKey(orderKey) {
   if (typeof orderKey !== 'string' || !orderKey.length || orderKey.length > 100 || !SAFE_ORDER_KEY_RE.test(orderKey)) {
     throw new Error('invalid_order_key');
   }
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<Params><Key>${orderKey}</Key></Params>`;
+  return orderKey.includes('-') ? orderKey.slice(orderKey.lastIndexOf('-') + 1) : orderKey;
+}
+
+function orderRequestXml(orderKey) {
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<Params><Key>${normalizeOrderLookupKey(orderKey)}</Key></Params>`;
 }
 
 function parseOrderResponse(xml) {
@@ -47,4 +51,4 @@ async function verifyUnasOrder(orderKey, options = {}) {
   return { ok: true, order: orders[0] };
 }
 
-module.exports = { MAX_XML_BYTES, orderRequestXml, parseOrderResponse, verifyUnasOrder };
+module.exports = { MAX_XML_BYTES, normalizeOrderLookupKey, orderRequestXml, parseOrderResponse, verifyUnasOrder };

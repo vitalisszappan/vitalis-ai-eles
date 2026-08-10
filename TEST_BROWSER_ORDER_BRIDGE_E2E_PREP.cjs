@@ -18,8 +18,8 @@ const missing={...base}; delete missing.timestamp; assert.equal(valid(missing).e
 const allowTwice=createRateLimiter({limit:2,windowMs:60000,now:()=>now});assert.equal(allowTwice('proof-client'),true);assert.equal(allowTwice('proof-client'),true);assert.equal(allowTwice('proof-client'),false);
 const xml='<Orders><Order><Key>ORDER-123</Key><Id>42</Id><Date>2026.08.08</Date><Items><Item><Id>1</Id><Sku>OTHER</Sku></Item><Item><Id>2</Id><Sku>SKU-CLICKED</Sku></Item></Items><Customer><Email>secret@example.com</Email></Customer></Order></Orders>';
 const orders=parseOrderResponse(xml); assert.equal(orders.length,1); assert.equal(JSON.stringify(orders).includes('secret@example.com'),false); assert.throws(()=>parseOrderResponse('<Orders>'));
-assert.equal(parseOrderResponse('<Orders><Order/><Order/></Orders>').length,2); assert.match(orderRequestXml('ORDER-123'),/<Key>ORDER-123<\/Key>/);
-for(const unsafe of ['<xml>','A&B','x'.repeat(101)]) assert.throws(()=>orderRequestXml(unsafe),/invalid_order_key/);
+assert.equal(parseOrderResponse('<Orders><Order/><Order/></Orders>').length,2); assert.match(orderRequestXml('99212-636298'),/<Key>636298<\/Key>/); assert.match(orderRequestXml('636298'),/<Key>636298<\/Key>/);
+for(const unsafe of ['<xml>','A&B','-636298','99212-','99212--636298','1-2-3','x'.repeat(101)]) assert.throws(()=>orderRequestXml(unsafe),/invalid_order_key/);
 (async()=>{const dir=fs.mkdtempSync(path.join(os.tmpdir(),'vitalis-proof-')); try {
  const store=createLocalPocProofStore(path.join(dir,'proofs.jsonl')), clicked=[{attribution_id:attributionId,event_type:'product_clicked',sku:'SKU-CLICKED',occurred_at:new Date(now-1000).toISOString()}];
  const opts={proofStore:store,findEvents:()=>clicked,verifyOrder:async key=>({ok:true,order:{...orders[0],key}})};
@@ -39,8 +39,8 @@ for(const unsafe of ['<xml>','A&B','x'.repeat(101)]) assert.throws(()=>orderRequ
  assert.equal((await processOrderProof(proof('FAIL'),{...opts,verifyOrder:async()=>{throw Error('down')}})).error,'unas_verification_failed');
  assert.equal((await processOrderProof(proof('DISK'),{...opts,proofStore:{get:()=>null,append:()=>{throw Error('disk')}},verifyOrder:async()=>({ok:true,order:{...orders[0],key:'ORDER-DISK'}})})).error,'proof_storage_failed');
  assert.equal(orderProofHttpStatus({ok:false,error:'proof_storage_failed'}),503);
- assert.equal((await verifyUnasOrder('ORDER-123',{loginFn:async()=>({token:'t'}),requestFn:async()=>({body:xml})})).ok,true);
- assert.equal((await verifyUnasOrder('X',{loginFn:async()=>({token:'t'}),requestFn:async()=>({body:'<Orders><Order/><Order/></Orders>'})})).ok,false);
- await assert.rejects(verifyUnasOrder('X',{loginFn:async()=>({token:'t'}),requestFn:async()=>({body:'<Orders>'})}),/invalid_unas_xml/);
+ let requestBody='';const normalizedResponse='<Orders><Order><Key>99212-636298</Key><Id>42</Id><Items><Item><Id>1</Id><Sku>SKU-CLICKED</Sku></Item></Items></Order></Orders>';const normalized=await verifyUnasOrder('99212-636298',{loginFn:async()=>({token:'t'}),requestFn:async(call)=>{requestBody=call.body;return{body:normalizedResponse};}});assert.equal(normalized.ok,true);assert.equal(normalized.order.key,'99212-636298');assert.match(requestBody,/<Key>636298<\/Key>/);
+ assert.equal((await verifyUnasOrder('1',{loginFn:async()=>({token:'t'}),requestFn:async()=>({body:'<Orders><Order/><Order/></Orders>'})})).ok,false);
+ await assert.rejects(verifyUnasOrder('1',{loginFn:async()=>({token:'t'}),requestFn:async()=>({body:'<Orders>'})}),/invalid_unas_xml/);
  } finally {fs.rmSync(dir,{recursive:true,force:true});} console.log('Browser -> Order Bridge E2E prep regresszio: OK');
 })().catch(error=>{console.error(error);process.exitCode=1});

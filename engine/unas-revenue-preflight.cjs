@@ -5,7 +5,7 @@ const { loginToUnas, unasRequest } = require('../unas-sync.cjs');
 const { orderRequestXml } = require('./unas-order-verifier.cjs');
 
 const MAX_XML_BYTES = 2 * 1024 * 1024;
-const SAFE_ORDER_KEY_RE = /^[A-Za-z0-9._:\/-]+$/;
+const SAFE_ORDER_KEY_RE = /^\d+(?:-\d+)?$/;
 const parser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',

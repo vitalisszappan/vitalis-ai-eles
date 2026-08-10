@@ -67,7 +67,7 @@ async function stopServer(child) {
 
 async function main() {
   assert.equal(validatePreflightOrderKey('99212-962676'), true);
-  for (const invalid of ['', '<xml>', 'A&B', 'a\nb', 'x'.repeat(101)]) assert.equal(validatePreflightOrderKey(invalid), false);
+  for (const invalid of ['', '<xml>', 'A&B', 'a\nb', 'ORDER-123', '-636298', '99212-', '99212--636298', '1-2-3', 'x'.repeat(101)]) assert.equal(validatePreflightOrderKey(invalid), false);
 
   const evidence = parseRevenuePreflightResponse(fixture);
   assert.deepEqual(ORDER_FIELDS.map(([name]) => name), ['key', 'id', 'dateTime', 'status', 'statusId', 'statusType', 'currency', 'grossTotal']);
@@ -96,6 +96,8 @@ async function main() {
   });
   assert.equal(probed.fields[0].value, '99212-962676');
   assert.deepEqual(calls.map((call) => call.endpoint), ['getOrder']);
+  assert.match(calls[0].body, /<Key>962676<\/Key>/);
+  assert.equal(calls[0].body.includes('<Key>99212-962676</Key>'), false);
   assert.equal(calls.some((call) => /setOrder/i.test(call.endpoint)), false);
 
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'vitalis-unas-preflight-'));
