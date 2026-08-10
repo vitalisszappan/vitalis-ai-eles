@@ -69,6 +69,7 @@ const { learningSignalFromOutcome } = require('./engine/commerce-learning-signal
 const { formatSanitizedRequestError, formatCommerceOutcomeDiagnostic } = require('./engine/technical-error-sanitizer.cjs');
 const { createCommerceHealthTracker, buildCommerceHealth } = require('./engine/commerce-health.cjs');
 const { verifyUnasOrder } = require('./engine/unas-order-verifier.cjs');
+const { createPermissionPreflightHandler } = require('./engine/unas-permission-preflight.cjs');
 const { validatePreflightOrderKey, preflightUnasOrder } = require('./engine/unas-revenue-preflight.cjs');
 
 function readCanonicalProductStatuses() {
@@ -2622,6 +2623,13 @@ async function handleUnasRevenuePreflight(req, res, url) {
   }
 }
 
+const handleUnasPermissionPreflight = createPermissionPreflightHandler({
+  adminToken: ADMIN_TOKEN,
+  unasConfigured,
+  sendJson,
+  logger: (event) => console.info('[unas-permission-preflight]', JSON.stringify(event))
+});
+
 /* =========================================================
    UNAS TUDÁSSZINKRON
 ========================================================= */
@@ -3651,6 +3659,15 @@ const server =
             return;
           }
           await handleUnasRevenuePreflight(req, res, url);
+          return;
+        }
+
+        if (url.pathname === '/api/admin/unas/permission-preflight') {
+          if (req.method !== 'GET') {
+            sendJson(res, 405, { ok: false, error: 'method_not_allowed' });
+            return;
+          }
+          await handleUnasPermissionPreflight(req, res);
           return;
         }
 
