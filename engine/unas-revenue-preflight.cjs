@@ -47,6 +47,18 @@ function asArray(value) {
   return value == null ? [] : (Array.isArray(value) ? value : [value]);
 }
 
+const PREFLIGHT_STAGES = new Set(['login','getOrder_http','getOrder_empty','xml_parse','order_match','evidence_build']);
+function stagedError(stage, code, status = 502) {
+  const error = new Error(code);
+  error.preflightStage = PREFLIGHT_STAGES.has(stage) ? stage : 'evidence_build';
+  error.preflightStatus = Number.isInteger(Number(status)) ? Number(status) : 502;
+  error.preflightCode = String(code || 'unas_preflight_failed').slice(0, 80);
+  return error;
+}
+function toPreflightDiagnostic(error) {
+  return { operation:'unas_order_preflight', stage:PREFLIGHT_STAGES.has(error?.preflightStage)?error.preflightStage:'evidence_build', status:Number.isInteger(Number(error?.preflightStatus))?Number(error.preflightStatus):502, code:/^[a-z0-9_]{1,80}$/.test(String(error?.preflightCode||''))?error.preflightCode:'unas_preflight_failed' };
+}
+
 function validatePreflightOrderKey(value) {
   return typeof value === 'string' && value.length > 0 && value.length <= 100 && SAFE_ORDER_KEY_RE.test(value);
 }
@@ -70,11 +82,13 @@ function specialItemKind(item) {
 
 function parseRevenuePreflightResponse(xml) {
   const source = String(xml || '');
+  if (!source.trim()) throw stagedError('getOrder_empty', 'unas_empty_response');
   if (Buffer.byteLength(source, 'utf8') > MAX_XML_BYTES) throw new Error('unas_response_too_large');
-  if (XMLValidator.validate(source) !== true) throw new Error('invalid_unas_xml');
+  if (XMLValidator.validate(source) !== true) throw stagedError('xml_parse', 'invalid_unas_xml');
   const parsed = parser.parse(source);
   const orders = asArray(parsed?.Orders?.Order);
-  if (orders.length !== 1) throw new Error('order_count_invalid');
+  if (orders.length === 0) throw stagedError('getOrder_empty', 'order_not_returned');
+  if (orders.length !== 1) throw stagedError('order_match', 'order_count_invalid');
 
   const order = orders[0];
   const items = asArray(order?.Items?.Item).map((item, index) => ({
@@ -93,9 +107,17 @@ async function preflightUnasOrder(orderKey, options = {}) {
   if (!validatePreflightOrderKey(orderKey)) throw new Error('invalid_order_key');
   const loginFn = options.loginFn || loginToUnas;
   const requestFn = options.requestFn || unasRequest;
-  const login = await loginFn(options);
-  const response = await requestFn({ endpoint: 'getOrder', token: login.token, body: orderRequestXml(orderKey) });
-  return parseRevenuePreflightResponse(response.body);
+  let login;
+  try { login = await loginFn(options); } catch { throw stagedError('login', 'unas_login_failed'); }
+  let response;
+  try { response = await requestFn({ endpoint: 'getOrder', token: login.token, body: orderRequestXml(orderKey) }); }
+  catch (error) { const match=String(error?.message||'').match(/UNAS HTTP\s+(\d{3})/);throw stagedError('getOrder_http','unas_get_order_http_failed',error?.status||Number(match?.[1])||502); }
+  let evidence;
+  try { evidence = await (options.parseFn || parseRevenuePreflightResponse)(response?.body); }
+  catch (error) { if(error?.preflightStage)throw error;throw stagedError('evidence_build','unas_evidence_build_failed'); }
+  const returnedKey=evidence.fields.find((item)=>item.field==='key')?.value;
+  if(returnedKey!==orderKey)throw stagedError('order_match','unas_order_key_mismatch');
+  return evidence;
 }
 
 module.exports = {
@@ -104,5 +126,6 @@ module.exports = {
   ITEM_FIELDS,
   validatePreflightOrderKey,
   parseRevenuePreflightResponse,
-  preflightUnasOrder
+  preflightUnasOrder,
+  toPreflightDiagnostic
 };

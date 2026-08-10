@@ -70,7 +70,7 @@ const { formatSanitizedRequestError, formatCommerceOutcomeDiagnostic } = require
 const { createCommerceHealthTracker, buildCommerceHealth } = require('./engine/commerce-health.cjs');
 const { verifyUnasOrder } = require('./engine/unas-order-verifier.cjs');
 const { createPermissionPreflightHandler } = require('./engine/unas-permission-preflight.cjs');
-const { validatePreflightOrderKey, preflightUnasOrder } = require('./engine/unas-revenue-preflight.cjs');
+const { validatePreflightOrderKey, preflightUnasOrder, toPreflightDiagnostic } = require('./engine/unas-revenue-preflight.cjs');
 
 function readCanonicalProductStatuses() {
   try {
@@ -2617,8 +2617,9 @@ async function handleUnasRevenuePreflight(req, res, url) {
   try {
     const evidence = await preflightUnasOrder(orderKey);
     sendJson(res, 200, { ok: true, evidence });
-  } catch (_) {
+  } catch (error) {
     // The upstream error and raw XML may contain order data, so neither is logged nor returned.
+    console.info(JSON.stringify(toPreflightDiagnostic(error)));
     sendJson(res, 502, { ok: false, error: 'unas_preflight_failed' });
   }
 }

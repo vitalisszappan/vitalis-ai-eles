@@ -11,7 +11,8 @@ const {
   ITEM_FIELDS,
   validatePreflightOrderKey,
   parseRevenuePreflightResponse,
-  preflightUnasOrder
+  preflightUnasOrder,
+  toPreflightDiagnostic
 } = require('./engine/unas-revenue-preflight.cjs');
 
 const ROOT = __dirname;
@@ -99,6 +100,17 @@ async function main() {
   assert.match(calls[0].body, /<Key>962676<\/Key>/);
   assert.equal(calls[0].body.includes('<Key>99212-962676</Key>'), false);
   assert.equal(calls.some((call) => /setOrder/i.test(call.endpoint)), false);
+
+  const secret='SECRET-ORDER-XML-API-TOKEN';
+  const failures=[
+    ['login',()=>preflightUnasOrder('99212-962676',{loginFn:async()=>{throw Error(secret)}})],
+    ['getOrder_http',()=>preflightUnasOrder('99212-962676',{loginFn:async()=>({token:secret}),requestFn:async()=>{throw Error(`UNAS HTTP 400: <Error>${secret}</Error>`)}})],
+    ['getOrder_empty',()=>preflightUnasOrder('99212-962676',{loginFn:async()=>({token:secret}),requestFn:async()=>({body:''})})],
+    ['xml_parse',()=>preflightUnasOrder('99212-962676',{loginFn:async()=>({token:secret}),requestFn:async()=>({body:'<Orders>'})})],
+    ['order_match',()=>preflightUnasOrder('99212-962676',{loginFn:async()=>({token:secret}),requestFn:async()=>({body:'<Orders><Order/><Order/></Orders>'})})],
+    ['evidence_build',()=>preflightUnasOrder('99212-962676',{loginFn:async()=>({token:secret}),requestFn:async()=>({body:fixture}),parseFn:()=>{throw Error(secret)}})]
+  ];
+  for(const [stage,run] of failures){let caught;try{await run();}catch(error){caught=error;}const diagnostic=toPreflightDiagnostic(caught);assert.deepEqual(Object.keys(diagnostic),['operation','stage','status','code']);assert.equal(diagnostic.stage,stage);const logged=JSON.stringify(diagnostic);for(const forbidden of [secret,'<Error>','99212-962676','private@example.invalid'])assert.equal(logged.includes(forbidden),false);}
 
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'vitalis-unas-preflight-'));
   const eventLog = path.join(temp, 'events.jsonl');
