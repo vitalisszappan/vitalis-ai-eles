@@ -1956,7 +1956,7 @@ function parseBody(
             chunk;
 
           if (
-            body.length >
+            Buffer.byteLength(body, 'utf8') >
             limit
           ) {
 
@@ -2002,6 +2002,13 @@ function commerceOriginAllowed(req) {
   return normalized === ownOrigin;
 }
 
+function configuredCommerceOriginAllowed(req) {
+  const origin = String(req.headers.origin || '').trim();
+  if (!origin) return false;
+  try { return configuredCommerceOrigins.has(new URL(origin).origin); }
+  catch { return false; }
+}
+
 async function handleCommerceEvent(req, res) {
   if (!commerceOriginAllowed(req)) return sendJson(res, 403, { ok: false, error: 'origin_not_allowed' });
   if (!/^application\/json(?:;|$)/i.test(String(req.headers['content-type'] || ''))) {
@@ -2043,7 +2050,7 @@ async function handleOrderProof(req, res) {
     }));
     return sendJson(res, status, { ok: false, error });
   };
-  if (!commerceOriginAllowed(req)) return reject(403, 'origin_not_allowed');
+  if (!configuredCommerceOriginAllowed(req)) return reject(403, 'origin_not_allowed');
   if (!/^application\/json(?:;|$)/i.test(String(req.headers['content-type'] || ''))) return reject(415, 'content_type_required');
   const declaredLength = Number(req.headers['content-length']);
   if (Number.isFinite(declaredLength) && declaredLength > 2048) return reject(413, 'payload_too_large');
@@ -2060,11 +2067,6 @@ async function handleOrderProof(req, res) {
   const result = await processOrderProof(validation.proof, {
     eventStore: commerceEventStore,
     proofStore: orderProofStore,
-    outcomeStore: commerceOutcomeStore,
-    onOutcomeDiagnostic: (event) => {
-      const line=`[commerce-outcome] ${formatCommerceOutcomeDiagnostic(event)}`;
-      if(event.phase==='supabase_insert_succeeded')console.info(line);else console.error(line);
-    },
     verifyOrder: (orderKey) => verifyUnasOrder(orderKey)
   });
   const status = orderProofHttpStatus(result);

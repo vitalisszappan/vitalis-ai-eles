@@ -1,11 +1,13 @@
 'use strict';
 const assert=require('node:assert/strict'),crypto=require('node:crypto'),fs=require('node:fs'),os=require('node:os'),path=require('node:path');
-const {validateOrderProof,createLocalPocProofStore,processOrderProof}=require('./engine/order-proof.cjs');
+const {validateOrderProof,createLocalPocProofStore,processOrderProof,orderProofHttpStatus}=require('./engine/order-proof.cjs');
+const {createRateLimiter}=require('./engine/commerce-events.cjs');
 const {orderRequestXml,parseOrderResponse,verifyUnasOrder}=require('./engine/unas-order-verifier.cjs');
 const now=Date.parse('2026-08-08T12:00:00.000Z'), attributionId=crypto.randomUUID();
 const base={orderKey:'ORDER-123',attributionId,schemaVersion:1,timestamp:new Date(now).toISOString()};
 const valid=(value)=>validateOrderProof(value,{now:()=>now});
 assert.equal(valid(base).ok,true); assert.deepEqual(Object.keys(valid(base).proof).sort(),['attributionId','orderKey','schemaVersion','timestamp'].sort());
+assert.equal(valid({...base,schemaVersion:2}).error,'invalid_schema_version');
 for(const minutes of [4,-4]) assert.equal(valid({...base,timestamp:new Date(now+minutes*60000).toISOString()}).ok,true);
 for(const hours of [24,-24]) assert.equal(valid({...base,timestamp:new Date(now+hours*3600000).toISOString()}).ok,false);
 for(const field of ['sku','revenue','email']) assert.equal(valid({...base,[field]:'manipulated'}).error,'unknown_fields');
@@ -13,6 +15,7 @@ assert.equal(valid({...base,timestamp:'invalid'}).ok,false); assert.equal(valid(
 assert.equal(valid({...base,attributionId:'00000000-0000-1000-8000-000000000000'}).ok,false);
 for(const orderKey of ['', 'x'.repeat(101),'<xml>','A&B','a\nb']) assert.equal(valid({...base,orderKey}).ok,false);
 const missing={...base}; delete missing.timestamp; assert.equal(valid(missing).error,'missing_fields');
+const allowTwice=createRateLimiter({limit:2,windowMs:60000,now:()=>now});assert.equal(allowTwice('proof-client'),true);assert.equal(allowTwice('proof-client'),true);assert.equal(allowTwice('proof-client'),false);
 const xml='<Orders><Order><Key>ORDER-123</Key><Id>42</Id><Date>2026.08.08</Date><Items><Item><Id>1</Id><Sku>OTHER</Sku></Item><Item><Id>2</Id><Sku>SKU-CLICKED</Sku></Item></Items><Customer><Email>secret@example.com</Email></Customer></Order></Orders>';
 const orders=parseOrderResponse(xml); assert.equal(orders.length,1); assert.equal(JSON.stringify(orders).includes('secret@example.com'),false); assert.throws(()=>parseOrderResponse('<Orders>'));
 assert.equal(parseOrderResponse('<Orders><Order/><Order/></Orders>').length,2); assert.match(orderRequestXml('ORDER-123'),/<Key>ORDER-123<\/Key>/);
@@ -30,10 +33,14 @@ for(const unsafe of ['<xml>','A&B','x'.repeat(101)]) assert.throws(()=>orderRequ
  assert.equal((await processOrderProof(proof('MISMATCH'),{...opts,verifyOrder:async()=>({ok:true,order:{...orders[0],key:'ORDER-MISMATCH',items:[{id:'1',sku:'NOPE'}]}})})).verified,false);
  assert.equal((await processOrderProof(proof('BADKEY'),{...opts,verifyOrder:async()=>({ok:true,order:{...orders[0],key:'OTHER'}})})).verified,false);
  assert.equal((await processOrderProof(proof('NOID'),{...opts,verifyOrder:async()=>({ok:true,order:{...orders[0],key:'ORDER-NOID',id:null}})})).verified,false);
+ assert.equal((await processOrderProof(proof('NOITEM'),{...opts,verifyOrder:async()=>({ok:true,order:{key:'ORDER-NOITEM',id:'42',items:[]}})})).verified,false);
+ assert.equal((await processOrderProof(proof('NOSKU'),{...opts,verifyOrder:async()=>({ok:true,order:{key:'ORDER-NOSKU',id:'42',items:[{id:'1',sku:null}]}})})).verified,false);
  assert.equal((await processOrderProof(proof('FEE'),{...opts,findEvents:()=>[{...clicked[0],sku:'shipping-cost'}],verifyOrder:async()=>({ok:true,order:{key:'ORDER-FEE',id:'42',items:[{id:'shipping-cost',sku:'shipping-cost'}]}})})).verified,false);
  assert.equal((await processOrderProof(proof('FAIL'),{...opts,verifyOrder:async()=>{throw Error('down')}})).error,'unas_verification_failed');
  assert.equal((await processOrderProof(proof('DISK'),{...opts,proofStore:{get:()=>null,append:()=>{throw Error('disk')}},verifyOrder:async()=>({ok:true,order:{...orders[0],key:'ORDER-DISK'}})})).error,'proof_storage_failed');
+ assert.equal(orderProofHttpStatus({ok:false,error:'proof_storage_failed'}),503);
  assert.equal((await verifyUnasOrder('ORDER-123',{loginFn:async()=>({token:'t'}),requestFn:async()=>({body:xml})})).ok,true);
  assert.equal((await verifyUnasOrder('X',{loginFn:async()=>({token:'t'}),requestFn:async()=>({body:'<Orders><Order/><Order/></Orders>'})})).ok,false);
+ await assert.rejects(verifyUnasOrder('X',{loginFn:async()=>({token:'t'}),requestFn:async()=>({body:'<Orders>'})}),/invalid_unas_xml/);
  } finally {fs.rmSync(dir,{recursive:true,force:true});} console.log('Browser -> Order Bridge E2E prep regresszio: OK');
 })().catch(error=>{console.error(error);process.exitCode=1});

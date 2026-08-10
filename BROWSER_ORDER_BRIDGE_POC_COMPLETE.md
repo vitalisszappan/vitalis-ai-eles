@@ -1,60 +1,38 @@
-# Vitalis Browser → Order → Commerce Outcome — production E2E bizonyított
+# Vitalis Browser → Order Bridge — E2E proof előkészítés
 
 ## Státusz
 
-A teljes Browser → Order → Commerce Outcome lánc valódi UNAS rendeléssel productionben bizonyított. A lezáró production evidence rendelési referenciája `99212-636298`, attribution azonosítója `4738e0e8-315a-435a-9a7c-cf025c3e8992`. A szerveroldali proof verified, a tartós outcome `verified_order` típussal, `6a59f8a4-0bea-5ea0-be36-b5e3e712a542` outcome ID-val, `365099806` Order ID-val és `VEM02` matched SKU-val létrejött.
+Az E2E proof technikai előkészítése elkészült. A Browser → Order kapcsolat még nincs PoC szinten bizonyítva: ehhez egy valódi UNAS tesztrendelés sikeres, dokumentált E2E futása szükséges.
 
-A Render production runtime tényleges Supabase projektje: `pupbsyzijirixcvbjbgp`. A korábban vizsgált másik Supabase projekt nem a Render production adatbázisa, ezért annak objektumállapota nem tekinthető production evidence-nek.
+Ez a kör nem számol revenue-t, nem hoz létre `purchase_attributed` eseményt, és nem állítja, hogy production-ready revenue attribution készült.
 
-A megoldás továbbra sem számol revenue-t, nem hoz létre `purchase_attributed` eseményt, és nem jelent production-ready revenue attributiont vagy bizonyított kauzalitást.
+## Browser contract
 
-## Előkészített lánc
+`POST /api/commerce/order-proof`, `application/json`, legfeljebb 2048 byte. A body pontosan négy mezőből áll:
 
-1. A böngésző UUID v4 `attributionId`-t tart fenn az attribution lifecycle-ban.
-2. A chat a `/api/commerce/event` endpointon naplózza a commerce eseményeket és a `product_clicked` SKU-t.
-3. Az UNAS `order_send` oldalon a bridge az `UNAS.getOrder()` eredményéből kizárólag az `orderKey`-t olvassa.
-4. A browser pontosan `orderKey`, `attributionId`, `schemaVersion`, `timestamp` mezőket küld a `/api/commerce/order-proof` endpointnak.
-5. A szerver a korábbi eseményeket betölti, saját UNAS hitelesítéssel lekéri a rendelést, majd Order Key, Order ID, valós terméktétel és pontos SKU-egyezés alapján ellenőriz.
+```json
+{
+  "orderKey": "...",
+  "attributionId": "...",
+  "schemaVersion": 1,
+  "timestamp": "..."
+}
+```
 
-## Production persistence
+Ismeretlen vagy hiányzó mező hibás kérés. A kliens nem küldhet Order ID-t, SKU-t, terméklistát, quantity/price/revenue/status adatot, PII-t, chat-tartalmat, URL/query adatot vagy titkot.
 
-A `public.commerce_order_proofs` production persistence és a `UNIQUE(schema_version, attribution_id, order_key)` adatbázis-alapú idempotencia PRODUCTION PROVEN. A `public.commerce_outcomes` production persistence és a `UNIQUE(schema_version, order_key)` outcome-idempotencia szintén PRODUCTION PROVEN. Mindkettő a `pupbsyzijirixcvbjbgp` Supabase projektben bizonyított. A JSONL adapterek változatlanul LOCAL/POC ONLY megoldások; a Render ephemeral filesystem nem production persistence.
+## Szerveroldali ellenőrzés
 
-## Biztonsági határ
+Az `engine/unas-order-verifier.cjs` a meglévő szerveroldali UNAS login használatával `getOrder` kérést küld a megadott Key-re. A válaszból kizárólag az Order Key, Id, Date, valamint az Item Id és Sku mezőket tartja meg; Customer, Contact, cím, megjegyzés és más PII nem kerül a proof modellbe vagy storage-ba.
 
-A browser nem küldhet Order ID-t, SKU-t, terméklistát, mennyiséget, árat, revenue-t, státuszt, PII-t, chat-tartalmat, URL/query adatot vagy titkot. Ismeretlen mező 400 választ kap. Az UNAS teljes order objektuma és PII-mezői nem kerülnek proof storage-ba.
+`verified=true` csak akkor lehet, ha a request érvényes, van korábbi attribution és `product_clicked` esemény, a szerveroldali UNAS kérés pontosan egy azonos Key-jű, nem üres Id-jű rendelést ad, van valós terméktétel SKU-val, és legalább egy rendelési SKU pontosan egyezik egy korábban kattintott SKU-val. Terméknév-alapú következtetés nincs.
 
-## Production-proven lánc
+## Idempotencia és persistence gate
 
-A bizonyított lánc: chat → `product_recommended` → `product_clicked` → checkout → `order_send` → szerveroldali UNAS `getOrder` → Order Key / Order ID / SKU-egyezés → tartós verified proof → `verified_order` commerce outcome → tartós Supabase persistence.
+Az idempotency key: `schemaVersion + attributionId + orderKey`. Az első sikeres proof `duplicate:false`, az ismétlés `duplicate:true`, második rekord nélkül.
 
-## Gate státusz
+A JSONL proof store **LOCAL/POC ONLY**. A Render ephemeral filesystem nem production persistence. A production gate változatlanul tartós Supabase storage és adatbázis-szintű UNIQUE constraint; ebben a körben Supabase séma nem módosult.
 
-### PRODUCTION PROVEN
+## Biztonsági korlátok
 
-- Browser attribution és commerce event lánc valós storefront használatban.
-- Szerveroldali UNAS Order Key / Order ID / SKU verification.
-- `commerce_order_proofs` tartós Supabase persistence és duplicate/idempotent út.
-- `commerce_outcomes` tartós Supabase persistence.
-- PII-, price- és revenue-mentes `verified_order` outcome.
-
-### CODE PROVEN
-
-- Outcome determinisztikus ID-képzése és `UNIQUE(schema_version, order_key)` konfliktuskezelése.
-- Sanitizált, fázisonkénti commerce outcome diagnosztika.
-- Outcome-alapú, nem autonóm `recommendation_converted` learning signal.
-- Admin outcome read modell és kliensoldali belsőhiba-szigetelés.
-
-### NOT PROVEN
-
-- Külső riasztás és tartós operációs monitorozás a commerce/outcome storage hibáira.
-- Automatizált retention végrehajtás, törlési audit és production backup/restore próba.
-- Nagyobb volumenű, konkurens production retry/idempotencia terhelés.
-- Hosszabb időablakú production stabilitás és outcome reconciliation.
-
-### Nem része ennek a PoC-nak
-
-- Kauzalitás bizonyítása és pénzügyi/revenue attribution.
-- `purchase_attributed`, GA4 revenue linking és marketing dashboardok.
-- Refund, cancellation, partial return és revenue state reconciliation.
-- Automatikus knowledge-, Decision Engine- vagy expert-rule módosítás.
+A proof endpoint kizárólag POST és JSON, szigorú Vitalis webshop-origin allowlistet, byte-alapú méretkorlátot, rate limitet, UUID v4-et, XML-biztos legfeljebb 100 karakteres order Key-t, valamint egy helyen konfigurált, alapértelmezetten ±5 perces timestamp toleranciát használ. A technikai hibák nem jelennek meg a vásárlónak, és a bridge nem logolja az UNAS válaszát.

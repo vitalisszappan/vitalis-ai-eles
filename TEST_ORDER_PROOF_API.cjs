@@ -7,11 +7,18 @@ async function main(){const eventLog=path.join(dir,'events.jsonl'),proofLog=path
  for(let i=0;i<60;i++){try{if((await request('GET',null,null,null)).status===405)break}catch(_){} await new Promise(r=>setTimeout(r,100));}
  const base={orderKey:'ORDER-123',attributionId:crypto.randomUUID(),schemaVersion:1,timestamp:new Date().toISOString()};
  assert.equal((await request('GET',null)).status,405); assert.equal((await request('POST',base,'https://evil.example')).status,403); assert.equal((await request('POST',base,null)).status,403);
+ assert.equal((await request('POST',base,'http://127.0.0.1:'+PORT)).status,403);
  assert.equal((await request('POST',base,'https://vitalis-szappan.hu')).body.error,'attribution_not_found');
  assert.equal((await request('POST',base,undefined,'text/plain')).status,415); assert.equal((await request('POST','x'.repeat(2049))).status,413);
  for(const field of ['sku','revenue','email','orderId']) assert.equal((await request('POST',{...base,[field]:'x'})).status,400);
  assert.equal((await request('POST',{...base,attributionId:'invalid'})).body.error,'invalid_attribution_id');
+ assert.equal((await request('POST',{...base,attributionId:'00000000-0000-1000-8000-000000000000'})).body.error,'invalid_attribution_id');
+ assert.equal((await request('POST',{...base,schemaVersion:2})).body.error,'invalid_schema_version');
+ assert.equal((await request('POST',{...base,orderKey:''})).body.error,'invalid_order_key');
+ assert.equal((await request('POST',{...base,orderKey:'x'.repeat(101)})).body.error,'order_key_too_long');
  assert.equal((await request('POST',{...base,orderKey:'<unsafe>'})).body.error,'unsafe_order_key');
+ assert.equal((await request('POST',{...base,timestamp:'not-iso'})).body.error,'invalid_timestamp');
+ for(const hours of [24,-24])assert.equal((await request('POST',{...base,timestamp:new Date(Date.now()+hours*3600000).toISOString()})).body.error,'timestamp_out_of_range');
  const missing={...base};delete missing.timestamp;assert.equal((await request('POST',missing)).status,400);
  assert.equal((await request('POST',base)).body.error,'attribution_not_found');
  fs.writeFileSync(eventLog,JSON.stringify({attribution_id:base.attributionId,event_type:'chat_started',occurred_at:new Date(Date.now()-1000).toISOString()})+'\n');

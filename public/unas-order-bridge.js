@@ -20,7 +20,10 @@
 
     const attributionId = lifecycleApi.createLifecycle({ storage, crypto: cryptoObject }).get().attributionId;
     return new Promise((resolve) => {
+      let callbackHandled = false;
       UNAS.getOrder((result) => {
+        if (callbackHandled) return;
+        callbackHandled = true;
         const orderKey = String(result?.key || result?.Key || '').trim();
         if (!orderKey || orderKey.length > 100) return resolve({ ok: false, reason: 'order_key_unavailable' });
         const payload = { orderKey, attributionId, schemaVersion: 1, timestamp: new Date().toISOString() };

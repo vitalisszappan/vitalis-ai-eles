@@ -53,7 +53,7 @@ function idempotencyKey(proof) { return `${proof.schemaVersion}:${proof.attribut
 
 function orderProofHttpStatus(result) {
   if (result?.ok) return result.duplicate ? 200 : 201;
-  if (result?.error === 'commerce_event_store_unavailable' || result?.error === 'commerce_outcome_storage_failed') return 503;
+  if (result?.error === 'commerce_event_store_unavailable' || result?.error === 'commerce_outcome_storage_failed' || result?.error === 'proof_storage_failed') return 503;
   if (result?.error === 'unas_verification_failed') return 502;
   return 400;
 }

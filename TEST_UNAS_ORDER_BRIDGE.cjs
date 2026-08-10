@@ -4,8 +4,9 @@ const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
 const attributionId = crypto.randomUUID();
 let callbackPayload = null;
+let fetchCalls = 0;
 const lifecycleApi = { createLifecycle: () => ({ get: () => ({ attributionId }) }) };
-const UNAS = { getOrder(callback, options) { assert.deepEqual(options, { lang: 'base' }); callback({ key: 'ORDER-123' }); } };
+const UNAS = { getOrder(callback, options) { assert.deepEqual(options, { lang: 'base' }); callback({ key: 'ORDER-123' }); callback({ key: 'ORDER-123' }); } };
 
 const originalDocument = globalThis.document;
 globalThis.document = { currentScript: { src: 'https://vitalis-backend.example/unas-order-bridge.js' } };
@@ -16,12 +17,14 @@ globalThis.document = originalDocument;
 globalThis.VitalisUnasOrderBridge.runOrderBridge({
   UNAS, lifecycleApi, storage: {}, crypto,
   fetch: async (endpoint, options) => {
+    fetchCalls += 1;
     assert.equal(endpoint, 'https://vitalis-backend.example/api/commerce/order-proof');
     callbackPayload = JSON.parse(options.body);
     return { ok: true, status: 201, json: async () => ({ ok: true, verified: true }) };
   }
 }).then((result) => {
   assert.equal(result.ok, true);
+  assert.equal(fetchCalls, 1);
   assert.equal(callbackPayload.attributionId, attributionId);
   assert.equal(callbackPayload.orderKey, 'ORDER-123');
   assert.deepEqual(Object.keys(callbackPayload).sort(), ['attributionId', 'orderKey', 'schemaVersion', 'timestamp'].sort());
