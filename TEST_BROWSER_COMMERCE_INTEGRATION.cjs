@@ -6,6 +6,7 @@ const path = require('node:path');
 
 const read = (file) => fs.readFileSync(path.join(__dirname, file), 'utf8');
 const widget = read('public/widget.js');
+const commerceClient = read('public/commerce-event-client.js');
 const embed = read('public/embed.js');
 const lifecycle = read('public/attribution-lifecycle.js');
 const bridge = read('public/unas-order-bridge.js');
@@ -18,12 +19,12 @@ assert.match(lifecycle, /addEventListener\('storage'/);
 assert.match(widget, /sendCommerceEvent\('chat_open'\)/);
 assert.match(widget, /sendCommerceEvent\('chat_started'\)/);
 assert.match(widget, /sendCommerceEvent\('product_recommended'/);
-assert.match(widget, /sendCommerceEvent\('product_clicked'/);
+assert.match(widget, /commerceClient\.productClick\(event/);
 for (const field of ['eventId', 'attributionId', 'chatSessionId', 'route', 'intent', 'canonicalProductId', 'unasProductId', 'sku', 'recommendationType', 'recommendationRank', 'occurredAt', 'schemaVersion']) {
-  assert.match(widget, new RegExp(`\\b${field}\\b`), field);
+  assert.match(widget + commerceClient, new RegExp(`\\b${field}\\b`), field);
 }
-assert.doesNotMatch(widget + embed, /purchase_attributed|cart_detected|checkout_detected/);
-assert.doesNotMatch(widget + embed, /\b(?:email|phone|address|revenue)\b/i);
+assert.doesNotMatch(widget + embed + commerceClient, /purchase_attributed|cart_detected|checkout_detected/);
+assert.doesNotMatch(widget + embed + commerceClient, /\b(?:email|phone|address|revenue)\b/i);
 assert.match(bridge, /UNAS\.getOrder/);
 assert.match(bridge, /orderKey/);
 assert.match(bridge, /document\.currentScript/);

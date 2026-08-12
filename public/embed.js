@@ -26,6 +26,12 @@
   let chatOpen = false;
   let startupStateResult = null;
 
+  function sendAttribution() {
+    attributionReady.then((lifecycle) => {
+      if (lifecycle) frame.contentWindow.postMessage({ type: 'vitalis-chat-attribution', attributionId: lifecycle.get().attributionId }, base);
+    });
+  }
+
   function readState() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -257,6 +263,7 @@
         }, base);
       });
     }
+    if (event.data.type === 'vitalis-chat-attribution-request') sendAttribution();
     if (event.data.type === 'vitalis-chat-state-save') saveState(event.data.state);
     if (event.data.type === 'vitalis-chat-state-clear') {
       try { localStorage.removeItem(STORAGE_KEY); } catch {}

@@ -18,7 +18,10 @@ let storedMessages = [];
 let stateReady = false;
 let pending = false;
 let attributionId = '';
-const pendingCommerceEvents = [];
+const commerceClient = window.VitalisCommerceEventClient.createClient({
+  crypto: window.crypto, fetch: (...args) => window.fetch(...args), getChatSessionId: () => sessionId,
+  requestAttribution: () => { if (parentOrigin && window.parent !== window) window.parent.postMessage({ type: 'vitalis-chat-attribution-request' }, parentOrigin); }
+});
 
 function createSessionId() {
   return crypto.randomUUID ? crypto.randomUUID() : `session-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -169,23 +172,7 @@ function normalizeProduct(item, index) {
 }
 
 function sendCommerceEvent(eventType, details = {}) {
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(attributionId)) {
-    if (pendingCommerceEvents.length < 20) pendingCommerceEvents.push([eventType, details]);
-    return;
-  }
-  const payload = {
-    eventId: crypto.randomUUID(), attributionId, chatSessionId: sessionId,
-    eventType, route: safeText(details.route) || null, intent: safeText(details.intent) || null,
-    canonicalProductId: safeText(details.canonicalProductId) || null,
-    unasProductId: safeText(details.unasProductId) || null, sku: safeText(details.sku) || null,
-    recommendationType: safeText(details.recommendationType) || null,
-    recommendationRank: Number.isInteger(details.recommendationRank) ? details.recommendationRank : null,
-    occurredAt: new Date().toISOString(), schemaVersion: 1
-  };
-  fetch('/api/commerce/event', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload), keepalive: true
-  }).catch(() => {});
+  return commerceClient.send(eventType, details);
 }
 
 function addProductCards(article, links = [], context = {}) {
@@ -214,7 +201,7 @@ function addProductCards(article, links = [], context = {}) {
       card.href = item.url;
       card.target = '_blank';
       card.rel = 'noopener noreferrer';
-      card.addEventListener('click', () => sendCommerceEvent('product_clicked', {
+      card.addEventListener('click', (event) => commerceClient.productClick(event, {
         ...context, ...item, recommendationRank: index + 1
       }));
     } else {
@@ -492,7 +479,7 @@ window.addEventListener('message', (event) => {
   if (event.data.type === 'vitalis-chat-attribution' &&
       /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(event.data.attributionId || '')) {
     attributionId = event.data.attributionId;
-    pendingCommerceEvents.splice(0).forEach(([eventType, details]) => sendCommerceEvent(eventType, details));
+    commerceClient.setAttributionId(attributionId);
   }
 });
 
@@ -514,6 +501,7 @@ const fallbackState = readFallbackState();
 if (fallbackState) restoreState(fallbackState);
 if (parentOrigin && window.parent !== window) {
   window.parent.postMessage({ type: 'vitalis-chat-state-ready' }, parentOrigin);
+  window.parent.postMessage({ type: 'vitalis-chat-attribution-request' }, parentOrigin);
 } else {
   stateReady = true;
 }

@@ -3346,6 +3346,11 @@ const staticFiles = {
     type: 'text/javascript; charset=utf-8'
   },
 
+  '/commerce-event-client.js': {
+    file: 'commerce-event-client.js',
+    type: 'text/javascript; charset=utf-8'
+  },
+
   '/unas-order-bridge.js': {
     file: 'unas-order-bridge.js',
     type: 'text/javascript; charset=utf-8'

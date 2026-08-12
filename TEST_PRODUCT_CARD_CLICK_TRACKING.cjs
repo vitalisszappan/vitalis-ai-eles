@@ -1,0 +1,12 @@
+'use strict';
+const assert=require('node:assert/strict'),crypto=require('node:crypto'),fs=require('node:fs');
+const {createClient}=require('./public/commerce-event-client.js');
+const attributionId=crypto.randomUUID(),chatSessionId=crypto.randomUUID(),calls=[];let requests=0;
+const client=createClient({crypto,getChatSessionId:()=>chatSessionId,requestAttribution:()=>{requests+=1;},fetch:(url,options)=>{calls.push({url,options,payload:JSON.parse(options.body)});return Promise.resolve({ok:true});}});
+const click={},product={route:'recommendation',intent:'dry_skin',canonicalProductId:'dermavital-krem',unasProductId:'123',sku:'SKU-DERMAVITAL',recommendationType:'primary',recommendationRank:1};
+assert.equal(client.productClick(click,product),false);assert.equal(requests,1);assert.equal(calls.length,0);
+client.setAttributionId(attributionId);assert.equal(calls.length,1,'A sor navigacio utan is kiurul.');
+assert.equal(client.productClick(click,product),false);assert.equal(calls.length,1,'Dupla handler ugyanarra a clickre nem duplaz.');
+const sent=calls[0];assert.equal(sent.url,'/api/commerce/event');assert.equal(sent.options.keepalive,true);assert.equal(sent.payload.eventType,'product_clicked');assert.equal(sent.payload.attributionId,attributionId);assert.equal(sent.payload.chatSessionId,chatSessionId);assert.equal(sent.payload.sku,product.sku);assert.equal(sent.payload.canonicalProductId,product.canonicalProductId);assert.equal(sent.payload.unasProductId,product.unasProductId);assert.equal(JSON.stringify(sent.payload).match(/price|revenue|email|phone|address|chatMessage/i),null);
+const widget=fs.readFileSync('./public/widget.js','utf8'),embed=fs.readFileSync('./public/embed.js','utf8');assert.match(widget,/commerceClient\.productClick\(event/);assert.match(widget,/vitalis-chat-attribution-request/);assert.match(embed,/vitalis-chat-attribution-request/);
+console.log('Product card click navigation-safe tracking regresszio: OK');
