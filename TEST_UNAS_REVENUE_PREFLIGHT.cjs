@@ -18,6 +18,11 @@ const {
 const ROOT = __dirname;
 const PORT = 3412;
 const ADMIN_TOKEN = 'revenue-preflight-admin-token';
+const adminHtml=fs.readFileSync('./public/admin.html','utf8'),adminJs=fs.readFileSync('./public/admin.js','utf8');
+for(const id of ['unasOrderPreflightKey','unasOrderPreflightButton','unasOrderPreflightResult'])assert.equal(adminHtml.includes(`id="${id}"`),true);
+assert.match(adminHtml,/id="unasOrderPreflightKey"[^>]*value="99212-298722"/);assert.match(adminJs,/\/api\/admin\/commerce\/unas-order-preflight\?orderKey=/);
+for(const label of ['Response order count:','Order.Key:','Order.Id:','Status:','StatusID:','StatusType:','Currency:','SumPriceGross:','Product SKU-k:'])assert.equal(adminJs.includes(label),true);
+for(const forbidden of ['Customer','Contact','Address','Email','Phone','Comments','raw XML','response.body'])assert.equal(adminJs.includes(forbidden),false);
 
 const fixture = `<?xml version="1.0" encoding="UTF-8"?>
 <Orders><Order>

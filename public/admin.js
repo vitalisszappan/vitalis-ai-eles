@@ -96,6 +96,10 @@ const unasStatusMessageTop =
     'unasStatusMessageTop'
   );
 
+const unasOrderPreflightKey = document.getElementById('unasOrderPreflightKey');
+const unasOrderPreflightButton = document.getElementById('unasOrderPreflightButton');
+const unasOrderPreflightResult = document.getElementById('unasOrderPreflightResult');
+
 const unasSyncButton =
   document.getElementById(
     'unasSyncButton'
@@ -1570,6 +1574,40 @@ function renderDraftPanel(panel, task, draft) {
   panel.querySelectorAll('[data-draft-status]').forEach(button=>button.addEventListener('click',async()=>{try{const data=await adminFetch('/api/admin/knowledge-drafts/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:draft.id,generationStatus:button.dataset.draftStatus})});renderDraftPanel(panel,task,data.draft);knowledgeTaskStatus.textContent='A draft státusza mentve.';}catch(error){knowledgeTaskStatus.textContent=`Draft státuszhiba: ${error.message}`;} }));
 }
 
+async function runUnasOrderPreflight() {
+  const orderKey = String(unasOrderPreflightKey?.value || '').trim();
+  if (!/^\d+(?:-\d+)?$/.test(orderKey)) {
+    setStatus(unasOrderPreflightResult, 'OK: NEM\nResponse order count: 0\nHiba: Érvénytelen order key.', true);
+    return;
+  }
+  unasOrderPreflightButton.disabled = true;
+  setStatus(unasOrderPreflightResult, 'UNAS rendelés preflight folyamatban...');
+  try {
+    const data = await adminFetch(`/api/admin/commerce/unas-order-preflight?orderKey=${encodeURIComponent(orderKey)}`);
+    const fields = new Map((data.evidence?.fields || []).map(item => [item.field, item.value]));
+    const productSkus = (data.evidence?.items || [])
+      .filter(item => item.kind === 'product')
+      .map(item => item.fields?.find(field => field.field === 'sku')?.value)
+      .filter(Boolean);
+    setStatus(unasOrderPreflightResult, [
+      `OK: ${data.ok === true ? 'IGEN' : 'NEM'}`,
+      `Response order count: ${data.ok === true ? 1 : 0}`,
+      `Order.Key: ${fields.get('key') || 'NINCS'}`,
+      `Order.Id: ${fields.get('id') || 'NINCS'}`,
+      `Status: ${fields.get('status') || 'NINCS'}`,
+      `StatusID: ${fields.get('statusId') || 'NINCS'}`,
+      `StatusType: ${fields.get('statusType') || 'NINCS'}`,
+      `Currency: ${fields.get('currency') || 'NINCS'}`,
+      `SumPriceGross: ${fields.get('grossTotal') || 'NINCS'}`,
+      `Product SKU-k: ${productSkus.join(', ') || 'NINCS'}`
+    ].join('\n'));
+  } catch (error) {
+    setStatus(unasOrderPreflightResult, `OK: NEM\nResponse order count: 0\nHiba: ${error.message}`, true);
+  } finally {
+    unasOrderPreflightButton.disabled = false;
+  }
+}
+
 async function openDraftPanel(card, task) {
   let panel=card.querySelector('.draft-panel'); if(panel){panel.remove();return;}
   panel=document.createElement('section');panel.className='draft-panel';panel.textContent='Draft betöltése...';card.appendChild(panel);
@@ -1748,6 +1786,8 @@ async function loadCommerceOutcomes(){
     commerceOutcomeStatus.textContent=`${items.length} igazolt outcome betöltve (${data.storage}).`;
   }catch(error){commerceOutcomeStatus.textContent=`Outcome betöltési hiba: ${error.message}`;}
 }
+
+if (unasOrderPreflightButton) unasOrderPreflightButton.addEventListener('click', runUnasOrderPreflight);
 if(loadCommerceOutcomesButton)loadCommerceOutcomesButton.addEventListener('click',loadCommerceOutcomes);
 loadCommerceOutcomes();
 

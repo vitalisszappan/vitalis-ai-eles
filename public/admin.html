@@ -263,6 +263,22 @@
       Az UNAS kapcsolat még nincs tesztelve.
     </section>
 
+    <section class="toolbar">
+      <div>
+        <h2>UNAS rendelés preflight</h2>
+        <p>Read-only rendelésellenőrzés, személyes adatok megjelenítése nélkül.</p>
+      </div>
+      <div class="inline-form">
+        <label for="unasOrderPreflightKey">Order key</label>
+        <input id="unasOrderPreflightKey" type="text" value="99212-298722" inputmode="numeric" autocomplete="off">
+        <button id="unasOrderPreflightButton" type="button">Rendelés ellenőrzése</button>
+      </div>
+    </section>
+
+    <section id="unasOrderPreflightResult" class="status" aria-live="polite">
+      A rendelés preflight még nem futott le.
+    </section>
+
     <!-- =====================================================
          UNAS TUDÁSSZINKRON
     ====================================================== -->
@@ -341,7 +357,7 @@
 
   </main>
 
-  <script src="/admin.js?v=20260813-unas-identity-visible"></script>
+  <script src="/admin.js?v=20260813-unas-order-preflight"></script>
 
 </body>
 
