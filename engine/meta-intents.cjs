@@ -23,6 +23,17 @@ function resolveMetaIntent(question) {
   const q = normalize(question);
   if (!q) return null;
 
+  if (/^(koszonom|koszi|nagyon koszonom|koszonom szepen|oke koszonom|rendben koszonom)[.! ]*$/.test(q)) {
+    return result('social-thanks', 'social-thanks', 'Nagyon sz\u00edvesen! Ha szeretn\u00e9l, seg\u00edtek m\u00e9g a v\u00e1laszt\u00e1sban vagy a haszn\u00e1latban.');
+  }
+  if (/^(rendben|oke|ertem|szuper)[.! ]*$/.test(q)) {
+    return result('social-acknowledgement', 'social-acknowledgement', 'Rendben! Ha felmer\u00fcl m\u00e9g k\u00e9rd\u00e9sed, sz\u00edvesen seg\u00edtek.');
+  }
+  if (/^(viszlat|szia|hello|hello)[.! ]*$/.test(q)) {
+    const greeting = /^(szia|hello|hello)/.test(q);
+    return result(greeting ? 'social-greeting' : 'social-goodbye', greeting ? 'social-greeting' : 'social-goodbye', greeting ? 'Szia! Miben seg\u00edthetek a Vitalis term\u00e9kekkel kapcsolatban?' : 'Viszl\u00e1t! Ha k\u00e9s\u0151bb k\u00e9rd\u00e9sed lesz, sz\u00edvesen seg\u00edtek.');
+  }
+
   const asksAboutProductCreator =
     includesAny(q, [
       'ki az a szalacsi zoltan',

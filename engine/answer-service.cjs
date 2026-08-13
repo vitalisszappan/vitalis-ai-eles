@@ -40,6 +40,8 @@ const { routeAnswer } = require('./answer-router.cjs');
 const { createCatalogSearch } = require('./catalog-search.cjs');
 const { childAnswer } = require('./product-faq.cjs');
 const { composeCommunication } = require('./communication-engine.cjs');
+const {classifyFallback,gapDisposition}=require('./fallback-classifier.cjs');
+const {matchesProductType}=require('./product-type-constraint.cjs');
 
 const decisionCatalog = createCatalogSearch();
 
@@ -73,7 +75,7 @@ function catalogCard(item, index = 0) {
   };
 }
 
-function materializeDecision({ routing, question, history, knowledge, ruleEngine, logGap }) {
+function materializeDecision({ routing, question, history, knowledge, ruleEngine, logGap, conversationState, technicalFailure, logDiagnostic }) {
   if (routing.responseSource === 'meta-intent') return attachDecision(resolveMetaIntent(question), routing);
   if (routing.matchedRuleId === 'sls-sles-free') return attachDecision(answerSlsSlesQuestion(question), routing);
 
@@ -107,13 +109,19 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
   }
 
   if (routing.route === 'clarification') {
+    const contextMissing=routing.rejectionReasons?.some(reason=>['missing_product_context','ambiguous_product_reference'].includes(reason));
+    if (contextMissing) {
+      try {
+        logDiagnostic?.({ type: 'context_diagnostic', rootCause: 'context_missing' });
+      } catch {}
+    }
     if (routing.matchedCanonicalIds?.length) {
-      return attachDecision(clarificationAnswer(buildConversationContext(history, normalize), routing.matchedCanonicalIds), routing);
+      return attachDecision({ ...clarificationAnswer(buildConversationContext(history, normalize), routing.matchedCanonicalIds), ...(contextMissing?{fallbackRootCause:'context_missing'}:{}) }, routing);
     }
     const answer = routing.contextTarget === 'product'
       ? 'Melyik termékre gondolsz? Írd meg a termék nevét, és pontosan válaszolok.'
       : 'Kérlek, pontosítsd, mire gondolsz.';
-    return attachDecision({ source: routing.responseSource, answer, confidence: 100, links: [], suggestions: [], ruleId: 'clarify-missing-argument', intent: routing.intent, matchedKnowledgeIds: [] }, routing);
+    return attachDecision({ source: routing.responseSource, answer, confidence: 100, links: [], suggestions: [], ruleId: 'clarify-missing-argument', intent: routing.intent, matchedKnowledgeIds: [], ...(contextMissing ? { fallbackRootCause: 'context_missing' } : {}) }, routing);
   }
 
   if (routing.route === 'context_followup') {
@@ -133,10 +141,11 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
     if (routing.goal === 'ask_variant') {
       return attachDecision({ source: 'conversation-context', answer: 'A jelenlegi katalógusban ennél a terméknél nem találtam bizonyított nagyobb kiszerelést. Az aktuális változatokat a termékoldalon ellenőrizheted.', confidence: 100, links: productCards([target]), suggestions: [], ruleId: 'variant-query', intent: 'variant_query', matchedKnowledgeIds: [] }, routing);
     }
+    if(!PRODUCTS[target]){const item=decisionCatalog.all().find(product=>product.id===String(target));if(item)return attachDecision({source:'unas-catalog',answer:`A megjelen\u00edtett lista kiv\u00e1lasztott eleme: ${item.name}.`,confidence:100,links:[catalogCard(item)],suggestions:[],ruleId:'catalog-ordinal-reference',intent:'select_recommendation',matchedKnowledgeIds:[]},routing);}
     return attachDecision(buildProductReferenceAnswer(target, knowledge), routing);
   }
 
-  if (routing.route === 'expert_rule') return attachDecision(ruleEngine.resolve(question, history), routing);
+  if (routing.route === 'expert_rule') {const expert=ruleEngine.resolve(question, history);if(expert&&routing.productTypeConstraint){const constrained=(expert.links||[]).filter(item=>matchesProductType(item,routing.productTypeConstraint));if(constrained.length)return attachDecision({...expert,links:constrained,answer:`A k\u00e9rt ${routing.productTypeConstraint} kateg\u00f3ri\u00e1ban els\u0151k\u00e9nt a ${constrained[0].name} term\u00e9ket javaslom.`},routing);}return attachDecision(expert,routing);}
 
   if (routing.route === 'exact_product') {
     const canonical = routing.matchedCanonicalIds[0];
@@ -147,10 +156,12 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
 
   if (routing.route === 'product_category') {
     const found = decisionCatalog.searchCategory(routing.domain);
-    if (!found.products.length) return attachDecision({ source: 'catalog-absent', answer: `A jelenlegi kínálatban nem találok ${found.category?.label || 'ilyen terméket'}.`, confidence: 100, links: [], suggestions: [], ruleId: null, intent: 'catalog_category_absent', matchedKnowledgeIds: [] }, routing);
-    const names = found.products.slice(0, 3).map((item) => item.name).join(', ');
+    const constrained=routing.productTypeConstraint?found.products.filter(item=>matchesProductType(item,routing.productTypeConstraint)):found.products;
+    const products=constrained.length?constrained:found.products;
+    if (!products.length) return attachDecision({ source: 'catalog-absent', answer: `A jelenlegi kínálatban nem találok ${found.category?.label || 'ilyen terméket'}.`, confidence: 100, links: [], suggestions: [], ruleId: null, intent: 'catalog_category_absent', matchedKnowledgeIds: [] }, routing);
+    const names = products.slice(0, 3).map((item) => item.name).join(', ');
     const distinction = routing.domain === 'deodorant' ? ' Ezek dezodorok: a testszag kialakulását segítenek megelőzni, de nem állítjuk róluk, hogy az izzadást megszüntetik.' : '';
-    return attachDecision({ source: 'unas-catalog', answer: `Igen, a jelenlegi kínálatban található ${found.category.label}. Például: ${names}.${distinction}`, confidence: 100, links: found.products.slice(0, 3).map(catalogCard), suggestions: [], ruleId: null, intent: 'catalog_category_found', matchedKnowledgeIds: [] }, routing);
+    return attachDecision({ source: 'unas-catalog', answer: `Igen, a jelenlegi kínálatban található ${found.category.label}. Például: ${names}.${distinction}`, confidence: 100, links: products.slice(0, 3).map(catalogCard), suggestions: [], ruleId: null, intent: 'catalog_category_found', matchedKnowledgeIds: [] }, routing);
   }
 
   if (routing.route === 'problem_domain') {
@@ -168,8 +179,9 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
     if (selected) return attachDecision(buildSingleAnswer(selected.item, Math.round(routing.confidence * 100)), routing);
   }
 
-  logGap(question, Math.round(routing.confidence * 100), history);
-  return attachDecision({ source: 'hard-fallback', answer: 'Ehhez nem találtam elég pontos, jóváhagyott Vitalis-információt. Írd meg kérlek részletesebben, melyik termékről vagy témáról van szó.', confidence: Math.round(routing.confidence * 100), links: [], suggestions: [], ruleId: null, intent: routing.intent, matchedKnowledgeIds: [] }, routing);
+  const fallbackRootCause=classifyFallback({routing,candidateCount:routing.candidateCount,question,state:conversationState,technicalFailure});const disposition=gapDisposition(fallbackRootCause);
+  if(disposition==='knowledge_gap')logGap(question,Math.round(routing.confidence*100),history,{fallbackRootCause,routing});else try{logDiagnostic?.({type:disposition,rootCause:fallbackRootCause});}catch{}
+  return attachDecision({ source: 'hard-fallback', fallbackRootCause, answer: 'Ehhez nem találtam elég pontos, jóváhagyott Vitalis-információt. Írd meg kérlek részletesebben, melyik termékről vagy témáról van szó.', confidence: Math.round(routing.confidence * 100), links: [], suggestions: [], ruleId: null, intent: routing.intent, matchedKnowledgeIds: [] }, routing);
 }
 
 /* =========================================================
@@ -1357,11 +1369,14 @@ function createAnswer({
   history,
   knowledge,
   ruleEngine,
-  logGap
+  logGap,
+  conversationState,
+  technicalFailure=false,
+  logDiagnostic
 }) {
 
-  const routing = routeAnswer({ question, history, knowledge, ruleEngine });
-  const draft = materializeDecision({ routing, question, history, knowledge, ruleEngine, logGap });
+  const routing = routeAnswer({ question, history, knowledge, ruleEngine, conversationState });
+  const draft = materializeDecision({ routing, question, history, knowledge, ruleEngine, logGap, conversationState, technicalFailure, logDiagnostic });
   return composeCommunication({ decision: routing, draft, question, history });
 
   /* Legacy pipeline retained temporarily as a rollback reference during the

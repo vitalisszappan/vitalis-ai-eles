@@ -11,6 +11,7 @@ const { buildConversationContext, resolveProductReference } = require('./convers
 const { findProductInText } = require('./product-faq.cjs');
 const { resolveMetaIntent } = require('./meta-intents.cjs');
 const { searchKnowledge } = require('./knowledge-fallback.cjs');
+const {detectProductTypeConstraint}=require('./product-type-constraint.cjs');
 
 const catalog = createCatalogSearch();
 
@@ -19,16 +20,18 @@ function decision(overrides = {}) {
     route: 'hard_fallback', intent: null, goal: 'unknown', domain: null, safetyClass: 'safe',
     contextUsed: false, contextTarget: null, matchedCanonicalIds: [], matchedProductIds: [],
     matchedRuleId: null, matchedKnowledgeIds: [], evidence: [], confidence: 0,
-    threshold: 1, rejectionReasons: [], responseSource: 'hard-fallback', ...overrides
+    threshold: 1, rejectionReasons: [], responseSource: 'hard-fallback', candidateCount: 0, ...overrides
   };
 }
 
-function routeAnswer({ question, history = [], knowledge = [], ruleEngine }) {
+function routeAnswer({ question, history = [], knowledge = [], ruleEngine, conversationState = null }) {
   const goal = detectCustomerGoal(question);
   const problem = detectProblemIntent(question);
   const safety = evaluateSafety(question, problem);
-  const context = buildConversationContext(history, normalize);
-  const base = { goal: goal.goal, intent: goal.intent, domain: goal.domain || problem?.domain || null, safetyClass: safety.safetyClass, evidence: [...goal.evidence, ...(problem?.evidence || []), ...safety.evidence] };
+  const derivedContext = buildConversationContext(history, normalize);
+  const context = conversationState ? {...derivedContext,lastRecommendedProducts:conversationState.lastOrdinalProductList||conversationState.lastRecommendedProducts||[],lastFocusProduct:conversationState.lastMentionedProduct,lastProduct:conversationState.lastMentionedProduct,lastProblemDomain:conversationState.activeProblemDomains?.at(-1)||derivedContext.lastProblemDomain} : derivedContext;
+  const productTypeConstraint=detectProductTypeConstraint(question);
+  const base = { goal: goal.goal, intent: goal.intent, domain: goal.domain || problem?.domain || null, safetyClass: safety.safetyClass, evidence: [...goal.evidence, ...(problem?.evidence || []), ...safety.evidence], productTypeConstraint };
 
   const meta = resolveMetaIntent(question);
   if (meta) return decision({ ...base, route: 'meta', intent: meta.intent, goal: 'unknown', domain: 'meta', matchedRuleId: meta.ruleId, confidence: 1, threshold: 1, responseSource: 'meta-intent' });
@@ -54,6 +57,9 @@ function routeAnswer({ question, history = [], knowledge = [], ruleEngine }) {
   if (/\b(sls|sles|sodium lauryl sulfate|sodium laureth sulfate)\b/.test(normalize(question))) {
     return decision({ ...base, route: 'expert_rule', intent: 'ingredient-question', matchedRuleId: 'sls-sles-free', confidence: 1, threshold: 1, responseSource: 'expert-sls-sles' });
   }
+
+  const attributeIntent=/\b(osszetevo\w*|inci)\b/.test(normalize(question))?'ingredients':/\b(illat\w*)\b/.test(normalize(question))?'scent':null;
+  if(attributeIntent&&(directCanonical||catalog.findExactProduct(question))){const matches=searchKnowledge(knowledge,question),assessed=evaluateKnowledgeConfidence(question,matches,{domain:'product',intent:attributeIntent,context});if(assessed.accepted)return decision({...base,route:'knowledge',intent:attributeIntent,domain:'product',matchedKnowledgeIds:[matches[0].item.id],confidence:assessed.confidence,threshold:assessed.threshold,evidence:[...base.evidence,`attribute:${attributeIntent}`],responseSource:'knowledge-fallback'});return decision({...base,route:'hard_fallback',intent:attributeIntent,domain:'product',candidateCount:matches.length,confidence:assessed.confidence,threshold:assessed.threshold,rejectionReasons:['knowledge_missing'],evidence:[...base.evidence,`attribute:${attributeIntent}`],responseSource:'hard-fallback'});}
 
   const reference = resolveProductReference(question, context);
   if (reference?.productId) {
@@ -110,7 +116,8 @@ function routeAnswer({ question, history = [], knowledge = [], ruleEngine }) {
   if (assessed.accepted) {
     return decision({ ...base, route: 'knowledge', matchedKnowledgeIds: [matches[0].item.id], confidence: assessed.confidence, threshold: assessed.threshold, evidence: [...base.evidence, `knowledge-score:${matches[0].score}`], responseSource: 'knowledge-fallback' });
   }
-  return decision({ ...base, route: 'hard_fallback', confidence: assessed.confidence, threshold: assessed.threshold, rejectionReasons: assessed.rejectionReasons.length ? assessed.rejectionReasons : ['knowledge_gap'], responseSource: 'hard-fallback' });
+  const aliasSuspected = matches.length === 0 && /\b(szappan|sampon|krem|balzsam|dezodor|termek)\b/.test(current);
+  return decision({ ...base, route: 'hard_fallback', candidateCount: matches.length, confidence: assessed.confidence, threshold: assessed.threshold, evidence: aliasSuspected ? [...base.evidence, 'alias-suspected'] : base.evidence, rejectionReasons: aliasSuspected ? ['alias_missing'] : assessed.rejectionReasons.length ? assessed.rejectionReasons : ['knowledge_gap'], responseSource: 'hard-fallback' });
 }
 
 module.exports = { routeAnswer, createRoutingDecision: decision };

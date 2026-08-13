@@ -52,7 +52,7 @@ const KNOWLEDGE_DRAFT_LOG = path.join(LOG_DIR, 'knowledge-drafts.jsonl');
 const KNOWLEDGE_CLUSTER_LOG = path.join(LOG_DIR, 'knowledge-clusters.jsonl');
 const CANONICAL_MAPPING_PATH = path.join(DATA_DIR, 'canonical-unas-mapping.json');
 
-const { STATUSES: KNOWLEDGE_TASK_STATUSES, taskFromConversation, mergeTasks, sortKnowledgeTasks, calculateEstimatedImpact } = require('./engine/knowledge-tasks.cjs');
+const { STATUSES: KNOWLEDGE_TASK_STATUSES, taskFromConversation, mergeTasks, sortKnowledgeTasks, calculateEstimatedImpact, isDiagnosticOnlyConversation } = require('./engine/knowledge-tasks.cjs');
 const { DRAFT_TYPES, GENERATION_STATUSES, SAFETY_STATUSES, contentHash, generateKnowledgeDraft, validateDraft, buildKnowledgeExport } = require('./engine/knowledge-drafts.cjs');
 const { STATUSES: KNOWLEDGE_CLUSTER_STATUSES, clusterKnowledgeTasks } = require('./engine/knowledge-clusters.cjs');
 const { resolveAdministrativeIntent } = require('./engine/admin-intents.cjs');
@@ -73,6 +73,7 @@ const { createPermissionPreflightHandler } = require('./engine/unas-permission-p
 const { validatePreflightOrderKey, preflightUnasOrder, toPreflightDiagnostic } = require('./engine/unas-revenue-preflight.cjs');
 const { createRevenuePhase4Service } = require('./engine/revenue-phase4.cjs');
 const { createRevenueAdminReader } = require('./engine/revenue-admin-read.cjs');
+const {rehydrateSessionHistory,validSessionId}=require('./engine/conversation-memory.cjs');
 
 function readCanonicalProductStatuses() {
   try {
@@ -1107,6 +1108,13 @@ function conversationTablePath(query = '') {
   return supabaseTablePath(CONVERSATION_TABLE, query);
 }
 
+async function readSessionConversationRows(sessionId,limit=10){
+  if(!supabaseConfigured()||!validSessionId(sessionId))return[];
+  const safeLimit=Math.max(1,Math.min(Number(limit)||10,10));
+  const result=await supabaseRequest({method:'GET',pathname:conversationTablePath(`?select=created_at,question,answer,source&session_id=eq.${encodeURIComponent(sessionId)}&order=created_at.desc&limit=${safeLimit}`),operation:'conversation_session_history_read',table:CONVERSATION_TABLE});
+  const rows=JSON.parse(result.body||'[]');if(!Array.isArray(rows))throw new Error('invalid_conversation_history');return rows;
+}
+
 /* =========================================================
    BESZÉLGETÉS MENTÉSE
 ========================================================= */
@@ -1238,7 +1246,7 @@ async function persistConversation(
   if (
     !supabaseConfigured()
   ) {
-    await upsertKnowledgeTask(taskFromConversation(safe, { productStatuses: readCanonicalProductStatuses() }));
+    if (!isDiagnosticOnlyConversation(safe)) await upsertKnowledgeTask(taskFromConversation(safe, { productStatuses: readCanonicalProductStatuses() }));
     return;
   }
 
@@ -1274,7 +1282,7 @@ async function persistConversation(
     });
   }
 
-  await upsertKnowledgeTask(taskFromConversation(safe, { productStatuses: readCanonicalProductStatuses() }));
+  if (!isDiagnosticOnlyConversation(safe)) await upsertKnowledgeTask(taskFromConversation(safe, { productStatuses: readCanonicalProductStatuses() }));
 }
 
 /* =========================================================
@@ -2157,12 +2165,9 @@ async function handleChat(
     return;
   }
 
-  const history =
-    Array.isArray(
-      parsed.history
-    )
-      ? parsed.history
-      : [];
+  const memory=await rehydrateSessionHistory({sessionId:parsed.sessionId,clientHistory:Array.isArray(parsed.history)?parsed.history:[],loadRows:readSessionConversationRows});
+  const history=memory.history;
+  if(memory.technicalFailure)console.info('CHAT_DIAGNOSTIC type=technical_diagnostic rootCause=technical_failure');
 
   const started =
     Date.now();
@@ -2177,8 +2182,10 @@ async function handleChat(
       knowledge,
 
       ruleEngine,
-
-      logGap
+      logGap,
+      conversationState:memory.state,
+      technicalFailure:memory.technicalFailure,
+      logDiagnostic:event=>console.info(`CHAT_DIAGNOSTIC type=${event.type} rootCause=${event.rootCause}`)
     });
 
   const matchedKnowledgeIds =
@@ -2211,7 +2218,7 @@ async function handleChat(
       matchedKnowledgeIds,
 
     source:
-      result.source ||
+      (result.fallbackRootCause?`${result.source}:${result.fallbackRootCause}`:result.source) ||
       'unknown',
 
     response_ms:

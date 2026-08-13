@@ -28,8 +28,19 @@ function normalizedQuestionKey(question) {
   return q.split(' ').filter(word => !['a','az','egy','es','hogy','lehet','kerdeznek','kapcsolatban'].includes(word)).sort().join(' ');
 }
 
+function isDiagnosticOnlyConversation(conversation) {
+  return /hard-fallback:(technical_failure|context_missing|routing_error)/.test(
+    fold(conversation?.source || conversation?.answerSource)
+  );
+}
+
 function determineRootCause({ input, classification, topic, unsafeCanonical, productStatuses }) {
   const source = fold(input.source || input.answerSource); const question = fold(input.question);
+  if (/hard-fallback:alias_missing/.test(source)) return {rootCause:'alias_missing',rootCauseReason:'A fallback classifier fel nem oldott alias evidence-et jelölt.',repairTarget:'alias_registry'};
+  if (/hard-fallback:confidence_rejected/.test(source)) return {rootCause:'knowledge_missing',rootCauseReason:'Volt knowledge candidate, de a determinisztikus confidence gate elutasította.',repairTarget:'knowledge'};
+  if (/hard-fallback:context_missing/.test(source)) return {rootCause:'conversation_context_missing',rootCauseReason:'Felismert follow-uphoz nem állt rendelkezésre elég session context.',repairTarget:'conversation_context'};
+  if (/hard-fallback:routing_error/.test(source)) return {rootCause:'intent_routing_error',rootCauseReason:'A routing classifier downstream válaszút mellett routing hibát jelölt.',repairTarget:'expert_rule'};
+  if (/hard-fallback:technical_failure/.test(source)) return {rootCause:'unknown',rootCauseReason:'Technikai hiba; nem knowledge gap.',repairTarget:'manual_review'};
   if (classification === 'irrelevant') return { rootCause:'irrelevant_or_spam', rootCauseReason:'A kérdés nem igényel tudás- vagy rendszerjavítást.', repairTarget:'none' };
   if (unsafeCanonical) return { rootCause:'canonical_not_approved', rootCauseReason:`A válasz a(z) ${unsafeCanonical} canonical ID-t ${productStatuses[unsafeCanonical]} állapotban ajánlotta.`, repairTarget:'canonical_mapping' };
   if (classification === 'wrong_answer' && topic === 'fizetés') return { rootCause:'intent_routing_error', rootCauseReason:'Az admin fizetési intent helyett más témájú válaszág futott.', repairTarget:'admin_intent' };
@@ -91,7 +102,7 @@ function taskFromConversation(conversation,options={}) {
   const impact=calculateEstimatedImpact(task); return {...task,estimatedImpact:impact.total,impactBreakdown:impact.breakdown};
 }
 function mergeTasks(conversations,options={}) {
-  const byKey=new Map(); [...conversations].sort((a,b)=>String(a.created_at||'').localeCompare(String(b.created_at||''))).forEach(conversation=>{ const next=taskFromConversation(conversation,options),old=byKey.get(next.normalizedQuestionKey); if(!old){byKey.set(next.normalizedQuestionKey,next);return;} if(!old.conversationIds.includes(next.conversationId))old.conversationIds.push(next.conversationId); old.occurrenceCount=old.conversationIds.length; old.firstSeenAt=old.firstSeenAt<next.firstSeenAt?old.firstSeenAt:next.firstSeenAt; old.lastSeenAt=old.lastSeenAt>next.lastSeenAt?old.lastSeenAt:next.lastSeenAt; if(next.lastSeenAt>=old.occurredAt)Object.assign(old,{conversationId:next.conversationId,question:next.question,answer:next.answer,answerSource:next.answerSource,confidenceScore:next.confidenceScore,occurredAt:next.occurredAt}); });
+  const byKey=new Map(); [...conversations].filter(conversation=>!isDiagnosticOnlyConversation(conversation)).sort((a,b)=>String(a.created_at||'').localeCompare(String(b.created_at||''))).forEach(conversation=>{ const next=taskFromConversation(conversation,options),old=byKey.get(next.normalizedQuestionKey); if(!old){byKey.set(next.normalizedQuestionKey,next);return;} if(!old.conversationIds.includes(next.conversationId))old.conversationIds.push(next.conversationId); old.occurrenceCount=old.conversationIds.length; old.firstSeenAt=old.firstSeenAt<next.firstSeenAt?old.firstSeenAt:next.firstSeenAt; old.lastSeenAt=old.lastSeenAt>next.lastSeenAt?old.lastSeenAt:next.lastSeenAt; if(next.lastSeenAt>=old.occurredAt)Object.assign(old,{conversationId:next.conversationId,question:next.question,answer:next.answer,answerSource:next.answerSource,confidenceScore:next.confidenceScore,occurredAt:next.occurredAt}); });
   return sortKnowledgeTasks([...byKey.values()].map(task=>{const impact=calculateEstimatedImpact(task);return {...task,estimatedImpact:impact.total,impactBreakdown:impact.breakdown};}));
 }
-module.exports={CLASSIFICATIONS,STATUSES,PRIORITIES,ROOT_CAUSES,REPAIR_TARGETS,normalizedQuestionKey,classifyConversation,calculateEstimatedImpact,sortKnowledgeTasks,taskFromConversation,mergeTasks};
+module.exports={CLASSIFICATIONS,STATUSES,PRIORITIES,ROOT_CAUSES,REPAIR_TARGETS,normalizedQuestionKey,classifyConversation,calculateEstimatedImpact,sortKnowledgeTasks,taskFromConversation,mergeTasks,isDiagnosticOnlyConversation};

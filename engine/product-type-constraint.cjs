@@ -1,0 +1,5 @@
+'use strict';
+const {normalize}=require('./normalizer.cjs');
+function detectProductTypeConstraint(question){const q=normalize(question);if(/\bsamponszappan\w*/.test(q))return'samponszappan';if(/\btusfurdo\w*/.test(q))return'tusfurdo';if(/\bszappan\w*/.test(q))return'szappan';if(/\bsampon\w*/.test(q))return'sampon';if(/\bkrem\w*/.test(q))return'krem';if(/\bbalzsam\w*/.test(q))return'balzsam';return null;}
+function matchesProductType(product,constraint){if(!constraint)return true;const text=normalize([product?.id,product?.name,product?.title,product?.label].filter(Boolean).join(' '));if(constraint==='samponszappan')return /\bsamponszappan\w*/.test(text);if(constraint==='tusfurdo')return /\btusfurdo\w*/.test(text);if(constraint==='szappan')return /\bszappan\w*/.test(text);if(constraint==='sampon')return /\bsampon\b/.test(text)&&!/\bsamponszappan\w*/.test(text);if(constraint==='krem')return /\bkrem\w*/.test(text);if(constraint==='balzsam')return /\bbalzsam\w*/.test(text);return false;}
+module.exports={detectProductTypeConstraint,matchesProductType};

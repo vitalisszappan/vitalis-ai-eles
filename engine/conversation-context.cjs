@@ -18,6 +18,8 @@ function normalizeLoose(
     value
   )
     .toLowerCase()
+    .replace(/[őöó]/g, 'o')
+    .replace(/[űüú]/g, 'u')
     .normalize(
       'NFD'
     )
@@ -335,6 +337,22 @@ function resolveProductReference(text, context) {
       };
     }
     return { productId: null, ambiguous: true };
+  }
+
+  if (/^(es\s+)?(ez|az)(\s+.*)?$|\b(ezt|ennek|errol)\b/.test(value)) {
+    if (context.lastSelectedProduct) {
+      return { productId: context.lastSelectedProduct, ambiguous: false };
+    }
+    if (context.lastUserProduct) {
+      return { productId: context.lastUserProduct, ambiguous: false };
+    }
+    if (context.lastFocusProduct) {
+      return { productId: context.lastFocusProduct, ambiguous: false };
+    }
+    if (products.length === 1) {
+      return { productId: products[0], ambiguous: false };
+    }
+    return { productId: null, ambiguous: products.length > 1 };
   }
 
   if (/\b(ebbol|belole|ezt|azt)\b/.test(value)) {
