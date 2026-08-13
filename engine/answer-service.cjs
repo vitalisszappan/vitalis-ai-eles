@@ -56,6 +56,7 @@ function attachDecision(answer, routing) {
     contextUsed: routing.contextUsed,
     contextTarget: routing.contextTarget,
     responseSource: routing.responseSource,
+    answerMode: routing.answerMode,
     routing
   };
 }

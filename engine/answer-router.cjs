@@ -11,8 +11,9 @@ const { buildConversationContext, resolveProductReference } = require('./convers
 const { findProductInText } = require('./product-faq.cjs');
 const { resolveMetaIntent } = require('./meta-intents.cjs');
 const { searchKnowledge } = require('./knowledge-fallback.cjs');
-const {detectProductTypeConstraint}=require('./product-type-constraint.cjs');
+const {detectProductTypeConstraint,inferredHairType,HAIR_WASH_TYPES}=require('./product-type-constraint.cjs');
 const {isTypeComparison}=require('./hair-wash-products.cjs');
+const {determineAnswerMode}=require('./answer-mode.cjs');
 
 const catalog = createCatalogSearch();
 
@@ -25,13 +26,17 @@ function decision(overrides = {}) {
   };
 }
 
-function routeAnswer({ question, history = [], knowledge = [], ruleEngine, conversationState = null }) {
+function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, conversationState = null }) {
   const goal = detectCustomerGoal(question);
   const problem = detectProblemIntent(question);
   const safety = evaluateSafety(question, problem);
   const derivedContext = buildConversationContext(history, normalize);
   const context = conversationState ? {...derivedContext,lastRecommendedProducts:conversationState.lastOrdinalProductList||conversationState.lastRecommendedProducts||[],lastFocusProduct:conversationState.lastMentionedProduct,lastProduct:conversationState.lastMentionedProduct,lastProblemDomain:conversationState.activeProblemDomains?.at(-1)||derivedContext.lastProblemDomain} : derivedContext;
-  const productTypeConstraint=detectProductTypeConstraint(question);
+  let productTypeConstraint=detectProductTypeConstraint(question);
+  if (!productTypeConstraint && /\b(ajanl\w*|javasol\w*|melyiket|mit valassz\w*)\b/.test(normalize(question))) {
+    const rememberedTypes = [...new Set((context.lastRecommendedProducts || []).map((id) => inferredHairType({ id })).filter(Boolean))];
+    if (rememberedTypes.length === 1 && HAIR_WASH_TYPES.includes(rememberedTypes[0])) productTypeConstraint = rememberedTypes[0];
+  }
   const base = { goal: goal.goal, intent: goal.intent, domain: goal.domain || problem?.domain || null, safetyClass: safety.safetyClass, evidence: [...goal.evidence, ...(problem?.evidence || []), ...safety.evidence], productTypeConstraint };
 
   const meta = resolveMetaIntent(question);
@@ -122,6 +127,11 @@ function routeAnswer({ question, history = [], knowledge = [], ruleEngine, conve
   }
   const aliasSuspected = matches.length === 0 && /\b(szappan|sampon|krem|balzsam|dezodor|termek)\b/.test(current);
   return decision({ ...base, route: 'hard_fallback', candidateCount: matches.length, confidence: assessed.confidence, threshold: assessed.threshold, evidence: aliasSuspected ? [...base.evidence, 'alias-suspected'] : base.evidence, rejectionReasons: aliasSuspected ? ['alias_missing'] : assessed.rejectionReasons.length ? assessed.rejectionReasons : ['knowledge_gap'], responseSource: 'hard-fallback' });
+}
+
+function routeAnswer(args) {
+  const routing = routeAnswerCore(args);
+  return { ...routing, answerMode: determineAnswerMode(args.question, routing) };
 }
 
 module.exports = { routeAnswer, createRoutingDecision: decision };
