@@ -1744,3 +1744,22 @@ async function loadCommerceOutcomes(){
 }
 if(loadCommerceOutcomesButton)loadCommerceOutcomesButton.addEventListener('click',loadCommerceOutcomes);
 loadCommerceOutcomes();
+
+const loadRevenueButton=document.getElementById('loadRevenueButton');
+const revenueStatus=document.getElementById('revenueStatus');
+const huf=value=>`${new Intl.NumberFormat('hu-HU',{maximumFractionDigits:0}).format(Number(value)||0)} HUF`;
+async function loadRevenue(){
+ if(!revenueStatus)return;revenueStatus.textContent='A revenue adatok betöltése...';
+ try{
+  const [summary,orders]=await Promise.all([adminFetch('/api/admin/commerce/revenue/summary'),adminFetch('/api/admin/commerce/revenue/orders?limit=50')]);
+  document.getElementById('revenueAiOrders').textContent=String(summary.aiAssistedOrders||0);
+  document.getElementById('revenueAiProduct').textContent=huf(summary.aiAssistedProductRevenue);
+  document.getElementById('revenueFullValue').textContent=huf(summary.fullOrderRevenue);
+  document.getElementById('revenueAverage').textContent=huf(summary.aiAssistedOrders?summary.fullOrderRevenue/summary.aiAssistedOrders:0);
+  const tbody=document.querySelector('#revenueTable tbody');tbody.innerHTML='';
+  for(const order of orders.items||[]){const row=document.createElement('tr');const skus=(order.items||[]).filter(i=>i.lineType==='product').map(i=>i.sku).filter(Boolean).join(', ');row.innerHTML=`<td>${escapeHtml(order.orderedAt||'')}</td><td>${escapeHtml(order.orderKey||'')}</td><td>${escapeHtml(huf(order.aiAssistedProductValue))}</td><td>${escapeHtml(huf(order.fullOrderValue))}</td><td>${escapeHtml(order.lifecycleState||'')}</td><td>${escapeHtml(skus)}</td>`;tbody.appendChild(row);}
+  revenueStatus.textContent=`${(orders.items||[]).length} revenue rendelés betöltve.`;
+ }catch(error){revenueStatus.textContent=`Revenue betöltési hiba: ${error.message}`;}
+}
+if(loadRevenueButton)loadRevenueButton.addEventListener('click',loadRevenue);
+loadRevenue();

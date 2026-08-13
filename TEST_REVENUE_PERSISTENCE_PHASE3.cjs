@@ -1,0 +1,54 @@
+'use strict';
+
+const assert=require('node:assert/strict');const fs=require('node:fs');const path=require('node:path');
+const {PGlite}=require(process.env.PGLITE_MODULE||'@electric-sql/pglite');
+const {buildRevenueSnapshot,FINAL_STATUS,PENDING_STATUS}=require('./engine/revenue-domain.cjs');
+const {createRevenuePersistenceAdapter}=require('./engine/revenue-persistence.cjs');
+const {createRevenueOrchestrator}=require('./engine/revenue-orchestrator.cjs');
+const apply=fs.readFileSync(path.join(__dirname,'SUPABASE_REVENUE_ATTRIBUTION_PHASE2_APPLY.sql'),'utf8');
+const ids={attribution:'10000000-0000-4000-8000-000000000001',proof:'10000000-0000-4000-8000-000000000002',outcome:'10000000-0000-4000-8000-000000000003'};
+const fp=(n)=>n.toString(16).padStart(64,'0');
+function database(raw){let tail=Promise.resolve();return{query:(s,p)=>raw.query(s,p),transaction(fn){const run=async()=>{await raw.exec('begin');try{const value=await fn({query:(s,p)=>raw.query(s,p)});await raw.exec('commit');return value;}catch(e){await raw.exec('rollback');throw e;}};const result=tail.then(run,run);tail=result.catch(()=>{});return result;}};}
+function order(key,items,status=FINAL_STATUS){return{order:{orderKey:key,orderId:`ID-${key}`,currency:'HUF',items},evidence:{recommended:[{sku:'SKU-A'},{sku:'SKU-B'}],clicked:[{sku:'SKU-B'}]},lifecycleObservation:{kind:'status',...status}};}
+function item(id,sku,quantity,priceGross,extra={}){return{id,sku,quantity,priceGross,...extra};}
+function input(snapshot,n,observation){return{snapshot,attributionId:ids.attribution,proofId:null,outcomeId:null,orderedAt:'2026-08-10T10:00:00.000Z',evidenceCapturedAt:'2026-08-10T10:01:00.000Z',initialObservation:observation,refreshFingerprint:fp(n)};}
+async function rejected(fn,code){let error;try{await fn();}catch(e){error=e;}assert.equal(error?.code||error?.message,code);}
+
+(async()=>{const raw=new PGlite();await raw.waitReady;try{
+ await raw.exec(`create role anon;create role authenticated;create role service_role bypassrls;create role browser_user;create table public.commerce_order_proofs(proof_id uuid primary key);create table public.commerce_outcomes(outcome_id uuid primary key);insert into public.commerce_order_proofs values('${ids.proof}');insert into public.commerce_outcomes values('${ids.outcome}');`);await raw.exec(apply);
+ const db=database(raw),logs=[],store=createRevenuePersistenceAdapter({db,logger:e=>logs.push(e)});
+ // A, D, E, F, G, H, Q: finalized snapshot, exact quantity arithmetic and all line classes.
+ const a=order('A',[item('p1','SKU-A','2','10.123456789012'),item('p2','SKU-B','1','3'),item('p3','SKU-X','1','4'),item('shipping-cost','SHIP','1','2',{isTechnical:true}),item('handel-cost','FEE','1','1',{isTechnical:true}),item('mystery','TECH','1','5',{isTechnical:true})]);
+ const snapA=buildRevenueSnapshot(a);assert.equal(snapA.productOrderValue,'27.246913578024');assert.equal(snapA.aiAssistedProductRevenue,'23.246913578024');assert.equal(snapA.fullOrderValue,'35.246913578024');
+ const createdA=await store.createRevenueSnapshot(input(snapA,1,a.lifecycleObservation));assert.equal(createdA.duplicate,false);assert.equal(createdA.snapshot.lifecycle.lifecycle_state,'finalized');
+ // B pending and C unknown.
+ const b=order('B',[item('p1','SKU-A','1','10')],PENDING_STATUS),createdB=await store.createRevenueSnapshot(input(buildRevenueSnapshot(b),2,b.lifecycleObservation));assert.equal(createdB.snapshot.lifecycle.lifecycle_state,'verified_pending');
+ const unknown={kind:'status',statusType:'other',statusId:'9',status:'Review'},c=order('C',[item('p1','SKU-X','1','7')],unknown),createdC=await store.createRevenueSnapshot(input(buildRevenueSnapshot(c),3,unknown));assert.equal(createdC.snapshot.lifecycle.lifecycle_state,'unknown');
+ // I identical retry, J incompatible immutable retry.
+ const duplicate=await store.createRevenueSnapshot(input(snapA,1,a.lifecycleObservation));assert.equal(duplicate.duplicate,true);assert.equal(duplicate.revenueOrderId,createdA.revenueOrderId);
+ const incompatible={...snapA,fullOrderValue:'36.246913578024'};await rejected(()=>store.createRevenueSnapshot(input(incompatible,1,a.lifecycleObservation)),'immutable_evidence_conflict');
+ const incompatibleEvidence=structuredClone(snapA);incompatibleEvidence.items[0].clickEventIds=['30000000-0000-4000-8000-000000000001'];await rejected(()=>store.createRevenueSnapshot(input(incompatibleEvidence,1,a.lifecycleObservation)),'immutable_evidence_conflict');
+ // K item constraint failure rolls back the order row.
+ const k=order('K',[item('p1','SKU-A','1','2')]),bad=buildRevenueSnapshot(k);bad.items[0].lineGross='999';await rejected(()=>store.createRevenueSnapshot(input(bad,4,k.lifecycleObservation)),'23514');assert.equal(await store.getRevenueOrderByOrderKey({orderKey:'K'}),null);
+ // L serialized concurrent transaction callers converge to one immutable row.
+ const l=order('L',[item('p1','SKU-A','1','2')]),li=input(buildRevenueSnapshot(l),5,l.lifecycleObservation),both=await Promise.all([store.createRevenueSnapshot(li),store.createRevenueSnapshot(li)]);assert.equal(both.filter(x=>!x.duplicate).length,1);assert.equal(both[0].revenueOrderId,both[1].revenueOrderId);
+ // M atomic lifecycle transition and N duplicate fingerprint no-op.
+ const transition=await store.upsertLifecycleState({revenueOrderId:createdB.revenueOrderId,expectedStateVersion:1,observation:{kind:'status',...FINAL_STATUS},observedAt:'2026-08-11T00:00:00Z',refreshFingerprint:fp(20)});assert.equal(transition.state,'finalized');assert.equal(transition.stateVersion,2);
+ const transitionDup=await store.upsertLifecycleState({revenueOrderId:createdB.revenueOrderId,expectedStateVersion:2,observation:{kind:'status',...FINAL_STATUS},observedAt:'2026-08-11T00:00:00Z',refreshFingerprint:fp(20)});assert.equal(transitionDup.duplicate,true);assert.equal(transitionDup.stateVersion,2);
+ await rejected(()=>store.upsertLifecycleState({revenueOrderId:createdC.revenueOrderId,expectedStateVersion:1,observation:{kind:'status',...FINAL_STATUS},observedAt:'bad',refreshFingerprint:fp(21)}),'invalid_observed_at');const cAfter=await store.getRevenueOrderById({revenueOrderId:createdC.revenueOrderId});assert.equal(Number(cAfter.lifecycle.state_version),1);
+ await raw.exec(`create function public.phase3_test_reject_lifecycle_update() returns trigger language plpgsql as $$ begin raise exception 'forced_lifecycle_update_failure'; end $$;create trigger phase3_test_reject_lifecycle_update before update on public.commerce_order_lifecycle for each row when (old.revenue_order_id='${createdC.revenueOrderId}') execute function public.phase3_test_reject_lifecycle_update()`);let atomicFailure=false;try{await store.upsertLifecycleState({revenueOrderId:createdC.revenueOrderId,expectedStateVersion:1,observation:{kind:'status',...FINAL_STATUS},observedAt:'2026-08-11T01:00:00Z',refreshFingerprint:fp(21)});}catch{atomicFailure=true;}assert.equal(atomicFailure,true);assert.equal(Number((await raw.query(`select count(*)::int as count from public.commerce_order_lifecycle_events where revenue_order_id=$1 and refresh_fingerprint=$2`,[createdC.revenueOrderId,fp(21)])).rows[0].count),0);await raw.exec('drop trigger phase3_test_reject_lifecycle_update on public.commerce_order_lifecycle;drop function public.phase3_test_reject_lifecycle_update()');
+ // O generic failure preserves state/status and monetary snapshot.
+ const before=await store.getRevenueOrderById({revenueOrderId:createdA.revenueOrderId});const failure=await store.upsertLifecycleState({revenueOrderId:createdA.revenueOrderId,expectedStateVersion:1,observation:{kind:'generic_502'},observedAt:'2026-08-12T00:00:00Z',refreshFingerprint:fp(22)});assert.equal(failure.state,'finalized');const after=await store.getRevenueOrderById({revenueOrderId:createdA.revenueOrderId});assert.equal(after.lifecycle.current_status,FINAL_STATUS.status);assert.equal(String(after.order.full_order_value),String(before.order.full_order_value));
+ // Authoritative evidence alone may produce unverifiable; generic failure cannot create snapshots.
+ const auth=await store.upsertLifecycleState({revenueOrderId:createdC.revenueOrderId,expectedStateVersion:1,observation:{kind:'authoritative_not_found',authoritative:true},observedAt:'2026-08-12T00:00:00Z',refreshFingerprint:fp(23)});assert.equal(auth.state,'unverifiable');
+ // Read models preserve numeric text and currency grouping.
+ const summary=await store.getRevenueSummary({from:'2026-08-01',to:'2026-09-01'});assert.equal(summary.length,1);assert.equal(typeof summary[0].full_order_value,'string');assert.ok((await store.listRevenueOrders({limit:10})).length>=4);assert.ok((await store.listRevenueByProduct({from:'2026-08-01',to:'2026-09-01',currency:'HUF'})).length>=1);
+ // P: schema and persisted JSON contain no PII/raw XML columns or values; sanitized logs only allowlisted fields.
+ const cols=(await raw.query(`select column_name from information_schema.columns where table_schema='public' and table_name like 'commerce_revenue_%'`)).rows.map(r=>r.column_name);assert.equal(cols.some(x=>/customer|email|phone|address|comment|xml|item_name/.test(x)),false);assert.equal(JSON.stringify(await store.getRevenueOrderById({revenueOrderId:createdA.revenueOrderId})).includes('<Order'),false);assert.equal(logs.every(e=>Object.keys(e).every(k=>['operation','loginOk','permissionChecked','getOrderAllowed','status','code'].includes(k))),true);
+ // R: browser role denied; service_role can read and insert under the proven contract.
+ await raw.exec('begin');let denied=false;try{await raw.exec('set role browser_user;select * from public.commerce_revenue_orders');}catch{denied=true;}await raw.exec('rollback');assert.equal(denied,true);await raw.exec('begin;set role service_role;select * from public.commerce_revenue_orders;rollback');
+ // Controlled manual harness function: read-only evidence -> build -> persist -> read back; no route wiring.
+ const proofOrder=order('PROOF',[item('p1','SKU-A','1','9')],PENDING_STATUS);const orchestrator=createRevenueOrchestrator({persistence:store,fetchOrderEvidence:async()=>({readOnly:true,order:proofOrder.order,attributionEvidence:proofOrder.evidence,lifecycleObservation:proofOrder.lifecycleObservation,orderedAt:'2026-08-13T00:00:00Z',capturedAt:'2026-08-13T00:01:00Z'})});const prepared=await orchestrator.prepareSingleRecordPersistenceProof({orderKey:'PROOF',attributionId:ids.attribution,refreshFingerprint:fp(30)});assert.equal(prepared.stored.order.order_key,'PROOF');
+ await rejected(()=>createRevenueOrchestrator({persistence:store,fetchOrderEvidence:async()=>({readOnly:true,failureKind:'generic_502'})}).buildAndPersistRevenueSnapshot({orderKey:'NOPE'}),'valid_monetary_evidence_required');assert.equal(await store.getRevenueOrderByOrderKey({orderKey:'NOPE'}),null);
+ console.log('Revenue Persistence Phase 3 A-R: PASS');
+}finally{await raw.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

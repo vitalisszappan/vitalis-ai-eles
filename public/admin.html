@@ -211,6 +211,16 @@
     <section id="commerceOutcomeStatus" class="status">Az igazolt eredmények még nincsenek betöltve.</section>
     <section id="commerceOutcomeList" class="commerce-outcome-list"></section>
 
+    <section class="toolbar revenue-toolbar"><div><h2>AI bevétel</h2><p>Mennyi bevételt segített az AI?</p></div><button id="loadRevenueButton" type="button">Frissítés</button></section>
+    <section class="stats revenue-stats">
+      <div class="stat-card"><span>AI-asszisztált rendelések</span><strong id="revenueAiOrders">–</strong></div>
+      <div class="stat-card"><span>AI által segített termékbevétel</span><strong id="revenueAiProduct">–</strong></div>
+      <div class="stat-card"><span>Érintett rendelési érték</span><strong id="revenueFullValue">–</strong></div>
+      <div class="stat-card"><span>Átlagos AI-assisted kosár</span><strong id="revenueAverage">–</strong></div>
+    </section>
+    <section id="revenueStatus" class="status">A revenue adatok még nincsenek betöltve.</section>
+    <div class="table-wrap"><table id="revenueTable"><thead><tr><th>Dátum</th><th>Rendelés</th><th>AI termékbevétel</th><th>Teljes rendelés</th><th>Állapot</th><th>Termék/SKU</th></tr></thead><tbody></tbody></table></div>
+
     <!-- =====================================================
          UNAS KAPCSOLAT
     ====================================================== -->
@@ -324,7 +334,7 @@
 
   </main>
 
-  <script src="/admin.js?v=20260731-knowledge-builder-3"></script>
+  <script src="/admin.js?v=20260813-revenue-phase4"></script>
 
 </body>
 

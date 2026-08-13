@@ -71,6 +71,8 @@ const { createCommerceHealthTracker, buildCommerceHealth } = require('./engine/c
 const { verifyUnasOrder } = require('./engine/unas-order-verifier.cjs');
 const { createPermissionPreflightHandler } = require('./engine/unas-permission-preflight.cjs');
 const { validatePreflightOrderKey, preflightUnasOrder, toPreflightDiagnostic } = require('./engine/unas-revenue-preflight.cjs');
+const { createRevenuePhase4Service } = require('./engine/revenue-phase4.cjs');
+const { createRevenueAdminReader } = require('./engine/revenue-admin-read.cjs');
 
 function readCanonicalProductStatuses() {
   try {
@@ -170,6 +172,8 @@ const commerceOutcomeStore = createCommerceOutcomeStore({
   supabaseConfigured: supabaseConfigured(), productionRuntime,
   request: supabaseRequest, filePath: COMMERCE_OUTCOME_LOG
 });
+const revenuePhase4 = supabaseConfigured() ? createRevenuePhase4Service({request:supabaseRequest}) : null;
+const revenueAdminReader = supabaseConfigured() ? createRevenueAdminReader({request:supabaseRequest}) : null;
 const commerceHealthTracker = createCommerceHealthTracker();
 const allowCommerceEvent = createRateLimiter({
   limit: Number(process.env.COMMERCE_EVENT_RATE_LIMIT) || 60,
@@ -2068,7 +2072,10 @@ async function handleOrderProof(req, res) {
   const result = await processOrderProof(validation.proof, {
     eventStore: commerceEventStore,
     proofStore: orderProofStore,
-    verifyOrder: (orderKey) => verifyUnasOrder(orderKey)
+    outcomeStore: commerceOutcomeStore,
+    verifyOrder: (orderKey) => verifyUnasOrder(orderKey),
+    onVerifiedRevenue: revenuePhase4 ? value=>revenuePhase4.persistVerified(value) : undefined,
+    onRevenueDiagnostic: event=>console.warn('[revenue]',JSON.stringify({status:event?.status==='failed'?'failed':'unknown',code:/^[a-z0-9_]{1,80}$/.test(String(event?.code||''))?event.code:'revenue_failed'}))
   });
   const status = orderProofHttpStatus(result);
   if (!result.ok) {
@@ -2076,6 +2083,17 @@ async function handleOrderProof(req, res) {
     console.warn('[order-proof] rejected', JSON.stringify({ status, error: result.error || 'proof_failed', originPresent: true, contentTypeJson: true }));
   }
   return sendJson(res, status, result);
+}
+
+async function handleAdminRevenueSummary(req,res,url){
+ if(!authorizeAdmin(req,res,url,{allowQueryToken:false}))return;
+ if(!revenueAdminReader)return sendJson(res,503,{ok:false,error:'revenue_store_unavailable'});
+ try{return sendJson(res,200,await revenueAdminReader.summary());}catch(error){logSafeTechnicalError('Revenue summary failed.',error,{operation:'revenue_summary',table:'commerce_revenue_orders'});return sendJson(res,503,{ok:false,error:'revenue_store_unavailable'});}
+}
+async function handleAdminRevenueOrders(req,res,url){
+ if(!authorizeAdmin(req,res,url,{allowQueryToken:false}))return;
+ if(!revenueAdminReader)return sendJson(res,503,{ok:false,error:'revenue_store_unavailable'});
+ try{return sendJson(res,200,await revenueAdminReader.orders(url.searchParams.get('limit')));}catch(error){logSafeTechnicalError('Revenue orders failed.',error,{operation:'revenue_orders',table:'commerce_revenue_orders'});return sendJson(res,503,{ok:false,error:'revenue_store_unavailable'});}
 }
 
 async function handleAdminCommerceOutcomes(req, res, url) {
@@ -3454,6 +3472,14 @@ const server =
           if (req.method !== 'GET') return sendJson(res, 405, { ok: false, error: 'method_not_allowed' });
           await handleAdminCommerceOutcomes(req, res, url);
           return;
+        }
+        if(url.pathname==='/api/admin/commerce/revenue/summary'){
+          if(req.method!=='GET')return sendJson(res,405,{ok:false,error:'method_not_allowed'});
+          await handleAdminRevenueSummary(req,res,url);return;
+        }
+        if(url.pathname==='/api/admin/commerce/revenue/orders'){
+          if(req.method!=='GET')return sendJson(res,405,{ok:false,error:'method_not_allowed'});
+          await handleAdminRevenueOrders(req,res,url);return;
         }
 
         /* -------------------------

@@ -22,7 +22,7 @@ assert.equal(parseOrderResponse('<Orders><Order/><Order/></Orders>').length,2); 
 for(const unsafe of ['<xml>','A&B','-636298','99212-','99212--636298','1-2-3','x'.repeat(101)]) assert.throws(()=>orderRequestXml(unsafe),/invalid_order_key/);
 (async()=>{const dir=fs.mkdtempSync(path.join(os.tmpdir(),'vitalis-proof-')); try {
  const store=createLocalPocProofStore(path.join(dir,'proofs.jsonl')), clicked=[{attribution_id:attributionId,event_type:'product_clicked',sku:'SKU-CLICKED',occurred_at:new Date(now-1000).toISOString()}];
- const opts={proofStore:store,findEvents:()=>clicked,verifyOrder:async key=>({ok:true,order:{...orders[0],key}})};
+ const opts={proofStore:store,outcomeStore:{insertOutcome:async outcome=>({duplicate:false,outcome})},findEvents:()=>clicked,verifyOrder:async key=>({ok:true,order:{...orders[0],key}})};
  assert.deepEqual(await processOrderProof(valid(base).proof,opts),{ok:true,verified:true,duplicate:false});
  assert.deepEqual(await processOrderProof(valid(base).proof,opts),{ok:true,verified:true,duplicate:true});
  assert.equal(fs.readFileSync(path.join(dir,'proofs.jsonl'),'utf8').trim().split(/\r?\n/).length,1);

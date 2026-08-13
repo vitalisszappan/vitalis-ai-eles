@@ -4,8 +4,11 @@
   "private": true,
   "description": "Vitalis webshop chatbot – éles kiadás",
   "scripts": {
-    "pretest": "node TEST_PRODUCT_CARD_CLICK_TRACKING.cjs && node TEST_UNAS_PERMISSION_PREFLIGHT.cjs && node TEST_VERIFIED_COMMERCE_OUTCOME.cjs && node TEST_COMMERCE_OUTCOME_API.cjs && node TEST_COMMERCE_OUTCOME_DIAGNOSTICS.cjs",
+    "pretest": "node TEST_PRODUCT_CARD_CLICK_TRACKING.cjs && node TEST_REVENUE_DOMAIN_PHASE1.cjs && node TEST_REVENUE_PHASE3_CONTRACT.cjs && node TEST_REVENUE_PRODUCTION_ROLLBACK_PROOF.cjs && node TEST_REVENUE_PHASE4.cjs && node TEST_REVENUE_PHASE4_PRODUCTION_RUNNER.cjs && node TEST_UNAS_PERMISSION_PREFLIGHT.cjs && node TEST_VERIFIED_COMMERCE_OUTCOME.cjs && node TEST_COMMERCE_OUTCOME_API.cjs && node TEST_COMMERCE_OUTCOME_DIAGNOSTICS.cjs",
     "start": "node server.cjs",
+    "revenue:db-preflight": "node RUN_REVENUE_PRODUCTION_DB_PREFLIGHT.cjs",
+    "revenue:production-rollback-proof": "node RUN_REVENUE_PRODUCTION_ROLLBACK_PROOF.cjs",
+    "revenue:phase4-production-persist": "node RUN_REVENUE_PHASE4_PRODUCTION_PERSIST.cjs",
     "test": "node TEST_ATTRIBUTION_LIFECYCLE.cjs && node TEST_ATTRIBUTION_ORDER_LIFECYCLE_E2E.cjs && node TEST_COMMERCE_EVENTS.cjs && node TEST_SUPABASE_COMMERCE_EVENT_STORE.cjs && node TEST_SUPABASE_ORDER_PROOF_STORE.cjs && node TEST_COMMERCE_HEALTH.cjs && node TEST_COMMERCE_RETENTION.cjs && node TEST_COMMERCE_EVENT_API.cjs && node TEST_BROWSER_COMMERCE_INTEGRATION.cjs && node TEST_UNAS_ORDER_BRIDGE.cjs && node TEST_BROWSER_ORDER_BRIDGE_E2E_PREP.cjs && node TEST_ORDER_PROOF_API.cjs && node TEST_UNAS_REVENUE_PREFLIGHT.cjs && node TEST_DECISION_ENGINE_1.cjs && node TEST_COMMUNICATION_ENGINE_1.cjs && node TEST_CHAT_TRANSPARENCY_PERSISTENCE.cjs && node TEST_KNOWLEDGE_BACKFILL.cjs && node TEST_KNOWLEDGE_BACKFILL_API.cjs && node TEST_KNOWLEDGE_DRAFTS.cjs && node TEST_KNOWLEDGE_TASKS.cjs && node TEST_KNOWLEDGE_TASK_API.cjs && node TEST_KNOWLEDGE_CLUSTERS.cjs && node TEST_KNOWLEDGE_CLUSTER_API.cjs && node TEST_EXPERT_RULES.cjs && node TEST_1_4.cjs && node TEST_1_5.cjs && node TEST_1_6.cjs && node TEST_1_7.cjs && node TEST_CONVERSATION_CONTEXT.cjs && node TEST_PRODUCT_LINKS.cjs && node TEST_PRODUCT_AUDIT_FIXES.cjs && node TEST_META_INTENTS.cjs && node TEST_UNAS_SYNC.cjs && node TEST_UNAS_SNAPSHOT_ENDPOINT.cjs && node TEST_CANONICAL_UNAS_MAPPING.cjs && node TEST_PRODUCT_REGISTRY.cjs && node TEST_UNAS_SYNC_COORDINATOR.cjs && node TEST_UNAS_PRODUCT_REVIEW.cjs && node TEST_CANONICAL_EXPANSION.cjs"
   },
   "engines": {
@@ -13,5 +16,9 @@
   },
   "dependencies": {
     "fast-xml-parser": "^5.10.1"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.4",
+    "pg": "^8.23.0"
   }
 }

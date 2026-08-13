@@ -60,6 +60,7 @@ async function main() {
     const proofStore = createLocalPocProofStore(path.join(temp, 'proofs.jsonl'));
     const result = await processOrderProof({ orderKey: '970185', attributionId, schemaVersion: 1, timestamp: new Date(now).toISOString() }, {
       eventStore: afterRestart, proofStore,
+      outcomeStore: { insertOutcome: async outcome => ({ duplicate: false, outcome }) },
       verifyOrder: async (key) => ({ ok: true, order: { key, id: '99212-970185', date: '2026.08.08', items: [{ id: '1', sku: 'SKU-1' }] } })
     });
     assert.deepEqual(result, { ok: true, verified: true, duplicate: false });

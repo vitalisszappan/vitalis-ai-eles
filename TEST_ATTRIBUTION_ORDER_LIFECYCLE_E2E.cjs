@@ -69,8 +69,9 @@ async function main() {
     const proof = validateOrderProof(bridgePayload, { now: () => now + 2_000 });
     assert.equal(proof.ok, true);
     const proofStore = createLocalPocProofStore(proofLog);
+    const outcomeStore = { insertOutcome: async (outcome) => ({ duplicate: false, outcome }) };
     const verified = await processOrderProof(proof.proof, {
-      eventLogPath: eventLog, proofStore,
+      eventLogPath: eventLog, proofStore, outcomeStore,
       verifyOrder: async (key) => ({ ok: true, order: { key, id: '99212-970185', date: '2026.08.08', items: [{ id: '1', sku: 'SKU-CLICKED' }] } })
     });
     assert.deepEqual(verified, { ok: true, verified: true, duplicate: false });

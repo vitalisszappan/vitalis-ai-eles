@@ -1,4 +1,7 @@
 node_modules/
+*.crt
+*.cer
+*.pem
 .env
 .env.local
 data/unas-catalog-snapshot.json
