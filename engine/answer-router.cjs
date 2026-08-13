@@ -12,6 +12,7 @@ const { findProductInText } = require('./product-faq.cjs');
 const { resolveMetaIntent } = require('./meta-intents.cjs');
 const { searchKnowledge } = require('./knowledge-fallback.cjs');
 const {detectProductTypeConstraint}=require('./product-type-constraint.cjs');
+const {isTypeComparison}=require('./hair-wash-products.cjs');
 
 const catalog = createCatalogSearch();
 
@@ -35,6 +36,7 @@ function routeAnswer({ question, history = [], knowledge = [], ruleEngine, conve
 
   const meta = resolveMetaIntent(question);
   if (meta) return decision({ ...base, route: 'meta', intent: meta.intent, goal: 'unknown', domain: 'meta', matchedRuleId: meta.ruleId, confidence: 1, threshold: 1, responseSource: 'meta-intent' });
+  if(isTypeComparison(question))return decision({...base,route:'hair_type_knowledge',intent:'product_type_comparison',goal:'compare_products',domain:'hair_wash',matchedRuleId:'solid-shampoo-vs-shampoo-soap',confidence:1,threshold:1,responseSource:'approved-knowledge'});
 
   if (safety.safetyClass === 'medical_escalation') {
     return decision({ ...base, route: 'safety', goal: 'medical_boundary', intent: 'medical_escalation', confidence: 1, threshold: 1, responseSource: 'safety-gate' });
@@ -60,6 +62,8 @@ function routeAnswer({ question, history = [], knowledge = [], ruleEngine, conve
 
   const attributeIntent=/\b(osszetevo\w*|inci)\b/.test(normalize(question))?'ingredients':/\b(illat\w*)\b/.test(normalize(question))?'scent':null;
   if(attributeIntent&&(directCanonical||catalog.findExactProduct(question))){const matches=searchKnowledge(knowledge,question),assessed=evaluateKnowledgeConfidence(question,matches,{domain:'product',intent:attributeIntent,context});if(assessed.accepted)return decision({...base,route:'knowledge',intent:attributeIntent,domain:'product',matchedKnowledgeIds:[matches[0].item.id],confidence:assessed.confidence,threshold:assessed.threshold,evidence:[...base.evidence,`attribute:${attributeIntent}`],responseSource:'knowledge-fallback'});return decision({...base,route:'hard_fallback',intent:attributeIntent,domain:'product',candidateCount:matches.length,confidence:assessed.confidence,threshold:assessed.threshold,rejectionReasons:['knowledge_missing'],evidence:[...base.evidence,`attribute:${attributeIntent}`],responseSource:'hard-fallback'});}
+
+  if(['solid_shampoo','shampoo_soap'].includes(productTypeConstraint))return decision({...base,route:'hair_product_type',intent:'product_recommendation',goal:'find_product',domain:'shampoo',confidence:1,threshold:1,responseSource:'approved-product-type-rule'});
 
   const reference = resolveProductReference(question, context);
   if (reference?.productId) {

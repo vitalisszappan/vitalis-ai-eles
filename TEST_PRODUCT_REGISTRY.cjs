@@ -78,7 +78,8 @@ assert.deepEqual(
     url: validProductUrl(PRODUCTS[id].url),
     image: '',
     rank: index + 1,
-    recommendationType: index === 0 ? 'primary' : 'secondary'
+    recommendationType: index === 0 ? 'primary' : 'secondary',
+    ...(PRODUCTS[id].productType ? { productType: PRODUCTS[id].productType } : {})
   }))
 );
 
@@ -178,7 +179,7 @@ assert.deepEqual(ids(ask('az elsőt', history)), ['psorivital_csomag']);
 
 const approvedMappings = require('./data/canonical-unas-mapping.json').mappings
   .filter((item) => item.mappingStatus === 'approved');
-assert.equal(approvedMappings.length, 14);
+assert.equal(approvedMappings.length, 17);
 const approvedProductRegistry = registry(
   approvedMappings,
   approvedMappings.map((item, index) => snapshotProduct({

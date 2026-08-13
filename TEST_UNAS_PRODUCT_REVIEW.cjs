@@ -27,7 +27,7 @@ assert.deepStrictEqual(reviewIds, snapshotIds, 'Nem minden snapshot-termék szer
 assert.equal(new Set(reviewIds).size, reviewIds.length, 'Duplikált UNAS ID van a review-ban.');
 
 const approvedMappings = mapping.mappings.filter((item) => item.mappingStatus === 'approved');
-assert.equal(approvedMappings.length, 14);
+assert.equal(approvedMappings.length, 17);
 for (const approved of approvedMappings) {
   const record = first.records.find((item) => item.unasId === String(approved.unasId));
   assert.ok(record, `Hiányzó approved UNAS rekord: ${approved.unasId}`);
@@ -35,8 +35,8 @@ for (const approved of approvedMappings) {
   assert.equal(record.canonicalCandidate, approved.canonicalId);
   assert.equal(record.confidence, 'exact');
 }
-assert.equal(first.summary.approved_mapped, 14);
-assert.equal(first.summary.topNewProductCandidateIds.length, 20);
+assert.equal(first.summary.approved_mapped, 17);
+assert.ok(first.summary.topNewProductCandidateIds.length <= 20);
 for (const unasId of first.summary.topNewProductCandidateIds) {
   assert.equal(first.records.find((record) => record.unasId === unasId).reviewStatus, 'new_product_candidate');
 }
@@ -45,9 +45,9 @@ const charcoalCanonical = mapping.mappings.find((item) => item.canonicalId === '
 assert.equal(charcoalCanonical.mappingStatus, 'needs_review');
 assert.equal(charcoalCanonical.unasId, undefined);
 const charcoalShampoo = first.records.find((item) => item.unasId === '1467818511');
-assert.equal(charcoalShampoo.reviewStatus, 'needs_review');
-assert.equal(charcoalShampoo.canonicalCandidate, 'aktiv_szenes_szappan');
-assert.notEqual(charcoalShampoo.confidence, 'exact');
+assert.equal(charcoalShampoo.reviewStatus, 'approved_mapped');
+assert.equal(charcoalShampoo.canonicalCandidate, 'teafa_aktiv_szen_samponszappan');
+assert.equal(charcoalShampoo.confidence, 'exact');
 
 for (const record of first.records) {
   assert.ok(record.reason && record.reason.trim(), `Hiányzó indoklás: ${record.unasId}`);

@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { normalize } = require('./normalizer.cjs');
+const {inferredHairType}=require('./product-type-constraint.cjs');
 
 const DEFAULT_SNAPSHOT = path.join(__dirname, '..', 'data', 'unas-catalog-snapshot.json');
 const CATEGORY_DEFINITIONS = [
@@ -33,13 +34,15 @@ function safeProduct(product) {
   const price = Number.isFinite(product.actualPriceGross) ? product.actualPriceGross
     : Number.isFinite(product.priceGross) ? product.priceGross : null;
   const size = normalize(product.name).match(/\b\d+(?:[.,]\d+)?\s*(?:ml|g|kg|db)\b/)?.[0] || '';
-  return {
+  const safe={
     id: String(product.unasId || product.sku || ''), unasId: String(product.unasId || ''), sku: String(product.sku || ''),
     name: String(product.name || '').trim(), normalizedName: normalize(product.name), aliases: [],
     category: (product.categoryNames || []).map(String), public: product.public !== false,
     active: product.active !== false && product.status?.state !== 'disabled', orderable: product.orderable !== false,
     size, price, currency: product.currency || 'HUF', url: validUrl(product.url), image
   };
+  safe.productType=inferredHairType(safe);
+  return safe;
 }
 
 function createCatalogSearch(snapshotPath = DEFAULT_SNAPSHOT) {

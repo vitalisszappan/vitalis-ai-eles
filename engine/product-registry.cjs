@@ -119,6 +119,7 @@ function mergeProduct(canonicalId, canonicalProduct, index) {
     unasId: cleanText(mapping.unasId),
     sku: cleanText(mapping.sku)
   };
+  if (cleanText(mapping.productType)) base.productType = cleanText(mapping.productType);
   return base;
 }
 

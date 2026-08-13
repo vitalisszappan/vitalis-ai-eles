@@ -6,6 +6,9 @@ const mapping = require('./data/canonical-unas-mapping.json');
 const EXPECTED_CANONICAL_IDS = [
   'dermavital_sampon',
   'rozmaringos_samponszappan',
+  'teafa_aktiv_szen_samponszappan',
+  'solid_shampoo_normal_green_tea',
+  'solid_shampoo_oily_rosemary_caffeine',
   'dermavital_krem',
   'dermavital_szappan',
   'psorivital_csomag',
@@ -32,14 +35,14 @@ function assertUnique(values, label) {
 assert.equal(mapping.schema, 'vitalis-canonical-unas-mapping/v1');
 assert.equal(mapping.version, 1);
 assert.ok(Array.isArray(mapping.mappings));
-assert.equal(mapping.mappings.length, 15);
+assert.equal(mapping.mappings.length, 18);
 
 const canonicalIds = mapping.mappings.map((item) => item.canonicalId);
 assertUnique(canonicalIds, 'canonicalId');
 assert.deepEqual([...canonicalIds].sort(), [...EXPECTED_CANONICAL_IDS].sort());
 
 const approved = mapping.mappings.filter((item) => item.mappingStatus === 'approved');
-assert.equal(approved.length, 14);
+assert.equal(approved.length, 17);
 
 for (const item of approved) {
   assert.equal(typeof item.canonicalId, 'string');
@@ -51,6 +54,15 @@ for (const item of approved) {
   assert.equal(item.mappingStatus, 'approved');
   assert.ok(Number.isFinite(Date.parse(item.approvedAt)));
 }
+
+const hairTypes = Object.fromEntries(approved.filter((item) => item.productType).map((item) => [item.canonicalId, item.productType]));
+assert.deepEqual(hairTypes, {
+  dermavital_sampon: 'liquid_shampoo',
+  rozmaringos_samponszappan: 'shampoo_soap',
+  teafa_aktiv_szen_samponszappan: 'shampoo_soap',
+  solid_shampoo_normal_green_tea: 'solid_shampoo',
+  solid_shampoo_oily_rosemary_caffeine: 'solid_shampoo'
+});
 
 assertUnique(approved.map((item) => item.unasId), 'unasId');
 assertUnique(approved.map((item) => item.sku), 'sku');

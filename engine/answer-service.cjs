@@ -42,6 +42,7 @@ const { childAnswer } = require('./product-faq.cjs');
 const { composeCommunication } = require('./communication-engine.cjs');
 const {classifyFallback,gapDisposition}=require('./fallback-classifier.cjs');
 const {matchesProductType}=require('./product-type-constraint.cjs');
+const {comparisonAnswer,recommendation:hairRecommendation}=require('./hair-wash-products.cjs');
 
 const decisionCatalog = createCatalogSearch();
 
@@ -77,6 +78,8 @@ function catalogCard(item, index = 0) {
 
 function materializeDecision({ routing, question, history, knowledge, ruleEngine, logGap, conversationState, technicalFailure, logDiagnostic }) {
   if (routing.responseSource === 'meta-intent') return attachDecision(resolveMetaIntent(question), routing);
+  if(routing.route==='hair_type_knowledge')return attachDecision(comparisonAnswer(),routing);
+  if(routing.route==='hair_product_type')return attachDecision(hairRecommendation(question,routing.productTypeConstraint),routing);
   if (routing.matchedRuleId === 'sls-sles-free') return attachDecision(answerSlsSlesQuestion(question), routing);
 
   if (routing.route === 'safety') {
@@ -157,7 +160,7 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
   if (routing.route === 'product_category') {
     const found = decisionCatalog.searchCategory(routing.domain);
     const constrained=routing.productTypeConstraint?found.products.filter(item=>matchesProductType(item,routing.productTypeConstraint)):found.products;
-    const products=constrained.length?constrained:found.products;
+    const products=routing.productTypeConstraint?constrained:found.products;
     if (!products.length) return attachDecision({ source: 'catalog-absent', answer: `A jelenlegi kínálatban nem találok ${found.category?.label || 'ilyen terméket'}.`, confidence: 100, links: [], suggestions: [], ruleId: null, intent: 'catalog_category_absent', matchedKnowledgeIds: [] }, routing);
     const names = products.slice(0, 3).map((item) => item.name).join(', ');
     const distinction = routing.domain === 'deodorant' ? ' Ezek dezodorok: a testszag kialakulását segítenek megelőzni, de nem állítjuk róluk, hogy az izzadást megszüntetik.' : '';

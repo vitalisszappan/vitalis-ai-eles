@@ -2777,5 +2777,22 @@
       "product_recommendation"
     ],
     "priority": 50
+  },
+  {
+    "id": "kb_solid_shampoo_vs_shampoo_soap",
+    "title": "A szilárd sampon és a samponszappan ugyanaz?",
+    "canonicalQuestion": "A szilárd sampon és a samponszappan ugyanaz?",
+    "questionVariants": [
+      "Mi a különbség a szilárd sampon és a samponszappan között?",
+      "A samponrúd és a samponszappan ugyanaz?"
+    ],
+    "shortAnswer": "Nem. A szilárd sampon sampon jellegű hajtisztító szilárd formában, a samponszappan pedig szappanalapú hajtisztító.",
+    "fullAnswer": "A szilárd sampon és a samponszappan nem ugyanaz. A szilárd sampon sampon jellegű hajtisztító szilárd formában. A samponszappan szappanalapú hajtisztító. Külön terméktípusok, ezért nem cseréljük fel őket automatikusan.",
+    "category": "termekismeret",
+    "products": [],
+    "keywords": ["szilard", "sampon", "samponrud", "samponszappan", "kulonbseg"],
+    "intents": ["product_type_comparison"],
+    "source": "approved-knowledge",
+    "priority": 100
   }
 ]

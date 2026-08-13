@@ -58,7 +58,7 @@ const NEEDS_REVIEW = Object.freeze({
 });
 
 const TOP_NEW_PRODUCT_IDS = [
-  '1229782139', '1229849469', '1462215016', '1462205581', '1462229441',
+  '1462215016', '1462205581', '1462229441',
   '163834530', '163833777', '864855961', '449056663', '1080620650',
   '111374978', '111374975', '111374976', '111374977', '1423171731',
   '1511229416', '423469634', '111374995', '111374983', '111374968'
@@ -218,7 +218,7 @@ function buildReview({ snapshot, mapping, knowledge, rules }) {
       total: records.length,
       ...counts,
       families,
-      topNewProductCandidateIds: TOP_NEW_PRODUCT_IDS.filter((id) => byId.has(id)),
+      topNewProductCandidateIds: TOP_NEW_PRODUCT_IDS.filter((id) => byId.get(id)?.reviewStatus === 'new_product_candidate'),
       needsReviewIds: records.filter((record) => record.reviewStatus === 'needs_review').map((record) => record.unasId)
     },
     records

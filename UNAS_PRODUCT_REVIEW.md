@@ -6,10 +6,10 @@ Forrás snapshot: 2026-07-21T08:57:18.568Z; összes rekord: **83**.
 
 ## Összesítés
 
-- approved_mapped: **14**
+- approved_mapped: **17**
 - mapping_candidate: **0**
-- new_product_candidate: **57**
-- needs_review: **11**
+- new_product_candidate: **55**
+- needs_review: **10**
 - excluded_or_non_product: **1**
 
 ## Termékcsaládok
@@ -17,8 +17,8 @@ Forrás snapshot: 2026-07-21T08:57:18.568Z; összes rekord: **83**.
 | Család | Összes | Mapped | Unmapped |
 |---|---:|---:|---:|
 | szappanok | 28 | 9 | 19 |
-| samponszappanok | 2 | 1 | 1 |
-| samponok | 3 | 1 | 2 |
+| samponszappanok | 2 | 2 | 0 |
+| samponok | 3 | 3 | 0 |
 | krémek és balzsamok | 9 | 2 | 7 |
 | testápolók | 3 | 0 | 3 |
 | dezodorok | 3 | 0 | 3 |
@@ -36,10 +36,13 @@ Forrás snapshot: 2026-07-21T08:57:18.568Z; összes rekord: **83**.
 |---|---|---|---|---|---|---:|:---:|---|
 | 1553769891 | Vitdermsamp01 | [Dermavital Sampon – nyugtató ápolás viszkető, irritált és érzékeny fejbőrre](https://www.vitalis-szappan.hu/dermavital-sampon-viszketo-irritalt-fejborre) | samponok | dermavital_sampon | exact | 3400 | igen | Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val. Jóváhagyott mapping; canonical név: Dermavital sampon. |
 | 1467825966 | Vssz02 | [Kézműves Samponszappan – Rozmaring 110 g](https://www.vitalis-szappan.hu/termek/sampon-szappan-normal-hajra-rozmaring) | samponszappanok | rozmaringos_samponszappan | exact | 1600 | igen | Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val. Jóváhagyott mapping; canonical név: Rozmaringos samponszappan. |
+| 1467818511 | Vssz01 | [Samponszappan – Teafa & Aktív szén 110 g](https://www.vitalis-szappan.hu/termek/samponszappan-teafa-aktiv-szen-110-g) | samponszappanok | teafa_aktiv_szen_samponszappan | exact | 1600 | igen | Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val. Jóváhagyott mapping; canonical név: Teafa és aktív szén samponszappan. |
 | 1462570616 | VDVSZ | [Dermavital szappan – Holt-tengeri ásványokkal problémás bőrre 120 g](https://www.vitalis-szappan.hu/vitalis-dermavital-szappan) | szappanok | dermavital_szappan | exact | 2700 | igen | Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val. Jóváhagyott mapping; canonical név: Dermavital szappan. |
 | 1412837511 | VDVK100 | [Dermavital nyugtató bőrápoló krém – érzékeny, irritált, ekcémára hajlamos bőrre (100 ml)](https://www.vitalis-szappan.hu/dermavital-balzsam-100-ml) | krémek és balzsamok | dermavital_krem | exact | 3700 | igen | Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val. Jóváhagyott mapping; canonical név: Dermavital krém. |
 | 1241472589 | Vksz03 | [Natúr kecsketejes szappan érzékeny, száraz bőrre – Illatmentes 110 g](https://www.vitalis-szappan.hu/Natur-kecsketejes-szappan) | szappanok | natur_kecsketejes_szappan | exact | 1490 | igen | Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val. Jóváhagyott mapping; canonical név: Natúr kecsketejes szappan. |
 | 1241471919 | Vksz02 | [Kecsketejes levendulás szappan gyulladt, érzékeny bőrre – Nyugtató 100 g](https://www.vitalis-szappan.hu/nyugtato-kecsketejes-szappan-tihanyi-Levendula-ola) | szappanok | kecsketejes_levendulas_szappan | exact | 1490 | igen | Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val. Jóváhagyott mapping; canonical név: Kecsketejes levendulás szappan. |
+| 1229849469 | VSZSP05 | [Szilárd sampon normál hajra zöldteával – Kíméletes tisztítás érzékeny fejbőrre](https://www.vitalis-szappan.hu/szilard-sampon-normal-hajra-zoldteaval) | samponok | solid_shampoo_normal_green_tea | exact | 3400 | igen | Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val. Jóváhagyott mapping; canonical név: Szilárd sampon normál hajra zöldteával. |
+| 1229782139 | VSZSP04 | [Szilárd sampon zsíros hajra rozmaringgal és koffeinnel – Hajnövekedés és hajdúsítás természetesen](https://www.vitalis-szappan.hu/szilard-sampon-zsiros-hajra-rozmaring) | samponok | solid_shampoo_oily_rosemary_caffeine | exact | 3400 | igen | Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val. Jóváhagyott mapping; canonical név: Szilárd sampon zsíros hajra rozmaringgal és koffeinnel. |
 | 1120057029 | CS001 | [PsoriVital csomag – Pikkelysömörrel érintett, hámlásra hajlamos bőr ápolására](https://www.vitalis-szappan.hu/psorivital-csomag-ekcemas-borre) | csomagok | psorivital_csomag | exact | 6500 | igen | Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val. Jóváhagyott mapping; canonical név: PsoriVital csomag. |
 | 163833663 | VEM02 | [Holt-tengeri só balzsam száraz, érzékeny bőrre – intenzív ápolás 250 ml](https://www.vitalis-szappan.hu/termek/holt-tengeri-so-balzsam) | krémek és balzsamok | holt_tengeri_so_balzsam | exact | 4290 | igen | Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val. Jóváhagyott mapping; canonical név: Holt-tengeri só balzsam. |
 | 111374997 | Vsz016 | [Shea vajas szappan – Hidratáló, bőrpuhító luxusápolás érzékeny bőrre – 110 g](https://www.vitalis-szappan.hu/termek/shea-vajas-szappan) | szappanok | shea_vajas_szappan | exact | 1490 | igen | Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val. Jóváhagyott mapping; canonical név: Shea vajas szappan. |
@@ -71,8 +74,6 @@ Forrás snapshot: 2026-07-21T08:57:18.568Z; összes rekord: **83**.
 | 1423186461 | VTUS04 | [Természetes tusfürdő – Levendula 250 ml Nyugtató, mindennapi használatra](https://www.vitalis-szappan.hu/Termeszetes-tusfurdo-Levendula-250-ml-Nyugtato-min) | szappanok | — | none | 1590 | igen | Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord. Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének. |
 | 1423171731 | VTUS03 | [Természetes tusfürdő – Teafa & Levendula 250 ml Frissítő tisztaság](https://www.vitalis-szappan.hu/Termeszetes-tusfurdo-Teafa-Levendula) | szappanok | — | none | 1590 | igen | Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord. Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének. |
 | 1423140766 | VTUS02 | [Természetes tusfürdő – Barack 250 ml](https://www.vitalis-szappan.hu/Termeszetes-tusfurdo-Barack) | szappanok | — | none | 1590 | igen | Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord. Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének. |
-| 1229849469 | VSZSP05 | [Szilárd sampon normál hajra zöldteával – Kíméletes tisztítás érzékeny fejbőrre](https://www.vitalis-szappan.hu/szilard-sampon-normal-hajra-zoldteaval) | samponok | — | none | 3400 | igen | Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord. Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének. |
-| 1229782139 | VSZSP04 | [Szilárd sampon zsíros hajra rozmaringgal és koffeinnel – Hajnövekedés és hajdúsítás természetesen](https://www.vitalis-szappan.hu/szilard-sampon-zsiros-hajra-rozmaring) | samponok | — | none | 3400 | igen | Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord. Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének. |
 | 1080620650 | VHB01 | [Hortobágyi Mester Balzsam – Ízületi és Izomfájdalmakra 250 ml](https://www.vitalis-szappan.hu/termek/hortobagyi-mester-balzsam-izuleti-es-izomfajdalmak) | krémek és balzsamok | — | none | 5790 | igen | Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord. Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének. |
 | 999444670 | VHB011 | [Tápláló Hajkondicionáló Pakolás Argán- és Ricinus Olajjal 50 ml](https://www.vitalis-szappan.hu/termek-taplalo-hajkondicionalo-pakolas) | egyéb | — | none | 3790 | igen | Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord. Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének. |
 | 864855961 | VHi01 | [Hyaluron feszesítő arckrém 75 ml](https://www.vitalis-szappan.hu/Hyaluron-feszesito-arckrem) | krémek és balzsamok | — | none | 4280 | igen | Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord. Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének. |
@@ -120,7 +121,6 @@ Forrás snapshot: 2026-07-21T08:57:18.568Z; összes rekord: **83**.
 
 | UNAS ID | SKU | Termék | Család | Canonical / tudásjelölt | Bizonyosság | Ár | Publikus | Indoklás |
 |---|---|---|---|---|---|---:|:---:|---|
-| 1467818511 | Vssz01 | [Samponszappan – Teafa & Aktív szén 110 g](https://www.vitalis-szappan.hu/termek/samponszappan-teafa-aktiv-szen-110-g) | samponszappanok | aktiv_szenes_szappan | medium | 1600 | igen | A névben aktív szén szerepel, de az UNAS rekord samponszappan, a canonical termék pedig bőrtisztító szappan. Nem azonosítható az aktiv_szenes_szappan termékkel; eltérő terméktípus, automatikus mapping tilos. |
 | 1412841306 | KACS01 | [Vitalis Karácsonyi Ajándékcsomag – Hajápoló válogatás (3 részes)](https://www.vitalis-szappan.hu/Vitalis-Karacsonyi-Ajandekcsomag-Hajapolo-valogata) | csomagok | — | none | 8400 | igen | Csomagtermék; összetevői, időszakossága és esetleges átfedései kézi ellenőrzést igényelnek. Önálló canonical termékként vagy csomagként történő későbbi kezelésről külön döntés szükséges. |
 | 1120474529 | CS005 | [Nyugodt Karácsony Csomag (pikkelysömör, ekcéma)](https://www.vitalis-szappan.hu/Nyugodt-Karacsony-Csomag-pikkelysomor-ekcema) | csomagok | — | none | 6100 | igen | Csomagtermék; összetevői, időszakossága és esetleges átfedései kézi ellenőrzést igényelnek. Önálló canonical termékként vagy csomagként történő későbbi kezelésről külön döntés szükséges. |
 | 1120474184 | CS004 | ["Ízületi Kényeztetés" csomag (visszér és gyulladás)](https://www.vitalis-szappan.hu/Izuleti-Kenyeztetes-csomag) | csomagok | — | none | 9900 | igen | Csomagtermék; összetevői, időszakossága és esetleges átfedései kézi ellenőrzést igényelnek. Önálló canonical termékként vagy csomagként történő későbbi kezelésről külön döntés szükséges. |
@@ -142,8 +142,6 @@ Forrás snapshot: 2026-07-21T08:57:18.568Z; összes rekord: **83**.
 
 | UNAS ID | SKU | Termék | Család | Canonical / tudásjelölt | Bizonyosság | Ár | Publikus | Indoklás |
 |---|---|---|---|---|---|---:|:---:|---|
-| 1229782139 | VSZSP04 | [Szilárd sampon zsíros hajra rozmaringgal és koffeinnel – Hajnövekedés és hajdúsítás természetesen](https://www.vitalis-szappan.hu/szilard-sampon-zsiros-hajra-rozmaring) | samponok | — | none | 3400 | igen | Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord. Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének. |
-| 1229849469 | VSZSP05 | [Szilárd sampon normál hajra zöldteával – Kíméletes tisztítás érzékeny fejbőrre](https://www.vitalis-szappan.hu/szilard-sampon-normal-hajra-zoldteaval) | samponok | — | none | 3400 | igen | Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord. Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének. |
 | 1462215016 | VFG | [Természetes fogkrém – Zöld agyaggal és mentával](https://www.vitalis-szappan.hu/termeszetes-fogkrem-zold-agyaggal-es-mentaval) | fogápolás | — | none | 3400 | igen | Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord. Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének. |
 | 1462205581 | VFFP | [Fogfehérítő por – Aktív kókusz szénnel és borsmentával 30 g](https://www.vitalis-szappan.hu/fogfeherito-por-aktiv-kokusz-szennel-es-borsmentav) | fogápolás | — | none | 3400 | igen | Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord. Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének. |
 | 1462229441 | VSZDCS | [Vitalis Szájápolási Duo – Természetes fogkrém és aktív szenes fogfehérítő por](https://www.vitalis-szappan.hu/vitalis-szajapolasi-duo) | fogápolás | — | none | 6190 | igen | Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord. Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének. |

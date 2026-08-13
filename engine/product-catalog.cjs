@@ -6,14 +6,16 @@ const PRODUCTS = {
     name: 'Dermavital sampon',
     description: 'Problémás, korpás, viszkető vagy hámló fejbőr kímélő tisztítására.',
     url: null,
-    image: null
+    image: null,
+    productType: 'liquid_shampoo'
   },
   rozmaringos_samponszappan: {
     id: 'rozmaringos_samponszappan',
     name: 'Rozmaringos samponszappan',
     description: 'Kiegészítő haj- és fejbőrápolásra, különösen viszkető vagy pikkelysömörre hajlamos fejbőrnél.',
     url: null,
-    image: null
+    image: null,
+    productType: 'shampoo_soap'
   },
   dermavital_krem: {
     id: 'dermavital_krem',
@@ -70,6 +72,21 @@ const PRODUCTS = {
     description: 'Száraz, húzódó bőr kímélő mindennapi tisztítására.',
     url: null,
     image: null
+  },
+  teafa_aktiv_szen_samponszappan: {
+    id: 'teafa_aktiv_szen_samponszappan', name: 'Teafa és aktív szén samponszappan',
+    description: 'Szappanalapú hajtisztító zsírosodásra hajlamos haj és fejbőr tisztítására.', url: null, image: null,
+    productType: 'shampoo_soap'
+  },
+  solid_shampoo_normal_green_tea: {
+    id: 'solid_shampoo_normal_green_tea', name: 'Szilárd sampon normál hajra zöldteával',
+    description: 'Szilárd formájú sampon normál vagy enyhén száraz haj és érzékeny fejbőr kíméletes tisztítására.', url: null, image: null,
+    productType: 'solid_shampoo'
+  },
+  solid_shampoo_oily_rosemary_caffeine: {
+    id: 'solid_shampoo_oily_rosemary_caffeine', name: 'Szilárd sampon zsíros hajra rozmaringgal és koffeinnel',
+    description: 'Szilárd formájú sampon zsírosodásra hajlamos haj tisztítására, rozmaringgal és koffeinnel.', url: null, image: null,
+    productType: 'solid_shampoo'
   },
   natur_kecsketejes_szappan: {
     id: 'natur_kecsketejes_szappan',
@@ -149,6 +166,7 @@ function productCards(ids = [], options = {}) {
         rank: index + 1,
         recommendationType: index === 0 ? 'primary' : 'secondary'
       };
+      if (cleanText(product.productType)) card.productType = cleanText(product.productType);
       if (typeof product.price === 'number') card.price = product.price;
       if (typeof product.priceGross === 'number') card.priceGross = product.priceGross;
       if (typeof product.actualPriceGross === 'number') card.actualPriceGross = product.actualPriceGross;

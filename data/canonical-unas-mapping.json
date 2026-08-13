@@ -7,6 +7,7 @@
       "unasId": "1553769891",
       "sku": "Vitdermsamp01",
       "verifiedName": "Dermavital Sampon – nyugtató ápolás viszkető, irritált és érzékeny fejbőrre",
+      "productType": "liquid_shampoo",
       "mappingStatus": "approved",
       "approvedAt": "2026-07-21T11:11:31+02:00"
     },
@@ -15,8 +16,36 @@
       "unasId": "1467825966",
       "sku": "Vssz02",
       "verifiedName": "Kézműves Samponszappan – Rozmaring 110 g",
+      "productType": "shampoo_soap",
       "mappingStatus": "approved",
       "approvedAt": "2026-07-21T11:11:31+02:00"
+    },
+    {
+      "canonicalId": "teafa_aktiv_szen_samponszappan",
+      "unasId": "1467818511",
+      "sku": "Vssz01",
+      "verifiedName": "Samponszappan – Teafa & Aktív szén 110 g",
+      "productType": "shampoo_soap",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-08-13T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "solid_shampoo_normal_green_tea",
+      "unasId": "1229849469",
+      "sku": "VSZSP05",
+      "verifiedName": "Szilárd sampon normál hajra zöldteával – Kíméletes tisztítás érzékeny fejbőrre",
+      "productType": "solid_shampoo",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-08-13T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "solid_shampoo_oily_rosemary_caffeine",
+      "unasId": "1229782139",
+      "sku": "VSZSP04",
+      "verifiedName": "Szilárd sampon zsíros hajra rozmaringgal és koffeinnel – Hajnövekedés és hajdúsítás természetesen",
+      "productType": "solid_shampoo",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-08-13T00:00:00+02:00"
     },
     {
       "canonicalId": "dermavital_krem",

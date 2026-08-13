@@ -48,6 +48,9 @@ const PRODUCT_ALIASES = [
     'katranyszappan'
   ]],
   ['rozmaringos_samponszappan', ['rozmaringos samponszappan']],
+  ['teafa_aktiv_szen_samponszappan', ['teafa aktiv szen samponszappan', 'teafa es aktiv szen samponszappan']],
+  ['solid_shampoo_normal_green_tea', ['szilard sampon normal hajra zoldteaval', 'zoldteas szilard sampon']],
+  ['solid_shampoo_oily_rosemary_caffeine', ['szilard sampon zsiros hajra rozmaringgal es koffeinnel', 'rozmaringos koffeines szilard sampon']],
   ['natur_kecsketejes_szappan', [
     'natur kecsketejes szappan',
     'illatmentes kecsketejes szappan',

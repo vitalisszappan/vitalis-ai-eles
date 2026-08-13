@@ -15,9 +15,9 @@
       "data/rules/expert-rules.json"
     ],
     "sourceEvidence": {
-      "canonicalProductCount": 15,
-      "aliasCanonicalCount": 15,
-      "knowledgeEntryCount": 96,
+      "canonicalProductCount": 18,
+      "aliasCanonicalCount": 18,
+      "knowledgeEntryCount": 97,
       "expertRuleCount": 19,
       "ruleCanonicalIds": [
         "aktiv_szenes_szappan",
@@ -34,10 +34,10 @@
   },
   "summary": {
     "total": 83,
-    "approved_mapped": 14,
+    "approved_mapped": 17,
     "mapping_candidate": 0,
-    "new_product_candidate": 57,
-    "needs_review": 11,
+    "new_product_candidate": 55,
+    "needs_review": 10,
     "excluded_or_non_product": 1,
     "families": [
       {
@@ -49,14 +49,14 @@
       {
         "family": "samponszappanok",
         "total": 2,
-        "mapped": 1,
-        "unmapped": 1
+        "mapped": 2,
+        "unmapped": 0
       },
       {
         "family": "samponok",
         "total": 3,
-        "mapped": 1,
-        "unmapped": 2
+        "mapped": 3,
+        "unmapped": 0
       },
       {
         "family": "krémek és balzsamok",
@@ -120,8 +120,6 @@
       }
     ],
     "topNewProductCandidateIds": [
-      "1229782139",
-      "1229849469",
       "1462215016",
       "1462205581",
       "1462229441",
@@ -142,7 +140,6 @@
       "111374968"
     ],
     "needsReviewIds": [
-      "1467818511",
       "1412841306",
       "1120474529",
       "1120474184",
@@ -246,11 +243,11 @@
         "state": "live"
       },
       "productFamily": "samponszappanok",
-      "canonicalCandidate": "aktiv_szenes_szappan",
-      "confidence": "medium",
-      "reason": "A névben aktív szén szerepel, de az UNAS rekord samponszappan, a canonical termék pedig bőrtisztító szappan.",
-      "note": "Nem azonosítható az aktiv_szenes_szappan termékkel; eltérő terméktípus, automatikus mapping tilos.",
-      "reviewStatus": "needs_review"
+      "canonicalCandidate": "teafa_aktiv_szen_samponszappan",
+      "confidence": "exact",
+      "reviewStatus": "approved_mapped",
+      "reason": "Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val.",
+      "note": "Jóváhagyott mapping; canonical név: Teafa és aktív szén samponszappan."
     },
     {
       "unasId": "1462570616",
@@ -702,11 +699,11 @@
         "state": "live"
       },
       "productFamily": "samponok",
-      "canonicalCandidate": null,
-      "confidence": "none",
-      "reviewStatus": "new_product_candidate",
-      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
-      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+      "canonicalCandidate": "solid_shampoo_normal_green_tea",
+      "confidence": "exact",
+      "reviewStatus": "approved_mapped",
+      "reason": "Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val.",
+      "note": "Jóváhagyott mapping; canonical név: Szilárd sampon normál hajra zöldteával."
     },
     {
       "unasId": "1229782139",
@@ -728,11 +725,11 @@
         "state": "live"
       },
       "productFamily": "samponok",
-      "canonicalCandidate": null,
-      "confidence": "none",
-      "reviewStatus": "new_product_candidate",
-      "reason": "Publikus, valós UNAS-termék, amelyhez nincs approved mapping vagy meglévő canonical rekord.",
-      "note": "Csak felülvizsgálati jelölt; nem része az éles chatbot ajánlási rendszerének."
+      "canonicalCandidate": "solid_shampoo_oily_rosemary_caffeine",
+      "confidence": "exact",
+      "reviewStatus": "approved_mapped",
+      "reason": "Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val.",
+      "note": "Jóváhagyott mapping; canonical név: Szilárd sampon zsíros hajra rozmaringgal és koffeinnel."
     },
     {
       "unasId": "1120474529",
