@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),http=require('node:http'),os=require('node:os'),path=require('node:path');
 const {spawn}=require('node:child_process');
 const {parseLoginPermissions,runUnasPermissionPreflight,createPermissionPreflightHandler}=require('./engine/unas-permission-preflight.cjs');
-const adminJs=fs.readFileSync('./public/admin.js','utf8');
+const adminJs=fs.readFileSync('./public/admin.js','utf8'),adminHtml=fs.readFileSync('./public/admin.html','utf8');
 const adminCss=fs.readFileSync('./public/admin.css','utf8');
 const secret='UNAS-API-KEY-SECRET',sessionToken='UNAS-SESSION-TOKEN-SECRET';
 const identity='<ShopId>SHOP-123</ShopId><Subscription>Premium</Subscription>';
@@ -17,6 +17,7 @@ assert.deepEqual(parseLoginPermissions(`<Login><Permissions><getOrder>1</getOrde
 assert.deepEqual(parseLoginPermissions(`<Login><Permissions><Permission><Name>getOrder</Name><Allowed>false</Allowed></Permission></Permissions>${identity}</Login>`),{...expectedIdentity,getOrderAllowed:false});
 assert.throws(()=>parseLoginPermissions('<Login>'),/invalid_unas_login_xml/);
 assert.match(adminJs,/\/api\/admin\/unas\/permission-preflight/);for(const label of ['UNAS kapcsolat: OK','Shop ID:','Csomag:','getOrder jogosultság:'])assert.equal(adminJs.includes(label),true);assert.equal(/data\.(token|raw|apiKey)/.test(adminJs),false);
+assert.match(adminHtml,/id="unasStatusMessageTop"[\s\S]*?aria-live="polite"/);assert.match(adminJs,/unasStatusMessageTop\.hidden\s*=\s*false/);assert.equal((adminJs.match(/setStatus\(unasStatusMessageTop/g)||[]).length,1);assert.equal((adminJs.match(/setStatus\(unasStatusMessage,/g)||[]).length,1);
 assert.match(adminCss,/\.status\s*\{[^}]*white-space:\s*pre-line/s);
 function sendJson(res,status,body){res.status=status;res.body=body;}
 async function invoke(handler,headers={},query=''){const res={headers:{'cache-control':'no-store'}};await handler({headers},res,new URL(`http://localhost/api/admin/unas/permission-preflight${query}`));return res;}

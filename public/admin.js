@@ -91,6 +91,11 @@ const unasStatusMessage =
     'unasStatusMessage'
   );
 
+const unasStatusMessageTop =
+  document.getElementById(
+    'unasStatusMessageTop'
+  );
+
 const unasSyncButton =
   document.getElementById(
     'unasSyncButton'
@@ -1338,8 +1343,13 @@ async function loadKnowledgeGaps() {
 ========================================================= */
 
 async function testUnasConnection() {
-  setStatus(
-    unasStatusMessage,
+  const setUnasStatus = (message, isError = false) => {
+    if (unasStatusMessageTop) unasStatusMessageTop.hidden = false;
+    setStatus(unasStatusMessageTop, message, isError);
+    setStatus(unasStatusMessage, message, isError);
+  };
+
+  setUnasStatus(
     'UNAS kapcsolat ellenőrzése folyamatban...'
   );
 
@@ -1363,8 +1373,7 @@ async function testUnasConnection() {
         '/api/admin/unas/permission-preflight'
       );
 
-    setStatus(
-      unasStatusMessage,
+    setUnasStatus(
       [
         'UNAS kapcsolat: OK',
         `Shop ID: ${data.shopId}`,
@@ -1381,8 +1390,7 @@ async function testUnasConnection() {
       error
     );
 
-    setStatus(
-      unasStatusMessage,
+    setUnasStatus(
       `UNAS kapcsolati hiba: ${error.message}`,
       true
     );
