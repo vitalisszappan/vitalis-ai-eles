@@ -37,12 +37,22 @@ function permissionNames(permissions) {
   });
 }
 
+function identityValue(value) {
+  const text = scalar(value);
+  if (!text || text.length > 100 || !/^[A-Za-z0-9._:\/ -]+$/.test(text)) throw new Error('invalid_unas_identity');
+  return text;
+}
+
 function parseLoginPermissions(xml) {
   const source = String(xml || '').trim();
   if (XMLValidator.validate(source) !== true) throw new Error('invalid_unas_login_xml');
   const parsed = parser.parse(source);
   if (!parsed?.Login || typeof parsed.Login !== 'object') throw new Error('invalid_unas_login_xml');
-  return { getOrderAllowed: permissionNames(parsed.Login.Permissions).some((name) => name === 'getOrder') };
+  return {
+    shopId: identityValue(parsed.Login.ShopId),
+    subscription: identityValue(parsed.Login.Subscription),
+    getOrderAllowed: permissionNames(parsed.Login.Permissions).some((name) => name === 'getOrder')
+  };
 }
 
 async function runUnasPermissionPreflight(options = {}) {
@@ -53,7 +63,7 @@ async function runUnasPermissionPreflight(options = {}) {
   }
   const login = await (options.loginFn || loginToUnas)();
   const result = parseLoginPermissions(login?.raw);
-  return { unasConfigured: true, loginOk: true, getOrderAllowed: result.getOrderAllowed };
+  return { unasConfigured: true, loginOk: true, shopId: result.shopId, subscription: result.subscription, getOrderAllowed: result.getOrderAllowed };
 }
 
 function createPermissionPreflightHandler(options = {}) {

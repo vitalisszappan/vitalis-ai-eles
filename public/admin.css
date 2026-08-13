@@ -246,6 +246,7 @@ button:disabled {
 
   color: var(--green-dark);
   font-size: 16px;
+  white-space: pre-line;
 }
 
 .status.error {

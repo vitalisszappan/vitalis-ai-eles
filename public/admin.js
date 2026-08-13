@@ -1360,19 +1360,17 @@ async function testUnasConnection() {
   try {
     const data =
       await adminFetch(
-        '/api/admin/unas/test'
+        '/api/admin/unas/permission-preflight'
       );
 
     setStatus(
       unasStatusMessage,
-      data.message ||
-      `Az UNAS API kapcsolat működik. Termékek: ${
-        data.products ??
-        '–'
-      }, kategóriák: ${
-        data.categories ??
-        '–'
-      }.`
+      [
+        'UNAS kapcsolat: OK',
+        `Shop ID: ${data.shopId}`,
+        `Csomag: ${data.subscription}`,
+        `getOrder jogosultság: ${data.getOrderAllowed ? 'IGEN' : 'NEM'}`
+      ].join('\n')
     );
 
   } catch (

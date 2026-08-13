@@ -107,6 +107,7 @@ async function processOrderProof(proof, options) {
   const productItems = Array.isArray(order?.items) ? order.items.filter(isRealProductItem) : [];
   const orderSkus = productItems.map((item) => String(item.sku));
   const verified = order?.key === proof.orderKey && Boolean(order?.id) && orderSkus.length > 0 && orderSkus.some((sku) => clickedSkus.has(sku));
+  try { options.onUnasDiagnostic?.({step:'SKU_MATCH',result:verified?'PASS':'FAIL',status:null,category:verified?null:'SKU_MISMATCH'}); } catch (_) {}
   const row = { schema_version: proof.schemaVersion, attribution_id: proof.attributionId, order_key: proof.orderKey, verified, verified_at: verified ? new Date().toISOString() : null };
   let stored = { duplicate: proofDuplicate, row: existing };
   if (!proofDuplicate) {

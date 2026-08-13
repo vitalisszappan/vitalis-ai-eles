@@ -48,10 +48,23 @@ function parseOrderResponse(xml) {
 async function verifyUnasOrder(orderKey, options = {}) {
   const loginFn = options.loginFn || loginToUnas;
   const requestFn = options.requestFn || unasRequest;
-  const login = await loginFn(options);
-  const response = await requestFn({ endpoint: 'getOrder', token: login.token, body: orderRequestXml(orderKey) });
-  const orders = parseOrderResponse(response.body);
-  if (orders.length !== 1) return { ok: false, reason: 'order_count_invalid' };
+  const emit = (step, result, status, category) => { try { options.onDiagnostic?.({ step, result, status: Number.isInteger(status) ? status : null, category }); } catch (_) {} };
+  const statusOf = (error) => Number(error?.status) || Number(String(error?.message || '').match(/UNAS HTTP\s+(\d{3})/)?.[1]) || null;
+  let login;
+  try { login = await loginFn(options); emit('UNAS_LOGIN', 'PASS', null, null); }
+  catch (error) { const status=statusOf(error);emit('UNAS_LOGIN','FAIL',status,status?'LOGIN_FAILED':(/timeout|timed|kapcsolat|network|ECONN|ENET|EHOST|EAI_AGAIN|ENOTFOUND/i.test(String(error?.message||''))?'NETWORK_FAILED':'LOGIN_FAILED'));throw error; }
+  let response;
+  try { response = await requestFn({ endpoint: 'getOrder', token: login.token, body: orderRequestXml(orderKey) });emit('UNAS_GET_ORDER','PASS',Number(response?.status)||null,null); }
+  catch (error) { const status=statusOf(error);emit('UNAS_GET_ORDER','FAIL',status,status?'GET_ORDER_FAILED':'NETWORK_FAILED');throw error; }
+  let orders;
+  try { orders = parseOrderResponse(response.body); }
+  catch (error) { emit('ORDER_COUNT','FAIL',null,'MALFORMED_RESPONSE');throw error; }
+  if (orders.length !== 1) { emit('ORDER_COUNT','FAIL',null,orders.length===0?'ORDER_NOT_FOUND':'MULTIPLE_ORDERS');return { ok: false, reason: 'order_count_invalid' }; }
+  emit('ORDER_COUNT','PASS',null,null);
+  if (orders[0].key !== orderKey) { emit('ORDER_KEY_MATCH','FAIL',null,'ORDER_KEY_MISMATCH');return {ok:false,reason:'order_key_mismatch'}; }
+  emit('ORDER_KEY_MATCH','PASS',null,null);
+  if (!orders[0].id) { emit('ORDER_ID_PRESENT','FAIL',null,'ORDER_ID_MISSING');return {ok:false,reason:'order_id_missing'}; }
+  emit('ORDER_ID_PRESENT','PASS',null,null);
   return { ok: true, order: orders[0] };
 }
 
