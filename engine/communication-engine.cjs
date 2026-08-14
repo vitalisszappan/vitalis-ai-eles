@@ -53,9 +53,9 @@ function reasonFor(link, decision) {
 function enrichLinks(links, decision) {
   return (Array.isArray(links) ? links : []).slice(0, 3).map((link, index) => ({
     ...link,
-    recommendationType: decision.answerMode === ANSWER_MODES.DIRECT ? 'available' : index === 0 ? 'primary' : index === 1 ? 'secondary' : 'related',
-    recommendationLabel: decision.answerMode === ANSWER_MODES.DIRECT ? 'Elérhető termék' : index === 0 ? 'Vitalis ajánlása' : index === 1 ? 'Alternatíva' : 'Kapcsolódó termék',
-    reason: reasonFor(link, decision)
+    recommendationType: decision.answerMode === ANSWER_MODES.DIRECT ? 'available' : decision.answerMode === ANSWER_MODES.RECOMMENDATION ? (index === 0 ? 'primary' : index === 1 ? 'secondary' : 'related') : 'context',
+    recommendationLabel: decision.answerMode === ANSWER_MODES.DIRECT ? 'Elérhető termék' : decision.answerMode === ANSWER_MODES.RECOMMENDATION ? (index === 0 ? 'Vitalis ajánlása' : index === 1 ? 'Alternatíva' : 'Kapcsolódó termék') : 'Az érintett termék',
+    reason: decision.answerMode === ANSWER_MODES.RECOMMENDATION ? reasonFor(link, decision) : ''
   }));
 }
 

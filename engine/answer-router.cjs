@@ -14,6 +14,7 @@ const { searchKnowledge } = require('./knowledge-fallback.cjs');
 const {detectProductTypeConstraint,inferredHairType,HAIR_WASH_TYPES}=require('./product-type-constraint.cjs');
 const {isTypeComparison}=require('./hair-wash-products.cjs');
 const {determineAnswerMode}=require('./answer-mode.cjs');
+const {detectProductQuestionIntent}=require('./product-question-intent.cjs');
 
 const catalog = createCatalogSearch();
 
@@ -28,6 +29,7 @@ function decision(overrides = {}) {
 
 function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, conversationState = null }) {
   const goal = detectCustomerGoal(question);
+  const productQuestionIntent = detectProductQuestionIntent(question);
   const problem = detectProblemIntent(question);
   const safety = evaluateSafety(question, problem);
   const derivedContext = buildConversationContext(history, normalize);
@@ -37,7 +39,7 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
     const rememberedTypes = [...new Set((context.lastRecommendedProducts || []).map((id) => inferredHairType({ id })).filter(Boolean))];
     if (rememberedTypes.length === 1 && HAIR_WASH_TYPES.includes(rememberedTypes[0])) productTypeConstraint = rememberedTypes[0];
   }
-  const base = { goal: goal.goal, intent: goal.intent, domain: goal.domain || problem?.domain || null, safetyClass: safety.safetyClass, evidence: [...goal.evidence, ...(problem?.evidence || []), ...safety.evidence], productTypeConstraint };
+  const base = { goal: goal.goal, intent: goal.intent, domain: goal.domain || problem?.domain || null, safetyClass: safety.safetyClass, evidence: [...goal.evidence, ...(problem?.evidence || []), ...safety.evidence], productTypeConstraint, productQuestionIntent };
 
   const meta = resolveMetaIntent(question);
   if (meta) return decision({ ...base, route: 'meta', intent: meta.intent, goal: 'unknown', domain: 'meta', matchedRuleId: meta.ruleId, confidence: 1, threshold: 1, responseSource: 'meta-intent' });
@@ -68,7 +70,7 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
   const attributeIntent=/\b(osszetevo\w*|inci)\b/.test(normalize(question))?'ingredients':/\b(illat\w*)\b/.test(normalize(question))?'scent':null;
   if(attributeIntent&&(directCanonical||catalog.findExactProduct(question))){const matches=searchKnowledge(knowledge,question),assessed=evaluateKnowledgeConfidence(question,matches,{domain:'product',intent:attributeIntent,context});if(assessed.accepted)return decision({...base,route:'knowledge',intent:attributeIntent,domain:'product',matchedKnowledgeIds:[matches[0].item.id],confidence:assessed.confidence,threshold:assessed.threshold,evidence:[...base.evidence,`attribute:${attributeIntent}`],responseSource:'knowledge-fallback'});return decision({...base,route:'hard_fallback',intent:attributeIntent,domain:'product',candidateCount:matches.length,confidence:assessed.confidence,threshold:assessed.threshold,rejectionReasons:['knowledge_missing'],evidence:[...base.evidence,`attribute:${attributeIntent}`],responseSource:'hard-fallback'});}
 
-  if(['solid_shampoo','shampoo_soap'].includes(productTypeConstraint))return decision({...base,route:'hair_product_type',intent:'product_recommendation',goal:'find_product',domain:'shampoo',confidence:1,threshold:1,responseSource:'approved-product-type-rule'});
+  if(HAIR_WASH_TYPES.includes(productTypeConstraint) && ['availability','recommendation'].includes(productQuestionIntent))return decision({...base,route:'hair_product_type',intent:productQuestionIntent==='availability'?'product_type_availability':'product_recommendation',goal:'find_product',domain:'shampoo',confidence:1,threshold:1,responseSource:'approved-product-type-rule'});
 
   const reference = resolveProductReference(question, context);
   if (reference?.productId) {
@@ -86,7 +88,7 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
     if (candidates.length === 1) return decision({ ...base, route: 'context_followup', contextUsed: true, contextTarget: candidates[0], matchedCanonicalIds: candidates, matchedProductIds: candidates, confidence: 1, threshold: 1, responseSource: 'conversation-context' });
     if (candidates.length > 1) return decision({ ...base, route: 'clarification', intent: 'conversation-clarification', contextUsed: true, contextTarget: 'product', matchedCanonicalIds: candidates, matchedProductIds: candidates, confidence: 1, threshold: 1, rejectionReasons: ['ambiguous_product_type'], responseSource: 'conversation-context' });
   }
-  if (['clarify_previous_answer', 'compare_products', 'ask_usage', 'ask_child_usage', 'ask_variant'].includes(goal.goal)) {
+  if (['clarify_previous_answer', 'compare_products', 'ask_usage', 'ask_product_information', 'ask_child_usage', 'ask_variant'].includes(goal.goal)) {
     const target = directCanonical || context.lastFocusProduct;
     if (goal.goal === 'clarify_previous_answer' && history.length) {
       return decision({ ...base, route: 'context_followup', contextUsed: true, contextTarget: target || context.lastProblemDomain || 'previous_answer', matchedProductIds: target ? [target] : [], confidence: 1, threshold: 1, responseSource: 'conversation-context' });

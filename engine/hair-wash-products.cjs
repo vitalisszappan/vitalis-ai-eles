@@ -56,7 +56,14 @@ function recommendation(question, type) {
   let allIds = [];
   let answer = '';
 
-  if (type === 'solid_shampoo') {
+  if (type === 'liquid_shampoo') {
+    allIds = [...IDS.liquid];
+    const oily = /zsiro|gyorsan zsiros/.test(q);
+    ids = oily ? [] : allIds;
+    answer = oily
+      ? 'Zsírosodásra hajlamos hajra a jelenlegi folyékony samponkínálatból nem tudok bizonyítottan megfelelő terméket ajánlani. Szilárd sampon is megfelelhet?'
+      : 'A folyékony samponok közül a Dermavital sampon érhető el problémás, korpás vagy viszkető fejbőr kímélő tisztítására.';
+  } else if (type === 'solid_shampoo') {
     allIds = [...IDS.solidNormal, ...IDS.solidOily];
     const oily = /zsiro|gyorsan zsiros|koffein/.test(q);
     const sensitive = /viszket|erzekeny|normal|szaraz/.test(q);
@@ -88,4 +95,31 @@ function recommendation(question, type) {
   };
 }
 
-module.exports = { IDS, isTypeComparison, comparisonAnswer, recommendation };
+function availability(question, type) {
+  const config = {
+    liquid_shampoo: { ids: IDS.liquid, label: 'folyékony samponunk' },
+    solid_shampoo: { ids: [...IDS.solidNormal, ...IDS.solidOily], label: 'szilárd samponunk' },
+    shampoo_soap: { ids: [...IDS.soapRosemary, ...IDS.soapTeaTree], label: 'samponszappanunk' }
+  }[type];
+  const links = productCards(config?.ids || []);
+  if (!config || !links.length) return { source: 'approved-product-type-rule', ruleId: `hair-wash-${type}-availability`, intent: 'product_type_availability', answer: 'Nem találtam ilyen terméktípust a jelenlegi kínálatban.', confidence: 100, links: [], suggestions: [], matchedKnowledgeIds: [] };
+  const exact = exactExistence(question, type, config.ids);
+  if (exact) return { source: 'approved-product-type-rule', ruleId: `hair-wash-${type}-availability`, intent: 'product_type_availability', answer: exact.answer, confidence: 100, links: exact.links, suggestions: [], matchedKnowledgeIds: [] };
+  const conciseAnswer = {
+    liquid_shampoo: 'Igen. Egyféle folyékony samponunk van: a Dermavital sampon.',
+    solid_shampoo: 'Igen. Kétféle szilárd samponunk van: egy zöldteás normál hajra, valamint egy rozmaringos-koffeines zsírosodásra hajlamos hajra.',
+    shampoo_soap: 'Igen. Kétféle samponszappanunk van: egy rozmaringos, valamint egy teafa–aktív szenes változat.'
+  }[type];
+  return {
+    source: 'approved-product-type-rule',
+    ruleId: `hair-wash-${type}-availability`,
+    intent: 'product_type_availability',
+    answer: conciseAnswer,
+    confidence: 100,
+    links,
+    suggestions: [],
+    matchedKnowledgeIds: []
+  };
+}
+
+module.exports = { IDS, isTypeComparison, comparisonAnswer, recommendation, availability };

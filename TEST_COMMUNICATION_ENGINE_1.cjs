@@ -31,7 +31,10 @@ for (const [question, mode, maximum] of cases) {
   assert.equal(result.communication.answerMode, mode, `${question}: communication mode`);
   assert.ok(result.communication.wordCount <= maximum, `${question}: mode maximum`);
   assert.doesNotMatch(result.answer, /Nézzük meg|Maradjunk|Korábban már|nem ismétlem meg/i, `${question}: filler`);
-  for (const link of result.links || []) assert.ok(link.reason, `${question}: product-card reason`);
+  for (const link of result.links || []) {
+    if (mode === 'RECOMMENDATION') assert.ok(link.reason, `${question}: recommendation reason`);
+    else assert.equal(link.reason, '', `${question}: no unsolicited recommendation reason`);
+  }
   if (mode === 'DIRECT') {
     for (const link of result.links || []) assert.equal(link.recommendationLabel, 'Elérhető termék', `${question}: neutral card label`);
   }

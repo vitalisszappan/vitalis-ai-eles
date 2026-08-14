@@ -186,7 +186,11 @@ function addProductCards(article, links = [], context = {}) {
 
   const heading = document.createElement('div');
   heading.className = 'product-section-title';
-  heading.textContent = validItems.length > 1 ? 'Ajánlott termékek' : 'Ajánlott termék';
+  const neutral = context.answerMode === 'DIRECT';
+  const contextual = context.answerMode === 'EXPLANATORY';
+  heading.textContent = neutral
+    ? (validItems.length > 1 ? 'Elérhető termékek' : 'Elérhető termék')
+    : contextual ? 'Az érintett termék' : (validItems.length > 1 ? 'Ajánlott termékek' : 'Ajánlott termék');
   section.append(heading);
 
   const cards = document.createElement('div');
@@ -209,7 +213,7 @@ function addProductCards(article, links = [], context = {}) {
       card.setAttribute('aria-label', item.name);
     }
 
-    const badgeText = item.recommendationLabel || (item.recommendationType === 'primary'
+    const badgeText = item.recommendationLabel || (item.recommendationType === 'available' ? 'Elérhető termék' : item.recommendationType === 'context' ? 'Az érintett termék' : item.recommendationType === 'primary'
       ? 'Vitalis ajánlása'
       : item.recommendationType === 'related' ? 'Kapcsolódó termék' : 'Alternatíva');
     const media = item.image
@@ -424,9 +428,10 @@ async function ask(question) {
       route: data.route,
       intent: data.intent,
       domain: data.domain,
-      responseType: data.responseSource || data.route
+      responseType: data.responseSource || data.route,
+      answerMode: data.answerMode
     });
-    (Array.isArray(data.links) ? data.links : []).slice(0, 3).forEach((item, index) => {
+    (data.answerMode === 'RECOMMENDATION' ? (Array.isArray(data.links) ? data.links : []) : []).slice(0, 3).forEach((item, index) => {
       const product = normalizeProduct(item, index);
       if (product) sendCommerceEvent('product_recommended', {
         route: data.route, intent: data.intent, ...product, recommendationRank: index + 1

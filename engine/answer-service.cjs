@@ -42,7 +42,7 @@ const { childAnswer } = require('./product-faq.cjs');
 const { composeCommunication } = require('./communication-engine.cjs');
 const {classifyFallback,gapDisposition}=require('./fallback-classifier.cjs');
 const {matchesProductType}=require('./product-type-constraint.cjs');
-const {comparisonAnswer,recommendation:hairRecommendation}=require('./hair-wash-products.cjs');
+const {comparisonAnswer,recommendation:hairRecommendation,availability:hairAvailability}=require('./hair-wash-products.cjs');
 
 const decisionCatalog = createCatalogSearch();
 
@@ -77,10 +77,14 @@ function catalogCard(item, index = 0) {
   };
 }
 
+function formatWholeForint(value) {
+  return String(Math.round(value)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+}
+
 function materializeDecision({ routing, question, history, knowledge, ruleEngine, logGap, conversationState, technicalFailure, logDiagnostic }) {
   if (routing.responseSource === 'meta-intent') return attachDecision(resolveMetaIntent(question), routing);
   if(routing.route==='hair_type_knowledge')return attachDecision(comparisonAnswer(),routing);
-  if(routing.route==='hair_product_type')return attachDecision(hairRecommendation(question,routing.productTypeConstraint),routing);
+  if(routing.route==='hair_product_type')return attachDecision(routing.intent==='product_type_availability'?hairAvailability(question,routing.productTypeConstraint):hairRecommendation(question,routing.productTypeConstraint),routing);
   if (routing.matchedRuleId === 'sls-sles-free') return attachDecision(answerSlsSlesQuestion(question), routing);
 
   if (routing.route === 'safety') {
@@ -101,7 +105,7 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
     const byIntent = {
       order_start: 'A kiválasztott terméket a termékoldalán tudod kosárba tenni és megrendelni. Ha még nem választottál terméket, írd meg, mit keresel, és segítek.',
       purchase_location: 'A Vitalis termékeket a vitalis-szappan.hu webshopban tudod megvásárolni.',
-      price_query: cards[0]?.price != null ? `A ${cards[0].name} jelenlegi ára ${Math.round(cards[0].price).toLocaleString('hu-HU')} Ft.` : 'A pontos aktuális árat a termékoldalon látod.',
+      price_query: cards[0]?.price != null ? `A ${PRODUCTS[target]?.name || cards[0].name} jelenlegi ára ${formatWholeForint(cards[0].price)} Ft.` : 'A pontos aktuális árat a termékoldalon látod.',
       availability_query: cards[0]?.availability?.orderable === false ? 'Ez a termék a jelenlegi katalógusadat szerint nem rendelhető.' : 'A termék aktuális rendelhetőségét a termékoldalon tudod ellenőrizni.',
       shipping_general: 'A rendelés szállítási módjait és aktuális díját a pénztárban tudod kiválasztani és ellenőrizni.',
       shipping_cost: 'A szállítás díja a választott szállítási és fizetési módtól függ; az aktuális összeget a pénztár mutatja.',
@@ -139,11 +143,16 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
       if (answer) return attachDecision({ source: 'product-faq', answer, confidence: 100, links: productCards([target]), suggestions: [], ruleId: `child_${target}`, intent: 'child_usage', matchedKnowledgeIds: [] }, routing);
     }
     if (routing.goal === 'ask_usage') {
-      const expert = ruleEngine.resolve(question, history);
+      const explicitQuestion = PRODUCTS[target] ? `Hogyan használjam a ${PRODUCTS[target].name} terméket?` : question;
+      const expert = ruleEngine.resolve(explicitQuestion, []);
       if (expert?.intent === 'product_usage') return attachDecision(expert, routing);
+      if (target === 'psorivital_csomag') return attachDecision({ source: 'product-faq', answer: 'A PsoriVital csomag balzsamját az érintett, megtisztított bőrfelületen használd rendszeresen. A csomag szappanjait nedves bőrön habosítsd fel, majd alaposan öblítsd le.', confidence: 100, links: productCards([target]), suggestions: [], ruleId: 'usage_psorivital_csomag', intent: 'product_usage', matchedKnowledgeIds: [] }, routing);
     }
     if (routing.goal === 'ask_variant') {
       return attachDecision({ source: 'conversation-context', answer: 'A jelenlegi katalógusban ennél a terméknél nem találtam bizonyított nagyobb kiszerelést. Az aktuális változatokat a termékoldalon ellenőrizheted.', confidence: 100, links: productCards([target]), suggestions: [], ruleId: 'variant-query', intent: 'variant_query', matchedKnowledgeIds: [] }, routing);
+    }
+    if (routing.goal === 'ask_product_information') {
+      return attachDecision({ ...buildProductReferenceAnswer(target, knowledge), intent: 'product_information' }, routing);
     }
     if(!PRODUCTS[target]){const item=decisionCatalog.all().find(product=>product.id===String(target));if(item)return attachDecision({source:'unas-catalog',answer:`A megjelen\u00edtett lista kiv\u00e1lasztott eleme: ${item.name}.`,confidence:100,links:[catalogCard(item)],suggestions:[],ruleId:'catalog-ordinal-reference',intent:'select_recommendation',matchedKnowledgeIds:[]},routing);}
     return attachDecision(buildProductReferenceAnswer(target, knowledge), routing);
