@@ -10,5 +10,8 @@ const {createCommerceHealthTracker,buildCommerceHealth,WINDOW_MS}=require('./eng
  assert.equal(JSON.stringify(health).match(/attributionId|orderKey|sku|session|customer|email/i),null);
  now+=WINDOW_MS+1;assert.deepEqual(tracker.snapshot(),{attributionNotFound:0,productClickedNotFound:0,storageErrors:0});
  const unavailable=await buildCommerceHealth({eventStore:{...eventStore,getHealthSnapshot:async()=>{throw Error('down')}},proofStore,tracker,now:()=>now});assert.equal(unavailable.level,'ERROR');assert.equal(unavailable.eventStore.available,false);
+ const hanging=new Promise(()=>{}),started=Date.now();
+ const timedOut=await buildCommerceHealth({eventStore:{...eventStore,getHealthSnapshot:()=>hanging},proofStore:{...proofStore,getHealthSnapshot:()=>hanging},tracker,now:()=>now,dependencyTimeoutMs:25});
+ assert.equal(Date.now()-started<250,true);assert.equal(timedOut.eventStore.available,false);assert.equal(timedOut.proofStore.available,false);assert.equal(timedOut.last24Hours.storageErrors,0);
  console.log('Commerce production health aggregation es privacy: OK');
 })().catch(error=>{console.error(error);process.exitCode=1});

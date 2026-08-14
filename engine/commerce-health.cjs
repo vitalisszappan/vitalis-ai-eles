@@ -1,7 +1,18 @@
 'use strict';
 
 const WINDOW_MS = 24 * 60 * 60 * 1000;
+const DEFAULT_DEPENDENCY_TIMEOUT_MS = 2000;
 const TRACKED_FAILURES = new Set(['attribution_not_found', 'product_clicked_not_found', 'commerce_event_store_unavailable', 'proof_storage_failed']);
+
+function settleWithin(promise, fallback, timeoutMs) {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(fallback), timeoutMs);
+    Promise.resolve(promise).then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      () => { clearTimeout(timer); resolve(fallback); }
+    );
+  });
+}
 
 function createCommerceHealthTracker(options = {}) {
   const now = options.now || Date.now;
@@ -24,12 +35,22 @@ function createCommerceHealthTracker(options = {}) {
   };
 }
 
-async function buildCommerceHealth({ eventStore, proofStore, tracker, now = Date.now }) {
+async function buildCommerceHealth({ eventStore, proofStore, tracker, now = Date.now, dependencyTimeoutMs = DEFAULT_DEPENDENCY_TIMEOUT_MS }) {
   const generatedAt = new Date(now()).toISOString();
   const since = new Date(now() - WINDOW_MS).toISOString();
+  const timeoutMs = Number.isFinite(dependencyTimeoutMs) && dependencyTimeoutMs > 0
+    ? dependencyTimeoutMs : DEFAULT_DEPENDENCY_TIMEOUT_MS;
   const [events, proofs] = await Promise.all([
-    eventStore.getHealthSnapshot(since).then((value) => ({ available: true, ...value })).catch(() => ({ available: false, eventCount: null, productClickedCount: null, lastSuccessfulEventAt: null })),
-    proofStore.getHealthSnapshot(since).then((value) => ({ available: true, ...value })).catch(() => ({ available: false, verifiedProofCount: null, lastVerifiedProofAt: null }))
+    settleWithin(
+      eventStore.getHealthSnapshot(since).then((value) => ({ available: true, ...value })),
+      { available: false, eventCount: null, productClickedCount: null, lastSuccessfulEventAt: null },
+      timeoutMs
+    ),
+    settleWithin(
+      proofStore.getHealthSnapshot(since).then((value) => ({ available: true, ...value })),
+      { available: false, verifiedProofCount: null, lastVerifiedProofAt: null },
+      timeoutMs
+    )
   ]);
   const failures = tracker.snapshot();
   const authoritative = eventStore.kind === 'supabase' && proofStore.kind === 'supabase';
@@ -39,4 +60,4 @@ async function buildCommerceHealth({ eventStore, proofStore, tracker, now = Date
   return { level, generatedAt, windowHours: 24, supabaseAuthoritative: authoritative, productionDurable, eventStore: { kind: eventStore.kind, available: events.available }, proofStore: { kind: proofStore.kind, available: proofs.available }, lastSuccessfulCommerceEventAt: events.lastSuccessfulEventAt, lastSuccessfulVerifiedProofAt: proofs.lastVerifiedProofAt, last24Hours: { commerceEvents: events.eventCount, productClicked: events.productClickedCount, verifiedProofs: proofs.verifiedProofCount, attributionNotFound: failures.attributionNotFound, productClickedNotFound: failures.productClickedNotFound, storageErrors: failures.storageErrors } };
 }
 
-module.exports = { WINDOW_MS, TRACKED_FAILURES, createCommerceHealthTracker, buildCommerceHealth };
+module.exports = { DEFAULT_DEPENDENCY_TIMEOUT_MS, WINDOW_MS, TRACKED_FAILURES, createCommerceHealthTracker, buildCommerceHealth, settleWithin };
