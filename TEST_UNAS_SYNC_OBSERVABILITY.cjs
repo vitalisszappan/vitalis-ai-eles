@@ -25,7 +25,7 @@ async function diagnosticFor(options, trigger = 'startup') {
 }
 
 function expected(phase, category, extra = {}) {
-  return { trigger: 'startup', phase, category, http_status: null, page: null, retryable: false, duration_ms: 123, ...extra };
+  return { trigger: 'startup', phase, category, http_status: null, page: null, transport_code: null, retryable: false, duration_ms: 123, ...extra };
 }
 
 async function main() {
@@ -43,7 +43,7 @@ async function main() {
 
   await assert.rejects(loginToUnas({ apiKey: 'not-logged', requestFn: async () => ({ body: '<broken secret="x">' }) }), (error) => {
     assert.deepEqual(buildSafeDiagnostic({ trigger: 'manual', error, durationMs: Infinity }), {
-      trigger: 'manual', phase: 'login', category: 'invalid_xml', http_status: null, page: null, retryable: false, duration_ms: 0
+      trigger: 'manual', phase: 'login', category: 'invalid_xml', http_status: null, page: null, transport_code: null, retryable: false, duration_ms: 0
     });
     return true;
   });
@@ -96,7 +96,7 @@ async function main() {
   await assert.rejects(coordinator.run('startup'));
   const status = coordinator.status();
   assert.deepEqual(status.lastUnasSyncDiagnostic, {
-    trigger: 'startup', phase: 'products', category: 'upstream', http_status: 502, page: 2, retryable: true, duration_ms: status.lastUnasSyncDiagnostic.duration_ms
+    trigger: 'startup', phase: 'products', category: 'upstream', http_status: 502, page: 2, transport_code: null, retryable: true, duration_ms: status.lastUnasSyncDiagnostic.duration_ms
   });
   assert.equal(Number.isInteger(status.lastUnasSyncDiagnostic.duration_ms), true);
   const serialized = JSON.stringify({ logs, status });

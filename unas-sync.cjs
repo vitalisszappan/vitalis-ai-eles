@@ -2,7 +2,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const { XMLParser, XMLValidator } = require('fast-xml-parser');
-const { tagSyncError } = require('./engine/unas-sync-diagnostics.cjs');
+const { tagSyncError, tagTransportError } = require('./engine/unas-sync-diagnostics.cjs');
 
 const UNAS_API_KEY = String(process.env.UNAS_API_KEY || '').trim();
 const UNAS_API_BASE_URL = String(
@@ -102,6 +102,7 @@ function ensureDataDirectory(directory = DATA_DIR) {
 
 function unasRequest({ endpoint, token = '', body = '' }) {
   return new Promise((resolve, reject) => {
+    const phase = endpoint === 'login' ? 'login' : endpoint === 'getProduct' ? 'products' : 'categories';
     let target;
     try {
       target = new URL(`${UNAS_API_BASE_URL}/${endpoint}`);
@@ -136,16 +137,16 @@ function unasRequest({ endpoint, token = '', body = '' }) {
           return;
         }
         reject(tagSyncError(new Error(`UNAS HTTP ${status}`), {
-          phase: endpoint === 'login' ? 'login' : endpoint === 'getProduct' ? 'products' : 'categories',
+          phase,
           category: status === 401 || status === 403 ? 'http_auth' : status === 429 ? 'rate_limit' : status >= 500 ? 'upstream' : 'unknown',
           http_status: status
         }));
       });
     });
     request.on('timeout', () => request.destroy(tagSyncError(new Error('Az UNAS API kapcsolat időtúllépett.'), {
-      phase: endpoint === 'login' ? 'login' : endpoint === 'getProduct' ? 'products' : 'categories', category: 'timeout'
+      phase, category: 'timeout'
     })));
-    request.on('error', reject);
+    request.on('error', (error) => reject(tagTransportError(error, phase)));
     request.write(bodyText);
     request.end();
   });
