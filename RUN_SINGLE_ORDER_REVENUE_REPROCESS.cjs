@@ -7,6 +7,7 @@ const {
   TARGET_ORDER_KEY,
   runSingleOrderRevenueReprocess
 } = require('./engine/single-order-revenue-reprocess.cjs');
+const { createSingleOrderRevenueRuntime, rows } = require('./engine/single-order-revenue-runtime.cjs');
 
 const SAFE_CODES = new Set([
   'EXACT_ORDER_KEY_REQUIRED', 'REPROCESS_DEPENDENCIES_REQUIRED', 'VERIFIED_PROOF_REQUIRED',
@@ -56,34 +57,8 @@ function request({ method = 'GET', pathname, body, headers = {} }) {
   });
 }
 
-function rows(response) {
-  const parsed = JSON.parse(response?.body || '[]');
-  if (!Array.isArray(parsed)) throw new Error('invalid_supabase_response');
-  return parsed;
-}
-
-async function loadProof(orderKey) {
-  const response = await request({
-    pathname: `/rest/v1/commerce_order_proofs?select=proof_id,attribution_id,verified,verified_at&schema_version=eq.1&order_key=eq.${encodeURIComponent(orderKey)}&limit=2`
-  });
-  const result = rows(response);
-  if (result.length !== 1) return null;
-  return result[0];
-}
-
-async function loadEvents(attributionId, beforeIso) {
-  const response = await request({
-    pathname: `/rest/v1/commerce_events?select=event_id,attribution_id,event_type,sku,canonical_product_id,occurred_at&attribution_id=eq.${encodeURIComponent(attributionId)}&event_type=in.(product_recommended,product_clicked)&occurred_at=lte.${encodeURIComponent(beforeIso)}&order=occurred_at.asc`
-  });
-  return rows(response);
-}
-
-async function loadOutcome(orderKey) {
-  const response = await request({
-    pathname: `/rest/v1/commerce_outcomes?select=outcome_id,attribution_id,order_key,matched_skus&schema_version=eq.1&order_key=eq.${encodeURIComponent(orderKey)}&limit=1`
-  });
-  return rows(response)[0] || null;
-}
+const runtime = createSingleOrderRevenueRuntime({ request, fetchRevenueEvidence: fetchUnasRevenueEvidence });
+const { loadEvents, loadOutcome, loadProof } = runtime;
 
 async function main() {
   try {
