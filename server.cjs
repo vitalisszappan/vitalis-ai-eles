@@ -68,6 +68,7 @@ const { createCommerceOutcomeStore } = require('./engine/commerce-outcome-store.
 const { learningSignalFromOutcome } = require('./engine/commerce-learning-signals.cjs');
 const { formatSanitizedRequestError, formatCommerceOutcomeDiagnostic } = require('./engine/technical-error-sanitizer.cjs');
 const { createCommerceHealthTracker, buildCommerceHealth } = require('./engine/commerce-health.cjs');
+const { createAttributionNotFoundDiagnostics } = require('./engine/attribution-not-found-diagnostics.cjs');
 const { verifyUnasOrder } = require('./engine/unas-order-verifier.cjs');
 const { createPermissionPreflightHandler } = require('./engine/unas-permission-preflight.cjs');
 const { validatePreflightOrderKey, preflightUnasOrder, toPreflightDiagnostic } = require('./engine/unas-revenue-preflight.cjs');
@@ -176,6 +177,10 @@ const commerceOutcomeStore = createCommerceOutcomeStore({
 const revenuePhase4 = supabaseConfigured() ? createRevenuePhase4Service({request:supabaseRequest}) : null;
 const revenueAdminReader = supabaseConfigured() ? createRevenueAdminReader({request:supabaseRequest}) : null;
 const commerceHealthTracker = createCommerceHealthTracker();
+const attributionNotFoundDiagnostics = createAttributionNotFoundDiagnostics({
+  lookupEvents: (attributionId) => commerceEventStore.findAttribution(attributionId),
+  logger: (event) => console.info('[attribution-not-found-diagnostic]', JSON.stringify(event))
+});
 const allowCommerceEvent = createRateLimiter({
   limit: Number(process.env.COMMERCE_EVENT_RATE_LIMIT) || 60,
   windowMs: 60_000
@@ -2085,6 +2090,11 @@ async function handleOrderProof(req, res) {
   const status = orderProofHttpStatus(result);
   if (!result.ok) {
     commerceHealthTracker.recordFailure(result.error);
+    attributionNotFoundDiagnostics.observeFailure(result.error, {
+      attributionId: validation.proof.attributionId,
+      proofTimestamp: validation.proof.timestamp,
+      origin: req.headers.origin
+    });
     console.warn('[order-proof] rejected', JSON.stringify({ status, error: result.error || 'proof_failed', originPresent: true, contentTypeJson: true }));
   }
   return sendJson(res, status, result);
@@ -4059,6 +4069,7 @@ startServer()
 function cleanupPid() {
 
   unasSyncCoordinator.stop();
+  attributionNotFoundDiagnostics.close();
 
   try {
 
