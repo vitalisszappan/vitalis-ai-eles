@@ -39,16 +39,7 @@ function createSingleOrderRevenueRuntime({ request, fetchRevenueEvidence } = {})
     return rows(response)[0] || null;
   }
 
-  async function revenueOrderExists(orderKey) {
-    const response = await request({
-      pathname: `/rest/v1/commerce_revenue_orders?select=revenue_order_id&order_key=eq.${encodeURIComponent(orderKey)}&limit=1`,
-      operation: 'single_order_revenue_preflight_read',
-      table: 'commerce_revenue_orders'
-    });
-    return rows(response).length > 0;
-  }
-
-  return { fetchRevenueEvidence, loadEvents, loadOutcome, loadProof, revenueOrderExists };
+  return { fetchRevenueEvidence, loadEvents, loadOutcome, loadProof };
 }
 
 module.exports = { createSingleOrderRevenueRuntime, rows };

@@ -73,10 +73,6 @@ const { createPermissionPreflightHandler } = require('./engine/unas-permission-p
 const { validatePreflightOrderKey, preflightUnasOrder, toPreflightDiagnostic } = require('./engine/unas-revenue-preflight.cjs');
 const { createRevenuePhase4Service } = require('./engine/revenue-phase4.cjs');
 const { createRevenueAdminReader } = require('./engine/revenue-admin-read.cjs');
-const { fetchUnasRevenueEvidence } = require('./engine/unas-revenue-evidence.cjs');
-const { TARGET_ORDER_KEY, runSingleOrderRevenueReprocess } = require('./engine/single-order-revenue-reprocess.cjs');
-const { createSingleOrderRevenueRuntime } = require('./engine/single-order-revenue-runtime.cjs');
-const { createTemporaryRevenueExecutionEndpoint } = require('./engine/temporary-revenue-execution-endpoint.cjs');
 const {rehydrateSessionHistory,validSessionId}=require('./engine/conversation-memory.cjs');
 
 function readCanonicalProductStatuses() {
@@ -95,10 +91,6 @@ const HOST =
 
 const ADMIN_TOKEN = String(
   process.env.ADMIN_TOKEN || ''
-).trim();
-
-const TEMP_REVENUE_EXECUTION_TOKEN = String(
-  process.env.TEMP_REVENUE_EXECUTION_TOKEN || ''
 ).trim();
 
 const SUPABASE_URL = String(
@@ -183,24 +175,6 @@ const commerceOutcomeStore = createCommerceOutcomeStore({
 });
 const revenuePhase4 = supabaseConfigured() ? createRevenuePhase4Service({request:supabaseRequest}) : null;
 const revenueAdminReader = supabaseConfigured() ? createRevenueAdminReader({request:supabaseRequest}) : null;
-const singleOrderRevenueRuntime = supabaseConfigured()
-  ? createSingleOrderRevenueRuntime({ request: supabaseRequest, fetchRevenueEvidence: fetchUnasRevenueEvidence })
-  : null;
-const handleTemporaryRevenueExecution = createTemporaryRevenueExecutionEndpoint({
-  adminToken: ADMIN_TOKEN,
-  executionToken: TEMP_REVENUE_EXECUTION_TOKEN,
-  sendJson,
-  logger: (event) => console.info(JSON.stringify(event)),
-  revenueOrderExists: singleOrderRevenueRuntime?.revenueOrderExists,
-  execute: singleOrderRevenueRuntime && revenuePhase4 ? () => runSingleOrderRevenueReprocess({
-    orderKey: TARGET_ORDER_KEY,
-    loadProof: singleOrderRevenueRuntime.loadProof,
-    loadEvents: singleOrderRevenueRuntime.loadEvents,
-    loadOutcome: singleOrderRevenueRuntime.loadOutcome,
-    fetchRevenueEvidence: singleOrderRevenueRuntime.fetchRevenueEvidence,
-    phase4: revenuePhase4
-  }) : null
-});
 const commerceHealthTracker = createCommerceHealthTracker();
 const allowCommerceEvent = createRateLimiter({
   limit: Number(process.env.COMMERCE_EVENT_RATE_LIMIT) || 60,
@@ -3468,11 +3442,6 @@ const server =
         );
 
       try {
-
-        if (url.pathname === '/api/admin/commerce/revenue/run-99212-459544') {
-          await handleTemporaryRevenueExecution(req, res, url);
-          return;
-        }
 
         /* -------------------------
            CORS
