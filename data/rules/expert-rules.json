@@ -39,7 +39,7 @@
     ],
     "primaryProduct": "dermavital_sampon",
     "secondaryProducts": [],
-    "answer": "A Dermavital sampont nedves hajon és fejbőrön habosítsd fel, finoman masszírozd be, majd alaposan öblítsd le. Problémás fejbőrnél rendszeresen használható; kezdetben heti 2–3 alkalom jó kiindulás lehet.",
+    "answer": "A Dermavital sampont nedves hajon és fejbőrön habosítsd fel, finoman masszírozd be, majd alaposan öblítsd le.",
     "askFollowUp": false,
     "safetyNote": "Szembe ne kerüljön. Tartós vagy romló fejbőrpanasz esetén kérj bőrgyógyászati tanácsot."
   },
@@ -206,7 +206,7 @@
     ],
     "primaryProduct": "dermavital_sampon",
     "secondaryProducts": [],
-    "answer": "Problémás, korpás, viszkető vagy hámló fejbőrre elsőként a Dermavital sampont javaslom. Ez a Vitalis kifejezetten problémás fejbőrre készült samponja.",
+    "answer": "Problémás, korpás, viszkető vagy hámló fejbőrre a Dermavital sampont javaslom. Kímélő tisztításra készült.",
     "askFollowUp": false,
     "safetyNote": "Tartós, erős vagy romló panasz esetén érdemes bőrgyógyásszal is egyeztetni.",
     "suggestions": [

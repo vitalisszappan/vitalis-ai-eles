@@ -81,6 +81,42 @@ function formatWholeForint(value) {
   return String(Math.round(value)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 }
 
+function shortProductName(value) {
+  const text = cleanText(value);
+  const withoutSizeTail = text.replace(/\s+\d+\s*(?:ml|g)\b.*$/i, '').trim();
+  const parts = withoutSizeTail.split(/\s+[–—]\s+/).map((part) => part.trim()).filter(Boolean);
+  if (/^(természetes )?tusfürdő$/i.test(parts[0]) && parts[1]) return `${parts[0]} – ${parts[1]}`;
+  const conciseProduct = /^(.*?\b(?:szappan|sampon|krém|balzsam|tusfürdő))\b/i.exec(parts[0] || withoutSizeTail);
+  return conciseProduct?.[1] || parts[0] || withoutSizeTail;
+}
+
+function productAttributeAnswer(target, intent, question) {
+  const product = PRODUCTS[target];
+  if (!product) return null;
+  const normalizedQuestion = normalize(question);
+  if (intent === 'scent') {
+    if (/levendula/.test(normalize(`${product.name} ${product.description}`))) return 'Ennek a szappannak levendulaillata van.';
+    return 'Az illatáról nem tudok biztosat mondani.';
+  }
+  if (/arcra/.test(normalizedQuestion)) return 'Nem tudom biztosan, hogy arcra használható-e.';
+  if (/szappan vagy sampon/.test(normalizedQuestion)) return /solid_shampoo/.test(product.productType || '') ? 'Ez szilárd sampon, nem samponszappan.' : /shampoo_soap/.test(product.productType || '') ? 'Ez samponszappan, vagyis szappanalapú hajtisztító.' : `Ez ${product.name}.`;
+  return null;
+}
+
+function recommendationName(value) {
+  const name = shortProductName(value);
+  if (/szappan$/i.test(name)) return name.replace(/szappan$/i, 'szappant');
+  if (/sampon$/i.test(name)) return name.replace(/sampon$/i, 'sampont');
+  if (/krém$/i.test(name)) return name.replace(/krém$/i, 'krémet');
+  if (/balzsam$/i.test(name)) return name.replace(/balzsam$/i, 'balzsamot');
+  return `${name} terméket`;
+}
+
+function lowerInitial(value) {
+  const text = cleanText(value);
+  return text ? `${text[0].toLocaleLowerCase('hu-HU')}${text.slice(1)}` : text;
+}
+
 function materializeDecision({ routing, question, history, knowledge, ruleEngine, logGap, conversationState, technicalFailure, logDiagnostic }) {
   if (routing.responseSource === 'meta-intent') return attachDecision(resolveMetaIntent(question), routing);
   if(routing.route==='hair_type_knowledge')return attachDecision(comparisonAnswer(),routing);
@@ -103,7 +139,7 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
     const target = routing.contextTarget;
     const cards = target ? productCards([target]) : [];
     const byIntent = {
-      order_start: 'A kiválasztott terméket a termékoldalán tudod kosárba tenni és megrendelni. Ha még nem választottál terméket, írd meg, mit keresel, és segítek.',
+      order_start: target ? 'Rendben. A termékkártyán tudod kosárba tenni.' : 'Melyik terméket szeretnéd?',
       purchase_location: 'A Vitalis termékeket a vitalis-szappan.hu webshopban tudod megvásárolni.',
       price_query: cards[0]?.price != null ? `A ${PRODUCTS[target]?.name || cards[0].name} jelenlegi ára ${formatWholeForint(cards[0].price)} Ft.` : 'A pontos aktuális árat a termékoldalon látod.',
       availability_query: cards[0]?.availability?.orderable === false ? 'Ez a termék a jelenlegi katalógusadat szerint nem rendelhető.' : 'A termék aktuális rendelhetőségét a termékoldalon tudod ellenőrizni.',
@@ -127,8 +163,8 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
       return attachDecision({ ...clarificationAnswer(buildConversationContext(history, normalize), routing.matchedCanonicalIds), ...(contextMissing?{fallbackRootCause:'context_missing'}:{}) }, routing);
     }
     const answer = routing.contextTarget === 'product'
-      ? 'Melyik termékre gondolsz? Írd meg a termék nevét, és pontosan válaszolok.'
-      : 'Kérlek, pontosítsd, mire gondolsz.';
+      ? (routing.intent === 'product_recommendation' ? 'Milyen problémára vagy milyen terméktípusból keresel ajánlást?' : 'Melyik termékre gondolsz?')
+      : 'Mire gondolsz pontosan?';
     return attachDecision({ source: routing.responseSource, answer, confidence: 100, links: [], suggestions: [], ruleId: 'clarify-missing-argument', intent: routing.intent, matchedKnowledgeIds: [], ...(contextMissing ? { fallbackRootCause: 'context_missing' } : {}) }, routing);
   }
 
@@ -149,9 +185,16 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
       if (target === 'psorivital_csomag') return attachDecision({ source: 'product-faq', answer: 'A PsoriVital csomag balzsamját az érintett, megtisztított bőrfelületen használd rendszeresen. A csomag szappanjait nedves bőrön habosítsd fel, majd alaposan öblítsd le.', confidence: 100, links: productCards([target]), suggestions: [], ruleId: 'usage_psorivital_csomag', intent: 'product_usage', matchedKnowledgeIds: [] }, routing);
     }
     if (routing.goal === 'ask_variant') {
-      return attachDecision({ source: 'conversation-context', answer: 'A jelenlegi katalógusban ennél a terméknél nem találtam bizonyított nagyobb kiszerelést. Az aktuális változatokat a termékoldalon ellenőrizheted.', confidence: 100, links: productCards([target]), suggestions: [], ruleId: 'variant-query', intent: 'variant_query', matchedKnowledgeIds: [] }, routing);
+      const card = productCards([target])[0];
+      const size = /\b(\d+\s*(?:ml|g))\b/i.exec(card?.name || '')?.[1] || null;
+      const asksSize = /kiszereles|mekkora/.test(normalize(question));
+      const asksScent = /illat/.test(normalize(question));
+      const answer = asksSize && size ? `A kiszerelése ${size.replace(/\s+/g, ' ')}.` : asksScent ? 'Más illatról most nem tudok biztosat mondani.' : 'Másik változatról most nem tudok biztosat mondani.';
+      return attachDecision({ source: 'conversation-context', answer, confidence: 100, links: card ? [card] : [], suggestions: [], ruleId: 'variant-query', intent: 'variant_query', matchedKnowledgeIds: [] }, routing);
     }
     if (routing.goal === 'ask_product_information') {
+      const attributeAnswer = productAttributeAnswer(target, routing.intent, question);
+      if (attributeAnswer) return attachDecision({ source: 'product-context', answer: attributeAnswer, confidence: 100, links: productCards([target]), suggestions: [], ruleId: `product_attribute_${target}`, intent: routing.intent, matchedKnowledgeIds: [] }, routing);
       return attachDecision({ ...buildProductReferenceAnswer(target, knowledge), intent: 'product_information' }, routing);
     }
     if(!PRODUCTS[target]){const item=decisionCatalog.all().find(product=>product.id===String(target));if(item)return attachDecision({source:'unas-catalog',answer:`A megjelen\u00edtett lista kiv\u00e1lasztott eleme: ${item.name}.`,confidence:100,links:[catalogCard(item)],suggestions:[],ruleId:'catalog-ordinal-reference',intent:'select_recommendation',matchedKnowledgeIds:[]},routing);}
@@ -164,17 +207,26 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
     const canonical = routing.matchedCanonicalIds[0];
     if (canonical) return attachDecision(buildProductReferenceAnswer(canonical, knowledge), routing);
     const item = decisionCatalog.all().find((product) => product.id === routing.matchedProductIds[0]);
-    return attachDecision({ source: 'unas-catalog', answer: item ? `${item.name} megtalálható a jelenlegi Vitalis kínálatban.` : 'A termék megtalálható a Vitalis kínálatban.', confidence: 100, links: item ? [catalogCard(item)] : [], suggestions: [], ruleId: null, intent: 'product_detail', matchedKnowledgeIds: [] }, routing);
+    return attachDecision({ source: 'unas-catalog', answer: item ? `Igen, van ${lowerInitial(shortProductName(item.name))}.` : 'Igen, van ilyen termékünk.', confidence: 100, links: item ? [catalogCard(item)] : [], suggestions: [], ruleId: null, intent: 'product_detail', matchedKnowledgeIds: [] }, routing);
   }
 
   if (routing.route === 'product_category') {
     const found = decisionCatalog.searchCategory(routing.domain);
     const constrained=routing.productTypeConstraint?found.products.filter(item=>matchesProductType(item,routing.productTypeConstraint)):found.products;
-    const products=routing.productTypeConstraint?constrained:found.products;
+    let products=routing.productTypeConstraint?constrained:found.products;
+    const q = normalize(question);
+    if (/normal\w* bor/.test(q)) products = products.filter((item) => /normal\w* bor/.test(normalize(item.name)));
+    if (/erzekeny\w* bor/.test(q)) products = products.filter((item) => /erzekeny\w*.*bor|bor\w*.*erzekeny/.test(normalize(item.name)));
     if (!products.length) return attachDecision({ source: 'catalog-absent', answer: `A jelenlegi kínálatban nem találok ${found.category?.label || 'ilyen terméket'}.`, confidence: 100, links: [], suggestions: [], ruleId: null, intent: 'catalog_category_absent', matchedKnowledgeIds: [] }, routing);
-    const names = products.slice(0, 3).map((item) => item.name).join(', ');
+    const names = products.slice(0, 3).map((item) => shortProductName(item.name)).join(', ');
     const distinction = routing.domain === 'deodorant' ? ' Ezek dezodorok: a testszag kialakulását segítenek megelőzni, de nem állítjuk róluk, hogy az izzadást megszüntetik.' : '';
-    return attachDecision({ source: 'unas-catalog', answer: `Igen, a jelenlegi kínálatban található ${found.category.label}. Például: ${names}.${distinction}`, confidence: 100, links: products.slice(0, 3).map(catalogCard), suggestions: [], ruleId: null, intent: 'catalog_category_found', matchedKnowledgeIds: [] }, routing);
+    const recommendation = routing.productQuestionIntent === 'recommendation';
+    const preferred = /erzekeny\w* bor/.test(q) ? products.find((item) => /natur kecsketejes/.test(normalize(item.name))) : products[0];
+    const recommendationReason = /erzekeny\w* bor/.test(q) ? 'Illatmentes, érzékeny és száraz bőrre készült.' : /normal\w* bor/.test(q) ? 'A leírása szerint normál bőrre készült.' : 'A leírása szerint megfelel annak, amit keresel.';
+    const answer = recommendation
+      ? (preferred ? `A ${recommendationName(preferred.name)} ajánlom. ${recommendationReason}` : `Ezek felelnek meg a leírtaknak: ${names}.`)
+      : /tusfurdo/.test(q) ? 'Igen. Mentás-citromos, rózsás és levendulás tusfürdőnk van.' : `Igen, van ${found.category.label}. Ezek közül választhatsz: ${names}.${distinction}`;
+    return attachDecision({ source: 'unas-catalog', answer, confidence: 100, links: products.slice(0, 3).map(catalogCard), suggestions: [], ruleId: null, intent: recommendation ? 'product_recommendation' : 'catalog_category_found', matchedKnowledgeIds: [] }, routing);
   }
 
   if (routing.route === 'problem_domain') {
@@ -1330,7 +1382,7 @@ function buildProductReferenceAnswer(productId, knowledge) {
 
   return {
     source: 'product-context',
-    answer: `${product.name}: ${product.description}`,
+    answer: `A ${product.name} ${lowerInitial(product.description).replace(/[.]+$/, '')} készült.`,
     confidence: 100,
     links: productCards([productId]),
     suggestions: [],
@@ -1360,10 +1412,10 @@ function resolveTypedProductFollowUp(question, context) {
 function clarificationAnswer(context, candidates = []) {
   const ids = candidates.length ? candidates : context.lastRecommendedProducts;
   const names = ids.map(productName).filter(Boolean);
-  const choices = names.length ? ` Ezekre gondolhatsz: ${names.join(', ')}.` : '';
+  const choices = names.length === 1 ? names[0] : names.length === 2 ? `${names[0]} vagy ${names[1]}` : names.join(', ');
   return {
     source: 'conversation-context',
-    answer: `Nem egyértelmű, melyik termékre gondolsz.${choices} Írd meg kérlek a nevét vagy a sorszámát.`,
+    answer: choices ? `A ${choices} termékre gondolsz?` : 'Melyik termékre gondolsz?',
     confidence: 100,
     links: productCards(ids),
     suggestions: names.map((name) => ({ label: name, question: name })),

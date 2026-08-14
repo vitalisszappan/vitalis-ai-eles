@@ -21,7 +21,7 @@ function comparisonAnswer() {
     source: 'approved-knowledge',
     ruleId: 'solid-shampoo-vs-shampoo-soap',
     intent: 'product_type_comparison',
-    answer: 'Nem, a szilárd sampon és a samponszappan nem ugyanaz. A szilárd sampon sampon jellegű hajtisztító szilárd formában. A samponszappan szappanalapú hajtisztító. Külön terméktípusok, ezért nem cseréljük fel őket automatikusan.',
+    answer: 'A szilárd sampon sampon jellegű hajtisztító szilárd formában, a samponszappan pedig szappanalapú hajtisztító. Két külön terméktípusról van szó.',
     confidence: 100,
     links: [],
     suggestions: [],
@@ -33,7 +33,7 @@ function requestedQualifiers(question, type) {
   let q = normalize(question).replace(/\b(van|vannak|kaphato|elerheto|nalatok|termek|termeket)\w*\b/g, ' ');
   q = type === 'solid_shampoo'
     ? q.replace(/\b(szilard|sampon)\w*\b/g, ' ')
-    : q.replace(/\b(samponszappan|sampon|szappan)\w*\b/g, ' ');
+    : q.replace(/\b(folyekony|samponszappan|sampon|szappan)\w*\b/g, ' ');
   return q.split(/\s+/).filter((word) => word.length > 2);
 }
 
@@ -67,12 +67,12 @@ function recommendation(question, type) {
     allIds = [...IDS.solidNormal, ...IDS.solidOily];
     const oily = /zsiro|gyorsan zsiros|koffein/.test(q);
     const sensitive = /viszket|erzekeny|normal|szaraz/.test(q);
-    ids = oily ? IDS.solidOily : sensitive ? IDS.solidNormal : allIds;
+    ids = oily ? IDS.solidOily : sensitive ? IDS.solidNormal : [];
     answer = oily
-      ? 'Zsírosodásra hajlamos hajra elsőként a rozmaringos-koffeines szilárd sampont javaslom. Kozmetikai hajtisztító; nem teszünk vele orvosi vagy garantált hajnövekedési ígéretet.'
+      ? 'Zsírosodásra hajlamos hajra a rozmaringos-koffeines szilárd sampont ajánlom. Kifejezetten ilyen haj tisztítására készült.'
       : sensitive
-        ? 'Normál hajra vagy érzékeny, viszketésre hajlamos fejbőr kíméletes tisztításához elsőként a zöldteás szilárd sampont javaslom.'
-        : 'Két szilárd sampon érhető el: a zöldteás normál hajra, illetve a rozmaringos-koffeines zsírosodásra hajlamos hajra.';
+        ? 'Normál hajra vagy érzékeny, viszketésre hajlamos fejbőr kíméletes tisztításához a zöldteás szilárd sampont ajánlom.'
+        : 'Normál vagy zsírosodásra hajlamos a hajad?';
   } else if (type === 'shampoo_soap') {
     allIds = [...IDS.soapRosemary, ...IDS.soapTeaTree];
     const oily = /zsiro|aktiv szen|teafa/.test(q);

@@ -12,8 +12,13 @@ const BANNED_REPLACEMENTS = [
   [/elegendő információ hiányában/gi, 'ha még nem egyértelmű minden részlet'],
   [/a jelenlegi kínálatban nem találok/gi, 'a jelenlegi kínálatban most nincs'],
   [/ehhez nem találtam elég pontos, jóváhagyott vitalis-információt/gi, 'erről még nincs elég biztos Vitalis-információnk'],
-  [/nem találtam/gi, 'most nincs biztos találat']
+  [/\b(?:elsősorban|elsőként)\s+/gi, ''],
+  [/\bjó kiindulás(?:t jelenthet| lehet)?\b/gi, 'jó választás'],
+  [/\bA Vitalis (?:megoldások|termékek) közül\s*/gi, ''],
+  [/\bSegítek megtalálni a számodra legmegfelelőbb[^.!?]*[.!?]?\s*/gi, '']
 ];
+
+const OPTIONAL_CTA = /^(?:ha megírod|ha szeretnéd|írj|írd meg|nézd meg|az aktuális változatokat|ha más állagot|mit vegyek mellé)/i;
 
 function clean(value = '') {
   return String(value).replace(/\s+/g, ' ').trim();
@@ -33,6 +38,38 @@ function splitSafety(text) {
     (SAFETY_PATTERN.test(sentence) ? safety : body).push(sentence);
   }
   return { body: body.join(' '), safety: safety.join(' ') };
+}
+
+function sentences(text) {
+  return humanize(text).match(/[^.!?]+[.!?]+|[^.!?]+$/g)?.map(clean).filter(Boolean) || [];
+}
+
+function sentenceMaximum(decision) {
+  if (decision.route === 'safety') return 4;
+  if (decision.route === 'clarification' || decision.route === 'hard_fallback') return 1;
+  if (decision.route === 'meta') return 3;
+  if (decision.answerMode === ANSWER_MODES.SOCIAL_META) return 3;
+  if (decision.intent === 'price_query') return 1;
+  if (decision.goal === 'ask_usage' || decision.goal === 'ask_child_usage' || decision.intent === 'product_usage') return 4;
+  if (decision.answerMode === ANSWER_MODES.DIRECT) return 2;
+  if (decision.answerMode === ANSWER_MODES.RECOMMENDATION) return 2;
+  if (decision.answerMode === ANSWER_MODES.EXPLANATORY) return 3;
+  return 1;
+}
+
+function applyMinimalAnswerPolicy(text, decision) {
+  const all = sentences(text);
+  if (!all.length) return '';
+  const withoutOptionalCta = all.filter((sentence, index) => index === 0 || !OPTIONAL_CTA.test(sentence));
+  const maximum = sentenceMaximum(decision);
+  if (withoutOptionalCta.length <= maximum) return withoutOptionalCta.join(' ');
+  const safety = withoutOptionalCta.filter((sentence) => SAFETY_PATTERN.test(sentence));
+  const body = withoutOptionalCta.filter((sentence) => !SAFETY_PATTERN.test(sentence));
+  if (decision.answerMode === ANSWER_MODES.RECOMMENDATION && safety.length) {
+    return [...body.slice(0, maximum), safety[0]].join(' ');
+  }
+  const keptSafety = safety.slice(0, Math.min(safety.length, maximum));
+  return [...body.slice(0, Math.max(0, maximum - keptSafety.length)), ...keptSafety].join(' ');
 }
 
 function reasonFor(link, decision) {
@@ -90,7 +127,7 @@ function composeCommunication({ decision, draft, question = '', history = [] }) 
   if (!draft || !decision) return draft;
   const links = enrichLinks(draft.links, decision);
   const range = responseRange(decision);
-  const answer = limitWords(humanize(draft.answer), range.maximum);
+  const answer = limitWords(applyMinimalAnswerPolicy(draft.answer, decision), range.maximum);
   const primaryName = links[0]?.name || '';
   const previous = normalize((history || []).filter((item) => item?.role === 'assistant').map((item) => item.content || '').join(' '));
   const repeatedRecommendation = Boolean(primaryName && previous.includes(normalize(primaryName)));
@@ -112,4 +149,4 @@ function composeCommunication({ decision, draft, question = '', history = [] }) 
   };
 }
 
-module.exports = { composeCommunication, enrichLinks, humanize, responseRange, wordCount };
+module.exports = { composeCommunication, enrichLinks, humanize, responseRange, wordCount, applyMinimalAnswerPolicy, sentenceMaximum };
