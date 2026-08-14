@@ -77,8 +77,9 @@ async function processOrderProof(proof, options) {
     ? await options.proofStore.findProof({ schemaVersion: proof.schemaVersion, attributionId: proof.attributionId, orderKey: proof.orderKey })
     : await options.proofStore.get(key); }
   catch (_) { return { ok: false, verified: false, duplicate: false, error: 'proof_storage_failed' }; }
-  if (existing && existing.verified !== true) return { ok: true, verified: false, duplicate: true };
-  if (existing?.verified === true && !options.outcomeStore) return { ok: false, verified: true, duplicate: true, error: 'commerce_outcome_storage_failed' };
+  if (existing && (!options.outcomeStore || existing.verified !== true)) {
+    return { ok: true, verified: existing.verified === true, duplicate: true };
+  }
   const proofDuplicate = Boolean(existing);
   const proofTime = Date.parse(proof.timestamp);
   let events;
@@ -115,7 +116,6 @@ async function processOrderProof(proof, options) {
     catch (_) { return { ok: false, verified: false, duplicate: false, error: 'proof_storage_failed' }; }
   }
   const effectiveVerified = stored?.duplicate ? stored.row?.verified === true : verified;
-  if (effectiveVerified && !options.outcomeStore) return { ok:false,verified:true,duplicate:proofDuplicate||stored?.duplicate===true,error:'commerce_outcome_storage_failed' };
   if (effectiveVerified && options.outcomeStore) {
     let outcome;
     try {

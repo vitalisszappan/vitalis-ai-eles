@@ -2080,10 +2080,7 @@ async function handleOrderProof(req, res) {
   const result = await processOrderProof(validation.proof, {
     eventStore: commerceEventStore,
     proofStore: orderProofStore,
-    outcomeStore: commerceOutcomeStore,
-    verifyOrder: (orderKey) => verifyUnasOrder(orderKey),
-    onVerifiedRevenue: revenuePhase4 ? value=>revenuePhase4.persistVerified(value) : undefined,
-    onRevenueDiagnostic: event=>console.warn('[revenue]',JSON.stringify({status:event?.status==='failed'?'failed':'unknown',code:/^[a-z0-9_]{1,80}$/.test(String(event?.code||''))?event.code:'revenue_failed'}))
+    verifyOrder: (orderKey) => verifyUnasOrder(orderKey)
   });
   const status = orderProofHttpStatus(result);
   if (!result.ok) {

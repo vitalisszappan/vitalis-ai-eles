@@ -37,11 +37,10 @@ function parseOrderResponse(xml) {
     key: scalar(order?.Key),
     id: scalar(order?.Id),
     date: scalar(order?.Date),
-    currency: scalar(order?.Currency),
-    status: scalar(order?.Status),
-    statusId: scalar(order?.StatusID),
-    statusType: scalar(order?.StatusType),
-    items: asArray(order?.Items?.Item).map((item) => ({ id: scalar(item?.Id), sku: scalar(item?.Sku), quantity: scalar(item?.Quantity), priceGross: scalar(item?.PriceGross) }))
+    items: asArray(order?.Items?.Item).map((item) => ({
+      id: scalar(item?.Id),
+      sku: scalar(item?.Sku)
+    }))
   }));
 }
 
