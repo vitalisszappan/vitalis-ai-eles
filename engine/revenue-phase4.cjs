@@ -12,7 +12,7 @@ function unasDateToIso(value){
 
 function createRevenuePhase4Service({request}={}){
  const persistence=createSupabaseRevenueRpcAdapter({request});
- async function persistVerified({proof,proofRow,order,priorEvents,outcome}={}){
+ async function persistVerified({proof,proofRow,order,priorEvents,outcome,evidenceCapturedAt}={}){
   if(!proofRow?.proof_id||proofRow.verified!==true)throw Object.assign(new Error('verified_proof_required'),{code:'verified_proof_required'});
   if(!proof?.attributionId||order?.key!==proof.orderKey)throw Object.assign(new Error('exact_order_match_required'),{code:'exact_order_match_required'});
   const matched=new Set(outcome?.matchedSkus||[]),recommendations=priorEvents.filter(e=>e.event_type==='product_recommended'&&matched.has(String(e.sku||''))),clicks=priorEvents.filter(e=>e.event_type==='product_clicked'&&matched.has(String(e.sku||'')));
@@ -20,7 +20,9 @@ function createRevenuePhase4Service({request}={}){
   if(!order.currency||!order.date||!order.status||!order.statusId||!order.statusType||!Array.isArray(order.items)||order.items.some(i=>!i.id||!i.quantity||!i.priceGross))throw Object.assign(new Error('authoritative_monetary_evidence_required'),{code:'authoritative_monetary_evidence_required'});
   const attributionEvidence={recommendationEvidence:recommendations.map(e=>({eventId:e.event_id,sku:e.sku,canonicalProductId:e.canonical_product_id})),clickEvidence:clicks.map(e=>({eventId:e.event_id,sku:e.sku,canonicalProductId:e.canonical_product_id}))};
   const lifecycleObservation={kind:'status',status:order.status,statusId:order.statusId,statusType:order.statusType};
-  const orchestrator=createRevenueOrchestrator({persistence,fetchOrderEvidence:async()=>({readOnly:true,order:{orderKey:order.key,orderId:order.id,currency:order.currency,items:order.items},attributionEvidence,lifecycleObservation,orderedAt:unasDateToIso(order.date),capturedAt:new Date().toISOString()})});
+  const capturedAt=evidenceCapturedAt||new Date().toISOString(),capturedAtMs=Date.parse(capturedAt);
+  if(typeof capturedAt!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(capturedAt)||!Number.isFinite(capturedAtMs)||Math.abs(capturedAtMs-Date.now())>5*60*1000)throw Object.assign(new Error('invalid_evidence_captured_at'),{code:'invalid_evidence_captured_at'});
+  const orchestrator=createRevenueOrchestrator({persistence,fetchOrderEvidence:async()=>({readOnly:true,order:{orderKey:order.key,orderId:order.id,currency:order.currency,items:order.items},attributionEvidence,lifecycleObservation,orderedAt:unasDateToIso(order.date),capturedAt})});
   return orchestrator.buildAndPersistRevenueSnapshot({orderKey:proof.orderKey,attributionId:proof.attributionId,proofId:proofRow.proof_id,outcomeId:outcome?.outcomeId||null});
  }
  return {persistence,persistVerified};
