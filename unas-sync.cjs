@@ -2,6 +2,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const { XMLParser, XMLValidator } = require('fast-xml-parser');
+const { tagSyncError } = require('./engine/unas-sync-diagnostics.cjs');
 
 const UNAS_API_KEY = String(process.env.UNAS_API_KEY || '').trim();
 const UNAS_API_BASE_URL = String(
@@ -81,16 +82,16 @@ function nullableBoolean(value) {
   return null;
 }
 
-function parseXml(xml, expectedRoot) {
+function parseXml(xml, expectedRoot, diagnostic = {}) {
   const source = String(xml || '').trim();
   const validation = XMLValidator.validate(source);
   if (validation !== true) {
     const message = validation?.err?.msg || 'ismeretlen XML-hiba';
-    throw new Error(`Hibás UNAS XML: ${message}`);
+    throw tagSyncError(new Error(`Hibás UNAS XML: ${message}`), { phase: diagnostic.phase, category: 'invalid_xml', page: diagnostic.page });
   }
   const parsed = xmlParser.parse(source);
   if (expectedRoot && !Object.prototype.hasOwnProperty.call(parsed || {}, expectedRoot)) {
-    throw new Error(`Érvénytelen UNAS XML: hiányzik a(z) ${expectedRoot} gyökérelem.`);
+    throw tagSyncError(new Error(`Érvénytelen UNAS XML: hiányzik a(z) ${expectedRoot} gyökérelem.`), { phase: diagnostic.phase, category: 'invalid_xml', page: diagnostic.page });
   }
   return parsed;
 }
@@ -134,10 +135,16 @@ function unasRequest({ endpoint, token = '', body = '' }) {
           resolve({ ok: true, status, body: responseBody });
           return;
         }
-        reject(new Error(`UNAS HTTP ${status}: ${responseBody.slice(0, 1500)}`));
+        reject(tagSyncError(new Error(`UNAS HTTP ${status}`), {
+          phase: endpoint === 'login' ? 'login' : endpoint === 'getProduct' ? 'products' : 'categories',
+          category: status === 401 || status === 403 ? 'http_auth' : status === 429 ? 'rate_limit' : status >= 500 ? 'upstream' : 'unknown',
+          http_status: status
+        }));
       });
     });
-    request.on('timeout', () => request.destroy(new Error('Az UNAS API kapcsolat időtúllépett.')));
+    request.on('timeout', () => request.destroy(tagSyncError(new Error('Az UNAS API kapcsolat időtúllépett.'), {
+      phase: endpoint === 'login' ? 'login' : endpoint === 'getProduct' ? 'products' : 'categories', category: 'timeout'
+    })));
     request.on('error', reject);
     request.write(bodyText);
     request.end();
@@ -151,8 +158,13 @@ async function loginToUnas(options = {}) {
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <Params><ApiKey>${escapeXml(apiKey)}</ApiKey><WebshopInfo>true</WebshopInfo></Params>`;
-  const response = await requestFn({ endpoint: 'login', body: xml });
-  const parsed = parseXml(response.body, 'Login');
+  let response;
+  try {
+    response = await requestFn({ endpoint: 'login', body: xml });
+  } catch (error) {
+    throw tagSyncError(error, { phase: 'login', category: error?.unasSyncCategory || 'unknown', http_status: error?.unasHttpStatus });
+  }
+  const parsed = parseXml(response.body, 'Login', { phase: 'login' });
   const token = scalar(parsed.Login.Token);
   if (!token) throw new Error('Az UNAS login nem adott vissza tokent.');
   return { token, raw: response.body };
@@ -285,15 +297,25 @@ async function getProducts(token, options = {}) {
 
   for (let page = 0; page < maxPages; page += 1) {
     const limitStart = page * pageSize;
-    const response = await requestFn({
-      endpoint: 'getProduct',
-      token,
-      body: productRequestXml(pageSize, limitStart)
-    });
-    const products = parseProducts(response.body);
+    let response;
+    try {
+      response = await requestFn({ endpoint: 'getProduct', token, body: productRequestXml(pageSize, limitStart) });
+    } catch (error) {
+      throw tagSyncError(error, { phase: 'products', category: error?.unasSyncCategory || 'unknown', http_status: error?.unasHttpStatus, page });
+    }
+    let products;
+    try {
+      products = parseProducts(response.body);
+    } catch (error) {
+      throw tagSyncError(error, {
+        phase: error?.unasSyncCategory === 'invalid_xml' ? 'products' : 'normalize',
+        category: error?.unasSyncCategory || 'unknown',
+        page: error?.unasSyncCategory === 'invalid_xml' ? page : null
+      });
+    }
     if (products.length) {
       const signature = recordSignature(products);
-      if (signatures.has(signature)) throw new Error('Az UNAS lapozás ismétlődő oldalt adott vissza.');
+      if (signatures.has(signature)) throw tagSyncError(new Error('Az UNAS lapozás ismétlődő oldalt adott vissza.'), { phase: 'products', category: 'repeated_page', page });
       signatures.add(signature);
       allProducts.push(...products);
     }
@@ -315,8 +337,21 @@ async function getCategories(token, options = {}) {
   const requestFn = options.requestFn || unasRequest;
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <Params><ContentType>full</ContentType><Lang>hu</Lang></Params>`;
-  const response = await requestFn({ endpoint: 'getCategory', token, body: xml });
-  const categories = parseCategories(response.body);
+  let response;
+  try {
+    response = await requestFn({ endpoint: 'getCategory', token, body: xml });
+  } catch (error) {
+    throw tagSyncError(error, { phase: 'categories', category: error?.unasSyncCategory || 'unknown', http_status: error?.unasHttpStatus });
+  }
+  let categories;
+  try {
+    categories = parseCategories(response.body);
+  } catch (error) {
+    throw tagSyncError(error, {
+      phase: error?.unasSyncCategory === 'invalid_xml' ? 'categories' : 'normalize',
+      category: error?.unasSyncCategory || 'unknown'
+    });
+  }
   return { xml: response.body, categories, count: categories.length };
 }
 
@@ -390,12 +425,28 @@ async function buildUnasKnowledge(options = {}) {
   const loginFn = options.loginFn || loginToUnas;
   const productsFn = options.productsFn || getProducts;
   const categoriesFn = options.categoriesFn || getCategories;
-  const login = await loginFn(options);
-  const productsResponse = await productsFn(login.token, options);
-  const categoriesResponse = await categoriesFn(login.token, options);
-  const rawProducts = productsResponse.rawProducts || productsResponse.products;
-  const audit = createAudit(rawProducts);
-  const products = deduplicateByUnasId(productsResponse.products || rawProducts);
+  let login;
+  let productsResponse;
+  let categoriesResponse;
+  try { login = await loginFn(options); } catch (error) {
+    throw tagSyncError(error, { phase: 'login', category: error?.unasSyncCategory || 'unknown', http_status: error?.unasHttpStatus });
+  }
+  try { productsResponse = await productsFn(login.token, options); } catch (error) {
+    throw tagSyncError(error, { phase: error?.unasSyncPhase || 'products', category: error?.unasSyncCategory || 'unknown', http_status: error?.unasHttpStatus, page: error?.unasPage });
+  }
+  try { categoriesResponse = await categoriesFn(login.token, options); } catch (error) {
+    throw tagSyncError(error, { phase: error?.unasSyncPhase || 'categories', category: error?.unasSyncCategory || 'unknown', http_status: error?.unasHttpStatus });
+  }
+  let rawProducts;
+  let audit;
+  let products;
+  try {
+    rawProducts = productsResponse.rawProducts || productsResponse.products;
+    audit = createAudit(rawProducts);
+    products = deduplicateByUnasId(productsResponse.products || rawProducts);
+  } catch (error) {
+    throw tagSyncError(error, { phase: 'normalize', category: 'unknown' });
+  }
   const snapshot = {
     schema: 'vitalis-unas-commerce-catalog/v1',
     generatedAt: new Date().toISOString(),
@@ -409,8 +460,17 @@ async function buildUnasKnowledge(options = {}) {
     products,
     categories: categoriesResponse.categories || []
   };
-  validateSnapshot(snapshot, options);
-  const file = writeSnapshotAtomic(snapshot, options.snapshotPath || UNAS_CATALOG_PATH, options);
+  try {
+    validateSnapshot(snapshot, options);
+  } catch (error) {
+    throw tagSyncError(error, { phase: 'validate', category: products.length === 0 ? 'empty_products' : 'unknown' });
+  }
+  let file;
+  try {
+    file = writeSnapshotAtomic(snapshot, options.snapshotPath || UNAS_CATALOG_PATH, options);
+  } catch (error) {
+    throw tagSyncError(error, { phase: 'snapshot_write', category: 'filesystem' });
+  }
   return {
     ok: true,
     products: products.length,

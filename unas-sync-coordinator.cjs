@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const { validateSnapshot } = require('./unas-sync.cjs');
+const { buildSafeDiagnostic } = require('./engine/unas-sync-diagnostics.cjs');
 
 const DEFAULT_UNAS_SYNC_INTERVAL_MS = 6 * 60 * 60 * 1000;
 const SAFE_SYNC_ERROR = 'Az UNAS katalógusszinkron sikertelen.';
@@ -40,6 +41,7 @@ function createUnasSyncCoordinator({
   const initialSnapshot = readValidSnapshot(snapshotPath);
   let lastSuccessfulUnasSyncAt = initialSnapshot?.generatedAt || null;
   let lastUnasSyncError = null;
+  let lastUnasSyncDiagnostic = null;
   let inFlight = null;
   let timer = null;
   let started = false;
@@ -53,18 +55,21 @@ function createUnasSyncCoordinator({
       snapshotPresent: snapshotPresent(),
       lastSuccessfulUnasSyncAt,
       unasSyncInProgress: Boolean(inFlight),
-      lastUnasSyncError
+      lastUnasSyncError,
+      lastUnasSyncDiagnostic
     };
   }
 
   function run(trigger = 'manual') {
     if (inFlight) return inFlight;
+    const startedAt = Date.now();
 
     inFlight = Promise.resolve()
       .then(() => buildSync())
       .then((result) => {
         lastSuccessfulUnasSyncAt = now().toISOString();
         lastUnasSyncError = null;
+        lastUnasSyncDiagnostic = null;
         logger.info?.('UNAS háttérszinkron sikeres.', {
           trigger,
           products: result?.products ?? null,
@@ -72,9 +77,10 @@ function createUnasSyncCoordinator({
         });
         return result;
       })
-      .catch(() => {
+      .catch((error) => {
         lastUnasSyncError = SAFE_SYNC_ERROR;
-        logger.error?.('UNAS háttérszinkron sikertelen.', { trigger });
+        lastUnasSyncDiagnostic = buildSafeDiagnostic({ trigger, error, durationMs: Date.now() - startedAt });
+        logger.error?.('UNAS háttérszinkron sikertelen.', lastUnasSyncDiagnostic);
         throw new Error(SAFE_SYNC_ERROR);
       })
       .finally(() => {
