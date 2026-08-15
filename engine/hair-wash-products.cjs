@@ -97,19 +97,21 @@ function recommendation(question, type) {
 
 function availability(question, type) {
   const config = {
+    generic_shampoo: { ids: [...IDS.liquid, ...IDS.solidNormal, ...IDS.solidOily], label: 'samponunk' },
     liquid_shampoo: { ids: IDS.liquid, label: 'folyékony samponunk' },
     solid_shampoo: { ids: [...IDS.solidNormal, ...IDS.solidOily], label: 'szilárd samponunk' },
     shampoo_soap: { ids: [...IDS.soapRosemary, ...IDS.soapTeaTree], label: 'samponszappanunk' }
-  }[type];
+  }[type || 'generic_shampoo'];
   const links = productCards(config?.ids || []);
   if (!config || !links.length) return { source: 'approved-product-type-rule', ruleId: `hair-wash-${type}-availability`, intent: 'product_type_availability', answer: 'Nem találtam ilyen terméktípust a jelenlegi kínálatban.', confidence: 100, links: [], suggestions: [], matchedKnowledgeIds: [] };
   const exact = exactExistence(question, type, config.ids);
   if (exact) return { source: 'approved-product-type-rule', ruleId: `hair-wash-${type}-availability`, intent: 'product_type_availability', answer: exact.answer, confidence: 100, links: exact.links, suggestions: [], matchedKnowledgeIds: [] };
   const conciseAnswer = {
+    generic_shampoo: 'Igen. Folyékony és szilárd sampont is találsz a jelenlegi kínálatban.',
     liquid_shampoo: 'Igen. Egyféle folyékony samponunk van: a Dermavital sampon.',
     solid_shampoo: 'Igen. Kétféle szilárd samponunk van: egy zöldteás normál hajra, valamint egy rozmaringos-koffeines zsírosodásra hajlamos hajra.',
     shampoo_soap: 'Igen. Kétféle samponszappanunk van: egy rozmaringos, valamint egy teafa–aktív szenes változat.'
-  }[type];
+  }[type || 'generic_shampoo'];
   return {
     source: 'approved-product-type-rule',
     ruleId: `hair-wash-${type}-availability`,

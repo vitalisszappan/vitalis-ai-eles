@@ -41,9 +41,9 @@ for (const question of ['Melyik sampont ajánlod zsíros hajra?', 'Viszket a fej
   assert.equal(result.intent, 'product_recommendation', question);
 }
 const oilyLiquid = ask('Melyik sampont ajánlod zsíros hajra?');
-assert.equal(oilyLiquid.links.length, 0);
-assert.doesNotMatch(oilyLiquid.answer, /Dermavital/i);
-assert.match(oilyLiquid.answer, /nem tudok bizonyítottan megfelelő terméket ajánlani/i);
+assert.deepEqual(oilyLiquid.links.map((item) => item.commerce?.sku), ['VSZSP04']);
+assert.ok(oilyLiquid.links.every((item) => item.productType === 'solid_shampoo'));
+assert.match(oilyLiquid.answer, /rozmaringos-koffeines szilárd sampont ajánlom/i);
 
 const psoriHistory = productContext('psorivital_csomag', 'PsoriVital csomag');
 const usage = ask('Hogyan használjam?', psoriHistory);

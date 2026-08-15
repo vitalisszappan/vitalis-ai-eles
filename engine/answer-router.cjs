@@ -35,6 +35,7 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
   const derivedContext = buildConversationContext(history, normalize);
   const context = conversationState ? {...derivedContext,lastRecommendedProducts:conversationState.lastOrdinalProductList||conversationState.lastRecommendedProducts||[],lastFocusProduct:conversationState.lastMentionedProduct,lastProduct:conversationState.lastMentionedProduct,lastProblemDomain:conversationState.activeProblemDomains?.at(-1)||derivedContext.lastProblemDomain} : derivedContext;
   let productTypeConstraint=detectProductTypeConstraint(question);
+  if (!productTypeConstraint && productQuestionIntent === 'recommendation' && /\b(zsiros\w* haj\w*|gyorsan zsiros\w*)\b/.test(normalize(question))) productTypeConstraint = 'solid_shampoo';
   if (!productTypeConstraint && /\b(ajanl\w*|javasol\w*|melyiket|mit valassz\w*)\b/.test(normalize(question))) {
     const rememberedTypes = [...new Set((context.lastRecommendedProducts || []).map((id) => inferredHairType({ id })).filter(Boolean))];
     if (rememberedTypes.length === 1 && HAIR_WASH_TYPES.includes(rememberedTypes[0])) productTypeConstraint = rememberedTypes[0];
@@ -60,7 +61,8 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
     if (needsProduct && !commerceTarget) {
       return decision({ ...base, route: 'clarification', contextUsed: history.length > 0, contextTarget: 'product', confidence: 1, threshold: 1, rejectionReasons: ['missing_product_argument'], responseSource: 'commerce-clarification' });
     }
-    return decision({ ...base, route: 'commerce', contextUsed: needsProduct && !directCanonical, contextTarget: needsProduct ? commerceTarget : null, matchedProductIds: needsProduct ? [commerceTarget] : [], confidence: 1, threshold: 1, responseSource: 'commerce-intent' });
+    const usesOptionalTarget = commerce.intent === 'order_start' && Boolean(commerceTarget);
+    return decision({ ...base, route: 'commerce', contextUsed: (needsProduct || usesOptionalTarget) && !directCanonical, contextTarget: (needsProduct || usesOptionalTarget) ? commerceTarget : null, matchedProductIds: (needsProduct || usesOptionalTarget) ? [commerceTarget] : [], confidence: 1, threshold: 1, responseSource: 'commerce-intent' });
   }
 
   if (/\b(sls|sles|sodium lauryl sulfate|sodium laureth sulfate)\b/.test(normalize(question))) {
@@ -70,13 +72,18 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
   const attributeIntent=/\b(osszetevo\w*|inci)\b/.test(normalize(question))?'ingredients':/\b(illat\w*)\b/.test(normalize(question))?'scent':null;
   if(attributeIntent&&(directCanonical||catalog.findExactProduct(question))){const matches=searchKnowledge(knowledge,question),assessed=evaluateKnowledgeConfidence(question,matches,{domain:'product',intent:attributeIntent,context});if(assessed.accepted)return decision({...base,route:'knowledge',intent:attributeIntent,domain:'product',matchedKnowledgeIds:[matches[0].item.id],confidence:assessed.confidence,threshold:assessed.threshold,evidence:[...base.evidence,`attribute:${attributeIntent}`],responseSource:'knowledge-fallback'});return decision({...base,route:'hard_fallback',intent:attributeIntent,domain:'product',candidateCount:matches.length,confidence:assessed.confidence,threshold:assessed.threshold,rejectionReasons:['knowledge_missing'],evidence:[...base.evidence,`attribute:${attributeIntent}`],responseSource:'hard-fallback'});}
 
-  if(HAIR_WASH_TYPES.includes(productTypeConstraint) && ['availability','recommendation'].includes(productQuestionIntent))return decision({...base,route:'hair_product_type',intent:productQuestionIntent==='availability'?'product_type_availability':'product_recommendation',goal:'find_product',domain:'shampoo',confidence:1,threshold:1,responseSource:'approved-product-type-rule'});
+  const genericShampooAvailability=!productTypeConstraint&&productQuestionIntent==='availability'&&/\bsampon\w*/.test(normalize(question));
+  const explicitHairProductRequest=HAIR_WASH_TYPES.includes(productTypeConstraint)&&/\b(keres\w*|szeretn\w*)\b/.test(normalize(question));
+  if((HAIR_WASH_TYPES.includes(productTypeConstraint)&&(['availability','recommendation'].includes(productQuestionIntent)||problem))||explicitHairProductRequest||genericShampooAvailability)return decision({...base,route:'hair_product_type',intent:productQuestionIntent==='availability'?'product_type_availability':'product_recommendation',goal:'find_product',domain:'shampoo',confidence:1,threshold:1,responseSource:'approved-product-type-rule'});
 
   const reference = resolveProductReference(question, context);
   if (reference?.productId) {
     return decision({ ...base, route: 'context_followup', contextUsed: true, contextTarget: reference.productId, matchedCanonicalIds: [reference.productId], matchedProductIds: [reference.productId], confidence: 1, threshold: 1, responseSource: 'conversation-context' });
   }
   if (reference?.ambiguous) {
+    if (goal.goal === 'ask_variant' && context.lastFocusProduct) {
+      return decision({ ...base, route: 'context_followup', contextUsed: true, contextTarget: context.lastFocusProduct, matchedCanonicalIds: [context.lastFocusProduct], matchedProductIds: [context.lastFocusProduct], confidence: 1, threshold: 1, responseSource: 'conversation-context' });
+    }
     return decision({ ...base, route: 'clarification', contextUsed: true, contextTarget: 'product', confidence: 1, threshold: 1, rejectionReasons: ['ambiguous_product_reference'], responseSource: 'conversation-context' });
   }
   const current = normalize(question);
@@ -115,11 +122,16 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
 
   if (category && goal.goal !== 'solve_problem') {
     const found = catalog.searchCategory(category.id);
-    return decision({ ...base, route: 'product_category', intent: found.products.length ? 'catalog_category_found' : 'catalog_category_absent', goal: 'find_product', domain: category.id, matchedProductIds: found.products.map((item) => item.id), evidence: [...base.evidence, `catalog-category:${category.id}`], confidence: 1, threshold: 1, rejectionReasons: found.products.length ? [] : ['catalog_category_absent'], responseSource: found.products.length ? 'unas-catalog' : 'catalog-absent' });
+    const categoryIntent = productQuestionIntent === 'recommendation' ? 'product_recommendation' : found.products.length ? 'catalog_category_found' : 'catalog_category_absent';
+    return decision({ ...base, route: 'product_category', intent: categoryIntent, goal: 'find_product', domain: category.id, matchedProductIds: found.products.map((item) => item.id), evidence: [...base.evidence, `catalog-category:${category.id}`], confidence: 1, threshold: 1, rejectionReasons: found.products.length ? [] : ['catalog_category_absent'], responseSource: found.products.length ? 'unas-catalog' : 'catalog-absent' });
   }
 
   if (problem) {
     return decision({ ...base, route: 'problem_domain', intent: 'problem_recommendation', confidence: 1, threshold: 1, responseSource: 'problem-domain' });
+  }
+
+  if (productQuestionIntent === 'recommendation' && !productTypeConstraint && !directCanonical && !context.lastFocusProduct) {
+    return decision({ ...base, route: 'clarification', contextTarget: 'product', confidence: 1, threshold: 1, rejectionReasons: ['missing_recommendation_goal'], responseSource: 'conversation-context' });
   }
 
   const matches = searchKnowledge(knowledge, question);
