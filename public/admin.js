@@ -48,6 +48,11 @@ const refreshButton =
     'refreshButton'
   );
 
+const adminNavigation = document.querySelector('.admin-navigation');
+const adminViewTargets = [...document.querySelectorAll('[data-admin-view-target]')];
+const exportConversationsButton = document.getElementById('exportConversationsButton');
+const downloadUnasSnapshotButton = document.getElementById('downloadUnasSnapshotButton');
+
 /* -------------------------
    TUDÁSHIÁNYOK
 ------------------------- */
@@ -129,6 +134,11 @@ let knowledgeClusters = [];
 const knowledgeClusterFilter = { topic:'', priority:'', status:'', safetyLevel:'' };
 
 let adminToken = '';
+
+const loadedAdminViews = {
+  knowledge: false,
+  system: false
+};
 
 /* =========================================================
    ADMIN KULCS
@@ -624,15 +634,17 @@ function renderConversations(
           )
         : '–';
 
-    const article =
-      document.createElement(
-        'article'
-      );
+    const article = document.createElement('details');
 
     article.className =
       'conversation-card';
 
     article.innerHTML = `
+      <summary class="conversation-summary">
+        <strong>${escapeHtml(question || '–')}</strong>
+        <span>${escapeHtml(formatDate(createdAt))}</span>
+      </summary>
+      <div class="conversation-details">
       <div class="conversation-meta">
 
         <span>
@@ -703,6 +715,7 @@ function renderConversations(
           )}
         </span>
 
+      </div>
       </div>
     `;
 
@@ -1535,8 +1548,7 @@ async function refreshEverything() {
   try {
     await Promise.all([
       loadConversations(),
-      loadKnowledgeGaps(),
-      loadCommerceOutcomes()
+      loadKnowledgeGaps()
     ]);
 
   } finally {
@@ -1572,6 +1584,120 @@ function renderDraftPanel(panel, task, draft) {
   const save=panel.querySelector('.draft-save');
   if(save)save.addEventListener('click',async()=>{try{const data=await adminFetch('/api/admin/knowledge-drafts/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:draft.id,draftType:panel.querySelector('.draft-type').value,question:panel.querySelector('.draft-question').value,answer:panel.querySelector('.draft-answer').value,keywords:panel.querySelector('.draft-keywords').value.split(',').map(x=>x.trim()).filter(Boolean),category:panel.querySelector('.draft-category').value,canonicalIds:panel.querySelector('.draft-canonical').value.split(',').map(x=>x.trim()).filter(Boolean),confidenceScore:Number(panel.querySelector('.draft-confidence').value),safetyStatus:panel.querySelector('.draft-safety').value,reviewerNote:panel.querySelector('.draft-note').value})});renderDraftPanel(panel,task,data.draft);knowledgeTaskStatus.textContent='A draft mentve.';}catch(error){knowledgeTaskStatus.textContent=`Draft mentési hiba: ${error.message}`;} });
   panel.querySelectorAll('[data-draft-status]').forEach(button=>button.addEventListener('click',async()=>{try{const data=await adminFetch('/api/admin/knowledge-drafts/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:draft.id,generationStatus:button.dataset.draftStatus})});renderDraftPanel(panel,task,data.draft);knowledgeTaskStatus.textContent='A draft státusza mentve.';}catch(error){knowledgeTaskStatus.textContent=`Draft státuszhiba: ${error.message}`;} }));
+}
+
+async function downloadAdminFile(url, filename) {
+  if (!ensureAdminToken()) return;
+  const response = await fetch(url, { headers: { 'X-Admin-Token': adminToken } });
+  if (!response.ok) {
+    let message = 'A letöltés sikertelen.';
+    try { message = (await response.json()).error || message; } catch {}
+    throw new Error(message);
+  }
+  const blob = await response.blob();
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+/* =========================================================
+   ADMIN FŐNÉZETEK
+========================================================= */
+
+function adminViewSections() {
+  const toolbarFor = (element) => element?.closest('.toolbar') || null;
+  return {
+    overview: [
+      document.querySelector('.stats:not(.revenue-stats)'),
+      document.querySelector('.quick-entry-grid')
+    ],
+    conversations: [toolbarFor(searchInput), statusMessage, conversationList],
+    knowledge: [
+      toolbarFor(loadKnowledgeGapsButtonSecondary),
+      document.querySelector('.knowledge-queue-toolbar'),
+      document.querySelector('.filter-panel'),
+      document.getElementById('knowledgeTaskStatus'),
+      document.getElementById('knowledgeTaskList'),
+      document.querySelector('.advanced-panel'),
+      knowledgeGapStatusMessage,
+      knowledgeGapList
+    ],
+    system: [
+      unasStatusMessageTop,
+      toolbarFor(unasTestButtonSecondary),
+      unasStatusMessage,
+      toolbarFor(unasOrderPreflightButton),
+      unasOrderPreflightResult,
+      toolbarFor(unasSyncButtonSecondary),
+      unasSyncStatusMessage,
+      document.querySelector('.commerce-outcome-toolbar'),
+      document.getElementById('commerceOutcomeStatus'),
+      document.getElementById('commerceOutcomeList'),
+      document.querySelector('.revenue-toolbar'),
+      document.querySelector('.revenue-stats'),
+      document.getElementById('revenueStatus'),
+      document.querySelector('#revenueTable')?.closest('.table-wrap'),
+      document.querySelector('.system-panel')
+    ]
+  };
+}
+
+function organizeAdminViews() {
+  const main = document.querySelector('main.container');
+  if (!main || main.querySelector('.admin-view-group')) return;
+  const sections = adminViewSections();
+  const ordered = {
+    overview: sections.overview,
+    conversations: sections.conversations,
+    knowledge: [
+      sections.knowledge[0],
+      knowledgeGapStatusMessage,
+      knowledgeGapList,
+      sections.knowledge[1],
+      sections.knowledge[2],
+      sections.knowledge[3],
+      sections.knowledge[4],
+      sections.knowledge[5]
+    ],
+    system: sections.system
+  };
+  Object.entries(ordered).forEach(([view, items]) => {
+    const group = document.createElement('section');
+    group.className = 'admin-view-group';
+    group.dataset.adminView = view;
+    items.filter(Boolean).forEach((item) => group.appendChild(item));
+    main.appendChild(group);
+  });
+}
+
+async function loadAdminViewOnce(view) {
+  if (view === 'knowledge' && !loadedAdminViews.knowledge) {
+    loadedAdminViews.knowledge = true;
+    await Promise.all([loadKnowledgeTasks(), loadKnowledgeClusters()]);
+  }
+  if (view === 'system' && !loadedAdminViews.system) {
+    loadedAdminViews.system = true;
+    await Promise.all([loadCommerceOutcomes(), loadRevenue()]);
+  }
+}
+
+function setActiveAdminView(view) {
+  const sections = adminViewSections();
+  if (!sections[view]) return;
+  document.querySelectorAll('.admin-view-group').forEach((group) => {
+    group.classList.toggle('admin-view-hidden', group.dataset.adminView !== view);
+  });
+  adminViewTargets.forEach((button) => {
+    const active = button.dataset.adminViewTarget === view;
+    button.classList.toggle('active', active);
+    if (button.closest('.admin-navigation')) {
+      if (active) button.setAttribute('aria-current', 'page');
+      else button.removeAttribute('aria-current');
+    }
+  });
+  void loadAdminViewOnce(view);
 }
 
 async function runUnasOrderPreflight() {
@@ -1697,6 +1823,24 @@ if (
   );
 }
 
+adminViewTargets.forEach((button) => {
+  button.addEventListener('click', () => setActiveAdminView(button.dataset.adminViewTarget));
+});
+
+if (exportConversationsButton) {
+  exportConversationsButton.addEventListener('click', async () => {
+    try { await downloadAdminFile('/api/admin/conversations/export', 'vitalis-chat-beszelgetesek.json'); }
+    catch (error) { setStatus(statusMessage, `Export hiba: ${error.message}`, true); }
+  });
+}
+
+if (downloadUnasSnapshotButton) {
+  downloadUnasSnapshotButton.addEventListener('click', async () => {
+    try { await downloadAdminFile('/api/admin/unas/snapshot', 'unas-catalog-snapshot.json'); }
+    catch (error) { setStatus(unasSyncStatusMessage, `Snapshot letöltési hiba: ${error.message}`, true); }
+  });
+}
+
 if (
   refreshButton
 ) {
@@ -1764,10 +1908,6 @@ if (
    INDÍTÁS
 ========================================================= */
 
-refreshEverything();
-loadKnowledgeTasks();
-loadKnowledgeClusters();
-
 const loadCommerceOutcomesButton=document.getElementById('loadCommerceOutcomesButton');
 const commerceOutcomeStatus=document.getElementById('commerceOutcomeStatus');
 const commerceOutcomeList=document.getElementById('commerceOutcomeList');
@@ -1789,7 +1929,6 @@ async function loadCommerceOutcomes(){
 
 if (unasOrderPreflightButton) unasOrderPreflightButton.addEventListener('click', runUnasOrderPreflight);
 if(loadCommerceOutcomesButton)loadCommerceOutcomesButton.addEventListener('click',loadCommerceOutcomes);
-loadCommerceOutcomes();
 
 const loadRevenueButton=document.getElementById('loadRevenueButton');
 const revenueStatus=document.getElementById('revenueStatus');
@@ -1808,4 +1947,7 @@ async function loadRevenue(){
  }catch(error){revenueStatus.textContent=`Revenue betöltési hiba: ${error.message}`;}
 }
 if(loadRevenueButton)loadRevenueButton.addEventListener('click',loadRevenue);
-loadRevenue();
+
+organizeAdminViews();
+setActiveAdminView('overview');
+refreshEverything();

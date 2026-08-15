@@ -45,28 +45,6 @@
     </div>
 
     <div class="topbar-actions">
-
-      <button
-        id="loadKnowledgeGapsButton"
-        type="button"
-      >
-        Tudáshiányok
-      </button>
-
-      <button
-        id="unasTestButton"
-        type="button"
-      >
-        UNAS kapcsolat tesztelése
-      </button>
-
-      <button
-        id="unasSyncButton"
-        type="button"
-      >
-        UNAS tudás szinkronizálása
-      </button>
-
       <button
         id="refreshButton"
         type="button"
@@ -77,6 +55,13 @@
     </div>
 
   </header>
+
+  <nav class="admin-navigation" aria-label="Admin főnézetek">
+    <button type="button" class="active" data-admin-view-target="overview" aria-current="page">Áttekintés</button>
+    <button type="button" data-admin-view-target="conversations">Beszélgetések</button>
+    <button type="button" data-admin-view-target="knowledge">Tudásfejlesztés</button>
+    <button type="button" data-admin-view-target="system">Rendszer</button>
+  </nav>
 
   <main class="container">
 
@@ -96,7 +81,7 @@
       <div class="stat-card">
 
         <span>
-          Összes beszélgetés
+          Betöltött beszélgetések
         </span>
 
         <strong id="totalCount">
@@ -164,7 +149,15 @@
       <button id="loadKnowledgeTasksButton" type="button">Queue frissítése</button>
       <button id="exportKnowledgeDraftsButton" type="button">Jóváhagyott draftok exportja</button>
     </section>
-    <nav id="knowledgeTaskFilters" class="queue-filters" aria-label="Knowledge Queue szűrők">
+
+    <section class="quick-entry-grid" data-admin-section="overview" aria-label="Gyors belépés">
+      <button type="button" data-admin-view-target="conversations"><strong>Beszélgetések megnyitása</strong><span>Keresés és beszélgetésrészletek</span></button>
+      <button type="button" data-admin-view-target="knowledge"><strong>Tudásfejlesztés megnyitása</strong><span>Tudáshiányok és Knowledge Queue</span></button>
+      <button type="button" data-admin-view-target="system"><strong>Rendszer megnyitása</strong><span>UNAS és technikai diagnosztika</span></button>
+    </section>
+    <details class="filter-panel" data-admin-section="knowledge">
+      <summary>Szűrők</summary>
+      <nav id="knowledgeTaskFilters" class="queue-filters" aria-label="Knowledge Queue szűrők">
       <button data-filter="open" class="active">Nyitott</button><button data-filter="critical">Kritikus</button>
       <button data-filter="missing_knowledge">Tudáshiány</button><button data-filter="wrong_answer">Hibás válasz</button>
       <button data-filter="outdated_knowledge">Elavult tudás</button><button data-filter="solved">Megoldott</button>
@@ -177,10 +170,14 @@
       <button data-filter="root:unsafe_or_medical_guidance_missing">Gyökérok: biztonsági tudás</button>
       <button data-filter="root:unknown">Ismeretlen gyökérok</button>
       <button data-filter="impact:high">Magas hatású</button>
-    </nav>
+      </nav>
+    </details>
     <section id="knowledgeTaskStatus" class="status">A Knowledge Queue betöltése folyamatban...</section>
     <section id="knowledgeTaskList" class="knowledge-task-list"></section>
 
+    <details class="advanced-panel" data-admin-section="knowledge">
+      <summary>Haladó tudásfejlesztési műveletek</summary>
+      <div class="advanced-panel-content">
     <section class="toolbar knowledge-cluster-toolbar">
       <div><h2>Knowledge Clusters</h2><p>Determinista csoportok közös tudásproblémák szerint. Az újraépítés nem módosít tudást és nem készít draftot.</p></div>
       <button id="loadKnowledgeClustersButton" type="button">Klaszterek frissítése</button>
@@ -194,6 +191,8 @@
     </section>
     <section id="knowledgeClusterStatus" class="status">A Knowledge Clusters még nincs betöltve.</section>
     <section id="knowledgeClusterList" class="knowledge-cluster-list"></section>
+      </div>
+    </details>
 
     <section
       id="knowledgeGapStatusMessage"
@@ -315,6 +314,14 @@
       Az UNAS tudás még nincs szinkronizálva ebben a futásban.
     </section>
 
+    <details class="system-panel" data-admin-section="system">
+      <summary>Rendszerdiagnosztika és snapshot</summary>
+      <div class="system-panel-content">
+        <a class="button-link" href="/api/status" target="_blank" rel="noopener">Rendszerállapot megnyitása</a>
+        <button id="downloadUnasSnapshotButton" type="button">UNAS snapshot letöltése</button>
+      </div>
+    </details>
+
     <!-- =====================================================
          BESZÉLGETÉSEK
     ====================================================== -->
@@ -339,6 +346,8 @@
         id="searchInput"
         placeholder="Keresés a beszélgetésekben..."
       >
+
+      <button id="exportConversationsButton" type="button">Export</button>
 
     </section>
 
