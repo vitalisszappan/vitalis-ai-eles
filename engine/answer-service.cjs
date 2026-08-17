@@ -162,7 +162,9 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
     if (routing.matchedCanonicalIds?.length) {
       return attachDecision({ ...clarificationAnswer(buildConversationContext(history, normalize), routing.matchedCanonicalIds), ...(contextMissing?{fallbackRootCause:'context_missing'}:{}) }, routing);
     }
-    const answer = routing.contextTarget === 'product'
+    const answer = routing.contextTarget === 'excluded_product_type'
+      ? 'Milyen terméktípust keresel a sampon helyett?'
+      : routing.contextTarget === 'product'
       ? (routing.intent === 'product_recommendation' ? 'Milyen problémára vagy milyen terméktípusból keresel ajánlást?' : 'Melyik termékre gondolsz?')
       : 'Mire gondolsz pontosan?';
     return attachDecision({ source: routing.responseSource, answer, confidence: 100, links: [], suggestions: [], ruleId: 'clarify-missing-argument', intent: routing.intent, matchedKnowledgeIds: [], ...(contextMissing ? { fallbackRootCause: 'context_missing' } : {}) }, routing);

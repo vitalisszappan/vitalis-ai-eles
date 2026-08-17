@@ -18,6 +18,8 @@ const {
 const ROOT = __dirname;
 const PORT = 3412;
 const ADMIN_TOKEN = 'revenue-preflight-admin-token';
+const CATALOG_FIXTURE_PATH = path.join(ROOT, 'test', 'fixtures', 'knowledge-builder-catalog.json');
+const CATALOG_FIXTURE_PRELOAD = path.join(ROOT, 'test', 'helpers', 'install-catalog-fixture.cjs');
 const adminHtml=fs.readFileSync('./public/admin.html','utf8'),adminJs=fs.readFileSync('./public/admin.js','utf8');
 for(const id of ['unasOrderPreflightKey','unasOrderPreflightButton','unasOrderPreflightResult'])assert.equal(adminHtml.includes(`id="${id}"`),true);
 assert.match(adminHtml,/id="unasOrderPreflightKey"[^>]*value="99212-298722"/);assert.match(adminJs,/\/api\/admin\/commerce\/unas-order-preflight\?orderKey=/);
@@ -126,7 +128,9 @@ async function main() {
       ...process.env, PORT: String(PORT), HOST: '127.0.0.1', ADMIN_TOKEN,
       UNAS_API_KEY: 'test-only-key', UNAS_API_BASE_URL: 'https://127.0.0.1:9',
       UNAS_SYNC_INTERVAL_MS: '0', COMMERCE_EVENT_LOG: eventLog, ORDER_PROOF_LOG: proofLog,
-      SUPABASE_URL: '', SUPABASE_SERVICE_ROLE_KEY: ''
+      SUPABASE_URL: '', SUPABASE_SERVICE_ROLE_KEY: '',
+      VITALIS_TEST_CATALOG_FIXTURE: CATALOG_FIXTURE_PATH,
+      NODE_OPTIONS: `${process.env.NODE_OPTIONS || ''} --require=${CATALOG_FIXTURE_PRELOAD}`.trim()
     },
     stdio: ['ignore', 'ignore', 'pipe']
   });

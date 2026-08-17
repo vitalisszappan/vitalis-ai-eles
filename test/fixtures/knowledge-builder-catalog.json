@@ -1,0 +1,170 @@
+{
+  "schema": "vitalis-unas-commerce-catalog/v1",
+  "generatedAt": "2026-08-15T00:00:00.000Z",
+  "source": "deterministic-test-fixture",
+  "pagination": {
+    "pages": 1,
+    "pageSize": 13,
+    "rawRecords": 13
+  },
+  "audit": {},
+  "products": [
+    {
+      "unasId": "1462570616",
+      "sku": "VDVSZ",
+      "name": "Dermavital szappan – Holt-tengeri ásványokkal problémás bőrre 120 g",
+      "categoryNames": ["Szappanok"],
+      "public": true,
+      "active": true,
+      "orderable": true,
+      "actualPriceGross": 2700,
+      "currency": "HUF",
+      "url": "https://www.vitalis-szappan.hu/vitalis-dermavital-szappan"
+    },
+    {
+      "unasId": "1241472589",
+      "sku": "Vksz03",
+      "name": "Natúr kecsketejes szappan érzékeny, száraz bőrre – Illatmentes 110 g",
+      "categoryNames": ["Szappanok"],
+      "public": true,
+      "active": true,
+      "orderable": true,
+      "actualPriceGross": 1490,
+      "currency": "HUF",
+      "url": "https://www.vitalis-szappan.hu/Natur-kecsketejes-szappan"
+    },
+    {
+      "unasId": "1553769891",
+      "sku": "Vitdermsamp01",
+      "name": "Dermavital Sampon – nyugtató ápolás viszkető, irritált és érzékeny fejbőrre",
+      "categoryNames": ["Samponok"],
+      "public": true,
+      "active": true,
+      "orderable": true,
+      "actualPriceGross": 3400,
+      "currency": "HUF",
+      "url": "https://www.vitalis-szappan.hu/dermavital-sampon-viszketo-irritalt-fejborre"
+    },
+    {
+      "unasId": "1467825966",
+      "sku": "Vssz02",
+      "name": "Kézműves Samponszappan – Rozmaring 110 g",
+      "categoryNames": ["Samponszappanok"],
+      "public": true,
+      "active": true,
+      "orderable": true,
+      "actualPriceGross": 1600,
+      "currency": "HUF",
+      "url": "https://www.vitalis-szappan.hu/termek/sampon-szappan-normal-hajra-rozmaring"
+    },
+    {
+      "unasId": "1412837511",
+      "sku": "VDVK100",
+      "name": "Dermavital nyugtató bőrápoló krém – érzékeny, irritált, ekcémára hajlamos bőrre (100 ml)",
+      "categoryNames": ["Krémek és balzsamok"],
+      "public": true,
+      "active": true,
+      "orderable": true,
+      "actualPriceGross": 3700,
+      "currency": "HUF",
+      "url": "https://www.vitalis-szappan.hu/dermavital-balzsam-100-ml"
+    },
+    {
+      "unasId": "111374997",
+      "sku": "Vsz016",
+      "name": "Shea vajas szappan – 110 g",
+      "categoryNames": ["Szappanok"],
+      "public": true,
+      "active": true,
+      "orderable": true,
+      "actualPriceGross": 1490,
+      "currency": "HUF",
+      "url": "https://www.vitalis-szappan.hu/termek/shea-vajas-szappan"
+    },
+    {
+      "unasId": "test-shower-gel",
+      "sku": "TEST-TUS-01",
+      "name": "Mentás-citromos tusfürdő",
+      "categoryNames": ["Tusfürdők"],
+      "public": true,
+      "active": true,
+      "orderable": true,
+      "actualPriceGross": 1900,
+      "currency": "HUF",
+      "url": "https://www.vitalis-szappan.hu/mentas-citromos-tusfurdo"
+    },
+    {
+      "unasId": "test-deodorant",
+      "sku": "TEST-DEO-01",
+      "name": "Natúr krémdezodor",
+      "categoryNames": ["Dezodorok"],
+      "public": true,
+      "active": true,
+      "orderable": true,
+      "actualPriceGross": 1900,
+      "currency": "HUF",
+      "url": "https://www.vitalis-szappan.hu/natur-kremdezodor"
+    },
+    {
+      "unasId": "test-hand-cream",
+      "sku": "TEST-HAND-01",
+      "name": "Shea vajas kézkrém",
+      "categoryNames": ["Kézápolás"],
+      "public": true,
+      "active": true,
+      "orderable": true,
+      "actualPriceGross": 2100,
+      "currency": "HUF",
+      "url": "https://www.vitalis-szappan.hu/shea-vajas-kezkrem"
+    },
+    {
+      "unasId": "test-heel-care",
+      "sku": "TEST-HEEL-01",
+      "name": "Bőrpuhító sarokkrém",
+      "categoryNames": ["Lábápolás"],
+      "public": true,
+      "active": true,
+      "orderable": true,
+      "actualPriceGross": 2200,
+      "currency": "HUF",
+      "url": "https://www.vitalis-szappan.hu/borpuhito-sarokkrem"
+    },
+    {
+      "unasId": "1467818511",
+      "sku": "Vssz01",
+      "name": "Samponszappan – Teafa & Aktív szén 110 g",
+      "categoryNames": ["Samponszappanok"],
+      "public": true,
+      "active": true,
+      "orderable": true,
+      "actualPriceGross": 1600,
+      "currency": "HUF",
+      "url": "https://www.vitalis-szappan.hu/teafa-aktiv-szen-samponszappan"
+    },
+    {
+      "unasId": "1229849469",
+      "sku": "VSZSP05",
+      "name": "Szilárd sampon normál hajra zöldteával",
+      "categoryNames": ["Szilárd samponok"],
+      "public": true,
+      "active": true,
+      "orderable": true,
+      "actualPriceGross": 2600,
+      "currency": "HUF",
+      "url": "https://www.vitalis-szappan.hu/szilard-sampon-normal-hajra"
+    },
+    {
+      "unasId": "1229782139",
+      "sku": "VSZSP04",
+      "name": "Szilárd sampon zsíros hajra rozmaringgal és koffeinnel",
+      "categoryNames": ["Szilárd samponok"],
+      "public": true,
+      "active": true,
+      "orderable": true,
+      "actualPriceGross": 2600,
+      "currency": "HUF",
+      "url": "https://www.vitalis-szappan.hu/szilard-sampon-zsiros-hajra"
+    }
+  ],
+  "categories": []
+}

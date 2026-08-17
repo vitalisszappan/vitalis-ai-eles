@@ -7,6 +7,11 @@ const { buildMarkdown, buildReview } = require('./scripts/generate-unas-product-
 
 const ROOT = __dirname;
 const read = (relativePath) => JSON.parse(fs.readFileSync(path.join(ROOT, relativePath), 'utf8'));
+const snapshotPath = path.join(ROOT, 'data', 'unas-catalog-snapshot.json');
+if (!fs.existsSync(snapshotPath)) {
+  console.log('TEST_UNAS_PRODUCT_REVIEW: SKIP (generated UNAS snapshot is not present)');
+  process.exit(0);
+}
 const snapshot = read('data/unas-catalog-snapshot.json');
 const mapping = read('data/canonical-unas-mapping.json');
 const knowledge = read('data/knowledge.json');

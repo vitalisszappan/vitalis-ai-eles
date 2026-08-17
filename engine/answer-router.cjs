@@ -11,7 +11,7 @@ const { buildConversationContext, resolveProductReference } = require('./convers
 const { findProductInText } = require('./product-faq.cjs');
 const { resolveMetaIntent } = require('./meta-intents.cjs');
 const { searchKnowledge } = require('./knowledge-fallback.cjs');
-const {detectProductTypeConstraint,inferredHairType,HAIR_WASH_TYPES}=require('./product-type-constraint.cjs');
+const {detectExcludedProductTypes,detectProductTypeConstraint,inferredHairType,HAIR_WASH_TYPES}=require('./product-type-constraint.cjs');
 const {isTypeComparison}=require('./hair-wash-products.cjs');
 const {determineAnswerMode}=require('./answer-mode.cjs');
 const {detectProductQuestionIntent}=require('./product-question-intent.cjs');
@@ -34,13 +34,15 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
   const safety = evaluateSafety(question, problem);
   const derivedContext = buildConversationContext(history, normalize);
   const context = conversationState ? {...derivedContext,lastRecommendedProducts:conversationState.lastOrdinalProductList||conversationState.lastRecommendedProducts||[],lastFocusProduct:conversationState.lastMentionedProduct,lastProduct:conversationState.lastMentionedProduct,lastProblemDomain:conversationState.activeProblemDomains?.at(-1)||derivedContext.lastProblemDomain} : derivedContext;
+  const excludedProductTypes=detectExcludedProductTypes(question);
   let productTypeConstraint=detectProductTypeConstraint(question);
   if (!productTypeConstraint && productQuestionIntent === 'recommendation' && /\b(zsiros\w* haj\w*|gyorsan zsiros\w*)\b/.test(normalize(question))) productTypeConstraint = 'solid_shampoo';
   if (!productTypeConstraint && /\b(ajanl\w*|javasol\w*|melyiket|mit valassz\w*)\b/.test(normalize(question))) {
     const rememberedTypes = [...new Set((context.lastRecommendedProducts || []).map((id) => inferredHairType({ id })).filter(Boolean))];
-    if (rememberedTypes.length === 1 && HAIR_WASH_TYPES.includes(rememberedTypes[0])) productTypeConstraint = rememberedTypes[0];
+    const allowedRememberedTypes=rememberedTypes.filter((type)=>!excludedProductTypes.includes(type)&&!excludedProductTypes.includes('shampoo'));
+    if (allowedRememberedTypes.length === 1 && HAIR_WASH_TYPES.includes(allowedRememberedTypes[0])) productTypeConstraint = allowedRememberedTypes[0];
   }
-  const base = { goal: goal.goal, intent: goal.intent, domain: goal.domain || problem?.domain || null, safetyClass: safety.safetyClass, evidence: [...goal.evidence, ...(problem?.evidence || []), ...safety.evidence], productTypeConstraint, productQuestionIntent };
+  const base = { goal: goal.goal, intent: goal.intent, domain: goal.domain || problem?.domain || null, safetyClass: safety.safetyClass, evidence: [...goal.evidence, ...(problem?.evidence || []), ...safety.evidence], excludedProductTypes, productTypeConstraint, productQuestionIntent };
 
   const meta = resolveMetaIntent(question);
   if (meta) return decision({ ...base, route: 'meta', intent: meta.intent, goal: 'unknown', domain: 'meta', matchedRuleId: meta.ruleId, confidence: 1, threshold: 1, responseSource: 'meta-intent' });
@@ -114,7 +116,12 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
   if (directCanonical) {
     return decision({ ...base, route: 'exact_product', goal: 'find_product', intent: 'product_detail', domain: 'product', matchedCanonicalIds: [directCanonical], matchedProductIds: [directCanonical], confidence: 1, threshold: 1, responseSource: 'product-context' });
   }
-  const category = catalog.detectCategory(question);
+  let category = catalog.detectCategory(question);
+  const categoryExcluded=category?.id==='shampoo'&&(excludedProductTypes.includes('shampoo')||excludedProductTypes.includes('shampoo_soap'));
+  if(categoryExcluded){
+    const positiveCategory={tusfurdo:'shower_gel',szappan:'soap',krem:'cream',balzsam:'cream'}[productTypeConstraint];
+    category=positiveCategory?{id:positiveCategory}:null;
+  }
   const exactCatalogProduct = category ? null : catalog.findExactProduct(question);
   if (exactCatalogProduct) {
     return decision({ ...base, route: 'exact_product', goal: 'find_product', intent: 'product_detail', domain: 'product', matchedProductIds: [exactCatalogProduct.id], evidence: [...base.evidence, `catalog-product:${exactCatalogProduct.sku}`], confidence: 1, threshold: 1, responseSource: 'unas-catalog' });
@@ -128,6 +135,10 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
 
   if (problem) {
     return decision({ ...base, route: 'problem_domain', intent: 'problem_recommendation', confidence: 1, threshold: 1, responseSource: 'problem-domain' });
+  }
+
+  if (excludedProductTypes.length && !productTypeConstraint) {
+    return decision({ ...base, route: 'clarification', intent: 'product_type_exclusion', goal: 'find_product', contextTarget: 'excluded_product_type', confidence: 1, threshold: 1, rejectionReasons: ['missing_positive_product_type'], responseSource: 'product-type-negation' });
   }
 
   if (productQuestionIntent === 'recommendation' && !productTypeConstraint && !directCanonical && !context.lastFocusProduct) {
