@@ -160,7 +160,7 @@ function ids(result) {
 }
 
 const recommendationBaselines = [
-  ['Mit ajánlasz pikkelysömörre?', ['psorivital_csomag', 'holt_tengeri_so_balzsam']],
+  ['Mit ajánlasz pikkelysömörre?', ['psorivital_csomag', 'dermavital_szappan', 'tengeri_soszappan']],
   ['Mit ajánlasz ekcémára?', ['dermavital_krem', 'dermavital_szappan']],
   ['Mit ajánlasz aknéra?', ['aktiv_szenes_szappan', 'katrany_szappan']],
   ['Mit ajánlasz száraz bőrre?', ['shea_vajas_szappan']],
@@ -179,7 +179,7 @@ assert.deepEqual(ids(ask('az elsőt', history)), ['psorivital_csomag']);
 
 const approvedMappings = require('./data/canonical-unas-mapping.json').mappings
   .filter((item) => item.mappingStatus === 'approved');
-assert.equal(approvedMappings.length, 17);
+assert.equal(approvedMappings.length, 18);
 const approvedProductRegistry = registry(
   approvedMappings,
   approvedMappings.map((item, index) => snapshotProduct({

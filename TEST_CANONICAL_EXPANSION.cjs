@@ -14,6 +14,7 @@ const EXPECTED_NEW_MAPPINGS = Object.freeze({
   kecsketejes_levendulas_szappan: ['1241471919', 'Vksz02'],
   oliva_szappan: ['111374990', 'Vsz008'],
   teafa_szappan: ['111374987', 'Vsz005'],
+  tengeri_soszappan: ['111374991', 'Vsz010'],
   parajdi_sotomb: ['111374965', 'PSSZ01']
 });
 
@@ -47,6 +48,9 @@ const recognitionCases = [
   ['Teafa szappan', 'teafa_szappan'],
   ['teafas szappan', 'teafa_szappan'],
   ['teafaolajos szappan', 'teafa_szappan'],
+  ['Tengeri sószappan', 'tengeri_soszappan'],
+  ['Sószappan 120g', 'tengeri_soszappan'],
+  ['tengeri só szappan', 'tengeri_soszappan'],
   ['Parajdi sótömb', 'parajdi_sotomb'],
   ['parajdi sotomb', 'parajdi_sotomb'],
   ['Parajdi sószappan', 'parajdi_sotomb']
@@ -57,8 +61,9 @@ for (const [text, expected] of recognitionCases) {
 }
 
 assert.deepStrictEqual(recognized('Samponszappan – Teafa & Aktív szén 110 g'), []);
-assert.deepStrictEqual(recognized('Sószappan 120 g'), []);
+assert.deepStrictEqual(recognized('Sószappan 120 g'), ['tengeri_soszappan']);
 assert.equal(PRODUCTS.parajdi_sotomb.description.includes('nem tisztító'), true);
+assert.equal(PRODUCTS.tengeri_soszappan.name, 'Tengeri sószappan');
 assert.equal(Object.hasOwn(PRODUCTS, 'soszappan'), false);
 
 for (const [canonicalId, [unasId, sku]] of Object.entries({ ...PREVIOUS_APPROVED, ...EXPECTED_NEW_MAPPINGS })) {
@@ -75,7 +80,7 @@ assert.equal(Object.hasOwn(charcoal, 'unasId'), false);
 
 const expert = new ExpertRuleEngine(path.join(__dirname, 'data', 'rules', 'expert-rules.json'));
 const expectedRecommendations = [
-  ['pikkelysömör', ['psorivital_csomag', 'holt_tengeri_so_balzsam']],
+  ['pikkelysömör', ['psorivital_csomag', 'dermavital_szappan', 'tengeri_soszappan']],
   ['ekcéma', ['dermavital_krem', 'dermavital_szappan']],
   ['akné', ['aktiv_szenes_szappan', 'katrany_szappan']],
   ['száraz bőr', ['shea_vajas_szappan']],

@@ -15,8 +15,8 @@
       "data/rules/expert-rules.json"
     ],
     "sourceEvidence": {
-      "canonicalProductCount": 18,
-      "aliasCanonicalCount": 18,
+      "canonicalProductCount": 19,
+      "aliasCanonicalCount": 19,
       "knowledgeEntryCount": 97,
       "expertRuleCount": 19,
       "ruleCanonicalIds": [
@@ -27,24 +27,24 @@
         "shea_vajas_szappan",
         "rozmaringos_samponszappan",
         "psorivital_csomag",
-        "holt_tengeri_so_balzsam",
+        "tengeri_soszappan",
         "katrany_szappan"
       ]
     }
   },
   "summary": {
     "total": 83,
-    "approved_mapped": 17,
+    "approved_mapped": 18,
     "mapping_candidate": 0,
     "new_product_candidate": 55,
-    "needs_review": 10,
+    "needs_review": 9,
     "excluded_or_non_product": 1,
     "families": [
       {
         "family": "szappanok",
         "total": 28,
-        "mapped": 9,
-        "unmapped": 19
+        "mapped": 10,
+        "unmapped": 18
       },
       {
         "family": "samponszappanok",
@@ -148,7 +148,6 @@
       "169075266",
       "121057699",
       "111406270",
-      "111374991",
       "111374969"
     ]
   },
@@ -1678,11 +1677,11 @@
         "state": "live"
       },
       "productFamily": "szappanok",
-      "canonicalCandidate": null,
-      "confidence": "medium",
-      "reason": "Sószappan variáns, miközben a kínálatban külön Parajdi sószappan/sótömb is található.",
-      "note": "A két sótermék rendeltetése és terméktípusa kézi ellenőrzést igényel.",
-      "reviewStatus": "needs_review"
+      "canonicalCandidate": "tengeri_soszappan",
+      "confidence": "exact",
+      "reviewStatus": "approved_mapped",
+      "reason": "Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val.",
+      "note": "Jóváhagyott mapping; canonical név: Tengeri sószappan."
     },
     {
       "unasId": "111374990",

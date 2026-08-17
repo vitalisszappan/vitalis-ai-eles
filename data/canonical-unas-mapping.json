@@ -142,6 +142,14 @@
       "approvedAt": "2026-07-21T13:50:52+02:00"
     },
     {
+      "canonicalId": "tengeri_soszappan",
+      "unasId": "111374991",
+      "sku": "Vsz010",
+      "verifiedName": "Sószappan 120g",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-08-17T13:00:00+02:00"
+    },
+    {
       "canonicalId": "parajdi_sotomb",
       "unasId": "111374965",
       "sku": "PSSZ01",

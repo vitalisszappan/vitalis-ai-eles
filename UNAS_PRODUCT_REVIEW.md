@@ -6,17 +6,17 @@ Forrás snapshot: 2026-07-21T08:57:18.568Z; összes rekord: **83**.
 
 ## Összesítés
 
-- approved_mapped: **17**
+- approved_mapped: **18**
 - mapping_candidate: **0**
 - new_product_candidate: **55**
-- needs_review: **10**
+- needs_review: **9**
 - excluded_or_non_product: **1**
 
 ## Termékcsaládok
 
 | Család | Összes | Mapped | Unmapped |
 |---|---:|---:|---:|
-| szappanok | 28 | 9 | 19 |
+| szappanok | 28 | 10 | 18 |
 | samponszappanok | 2 | 2 | 0 |
 | samponok | 3 | 3 | 0 |
 | krémek és balzsamok | 9 | 2 | 7 |
@@ -46,6 +46,7 @@ Forrás snapshot: 2026-07-21T08:57:18.568Z; összes rekord: **83**.
 | 1120057029 | CS001 | [PsoriVital csomag – Pikkelysömörrel érintett, hámlásra hajlamos bőr ápolására](https://www.vitalis-szappan.hu/psorivital-csomag-ekcemas-borre) | csomagok | psorivital_csomag | exact | 6500 | igen | Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val. Jóváhagyott mapping; canonical név: PsoriVital csomag. |
 | 163833663 | VEM02 | [Holt-tengeri só balzsam száraz, érzékeny bőrre – intenzív ápolás 250 ml](https://www.vitalis-szappan.hu/termek/holt-tengeri-so-balzsam) | krémek és balzsamok | holt_tengeri_so_balzsam | exact | 4290 | igen | Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val. Jóváhagyott mapping; canonical név: Holt-tengeri só balzsam. |
 | 111374997 | Vsz016 | [Shea vajas szappan – Hidratáló, bőrpuhító luxusápolás érzékeny bőrre – 110 g](https://www.vitalis-szappan.hu/termek/shea-vajas-szappan) | szappanok | shea_vajas_szappan | exact | 1490 | igen | Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val. Jóváhagyott mapping; canonical név: Shea vajas szappan. |
+| 111374991 | Vsz010 | [Sószappan 120g](https://www.vitalis-szappan.hu/termek/soszappan) | szappanok | tengeri_soszappan | exact | 1990 | igen | Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val. Jóváhagyott mapping; canonical név: Tengeri sószappan. |
 | 111374990 | Vsz008 | [Olíva kézműves szappan 100 g](https://www.vitalis-szappan.hu/termek/oliva-szappan) | szappanok | oliva_szappan | exact | 1490 | igen | Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val. Jóváhagyott mapping; canonical név: Olíva szappan. |
 | 111374989 | Vsz007 | [Holt-tengeri iszap szappan 110 g – zsíros, pattanásos bőrre \| Vitalis](https://www.vitalis-szappan.hu/termek/holt-tengeri-iszap-szappan) | szappanok | holt_tengeri_iszapos_szappan | exact | 1490 | igen | Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val. Jóváhagyott mapping; canonical név: Holt-tengeri iszapos szappan. |
 | 111374987 | Vsz005 | [Teafa szappan 100g](https://www.vitalis-szappan.hu/termek/teafa-szappan) | szappanok | teafa_szappan | exact | 1490 | igen | Meglévő, kézzel jóváhagyott canonical–UNAS mapping egyező UNAS ID-val. Jóváhagyott mapping; canonical név: Teafa szappan. |
@@ -129,7 +130,6 @@ Forrás snapshot: 2026-07-21T08:57:18.568Z; összes rekord: **83**.
 | 169075266 | VKARACSONY | [Karácsonyi Ajándék Csomag](https://www.vitalis-szappan.hu/termek/karacsonyi-ajandek-csomag) | csomagok | — | none | 7000 | igen | Csomagtermék; összetevői, időszakossága és esetleges átfedései kézi ellenőrzést igényelnek. Önálló canonical termékként vagy csomagként történő későbbi kezelésről külön döntés szükséges. |
 | 121057699 | VHCS | [Természetes hajápolás csomag](https://www.vitalis-szappan.hu/termek/termeszetes-hajapolas-csomag) | csomagok | — | none | 4500 | igen | Csomagtermék; összetevői, időszakossága és esetleges átfedései kézi ellenőrzést igényelnek. Önálló canonical termékként vagy csomagként történő későbbi kezelésről külön döntés szükséges. |
 | 111406270 | VCS002 | [Levendulás ápolás csomag](https://www.vitalis-szappan.hu/termek/levendulas-apolas-csomag) | csomagok | — | none | 3300 | igen | Csomagtermék; összetevői, időszakossága és esetleges átfedései kézi ellenőrzést igényelnek. Önálló canonical termékként vagy csomagként történő későbbi kezelésről külön döntés szükséges. |
-| 111374991 | Vsz010 | [Sószappan 120g](https://www.vitalis-szappan.hu/termek/soszappan) | szappanok | — | medium | 1990 | igen | Sószappan variáns, miközben a kínálatban külön Parajdi sószappan/sótömb is található. A két sótermék rendeltetése és terméktípusa kézi ellenőrzést igényel. |
 | 111374969 | VCS001 | [Problémamentes bőr csomag](https://www.vitalis-szappan.hu/termek/problemamentes-bor-csomag) | csomagok | — | none | 6100 | igen | Csomagtermék; összetevői, időszakossága és esetleges átfedései kézi ellenőrzést igényelnek. Önálló canonical termékként vagy csomagként történő későbbi kezelésről külön döntés szükséges. |
 
 ## Kizárt rekordok

@@ -330,9 +330,10 @@
     ],
     "primaryProduct": "psorivital_csomag",
     "secondaryProducts": [
-      "holt_tengeri_so_balzsam"
+      "dermavital_szappan",
+      "tengeri_soszappan"
     ],
-    "answer": "Pikkelysömörre hajlamos, száraz és hámló bőr mindennapi kozmetikai ápolására elsőként a PsoriVital csomagot javaslom. Kiegészítésként a Holt-tengeri só balzsam használható.",
+    "answer": "Pikkelysömörre hajlamos, száraz és hámló bőr mindennapi kozmetikai ápolására elsősorban a PsoriVital csomagot javaslom. Ha külön szappant keresel, a Dermavital szappan vagy a Tengeri sószappan is szóba jöhet.",
     "askFollowUp": false,
     "safetyNote": "A termékek nem helyettesítik az orvosi kezelést."
   },

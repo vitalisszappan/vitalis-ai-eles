@@ -32,7 +32,7 @@ assert.deepStrictEqual(reviewIds, snapshotIds, 'Nem minden snapshot-termék szer
 assert.equal(new Set(reviewIds).size, reviewIds.length, 'Duplikált UNAS ID van a review-ban.');
 
 const approvedMappings = mapping.mappings.filter((item) => item.mappingStatus === 'approved');
-assert.equal(approvedMappings.length, 17);
+assert.equal(approvedMappings.length, 18);
 for (const approved of approvedMappings) {
   const record = first.records.find((item) => item.unasId === String(approved.unasId));
   assert.ok(record, `Hiányzó approved UNAS rekord: ${approved.unasId}`);
@@ -40,7 +40,7 @@ for (const approved of approvedMappings) {
   assert.equal(record.canonicalCandidate, approved.canonicalId);
   assert.equal(record.confidence, 'exact');
 }
-assert.equal(first.summary.approved_mapped, 17);
+assert.equal(first.summary.approved_mapped, 18);
 assert.ok(first.summary.topNewProductCandidateIds.length <= 20);
 for (const unasId of first.summary.topNewProductCandidateIds) {
   assert.equal(first.records.find((record) => record.unasId === unasId).reviewStatus, 'new_product_candidate');

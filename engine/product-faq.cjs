@@ -72,6 +72,12 @@ const PRODUCT_ALIASES = [
     'teafaolajos szappan',
     'teafa kezmuves szappan'
   ]],
+  ['tengeri_soszappan', [
+    'tengeri soszappan',
+    'soszappan 120g',
+    'soszappan 120 g',
+    'tengeri so szappan'
+  ]],
   ['parajdi_sotomb', [
     'parajdi sotomb',
     'parajdi soszappan',

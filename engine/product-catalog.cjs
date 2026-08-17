@@ -116,6 +116,13 @@ const PRODUCTS = {
     url: 'https://www.vitalis-szappan.hu/termek/teafa-szappan',
     image: null
   },
+  tengeri_soszappan: {
+    id: 'tengeri_soszappan',
+    name: 'Tengeri sószappan',
+    description: 'Illatmentes, magas tengeri sótartalmú, habzó szappan a bőr mindennapi kozmetikai tisztítására.',
+    url: 'https://www.vitalis-szappan.hu/termek/soszappan',
+    image: null
+  },
   parajdi_sotomb: {
     id: 'parajdi_sotomb',
     name: 'Parajdi sótömb',

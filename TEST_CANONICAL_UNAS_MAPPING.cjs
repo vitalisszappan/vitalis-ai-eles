@@ -14,6 +14,7 @@ const EXPECTED_CANONICAL_IDS = [
   'psorivital_csomag',
   'holt_tengeri_so_balzsam',
   'holt_tengeri_iszapos_szappan',
+  'tengeri_soszappan',
   'aktiv_szenes_szappan',
   'katrany_szappan',
   'shea_vajas_szappan',
@@ -35,14 +36,14 @@ function assertUnique(values, label) {
 assert.equal(mapping.schema, 'vitalis-canonical-unas-mapping/v1');
 assert.equal(mapping.version, 1);
 assert.ok(Array.isArray(mapping.mappings));
-assert.equal(mapping.mappings.length, 18);
+assert.equal(mapping.mappings.length, 19);
 
 const canonicalIds = mapping.mappings.map((item) => item.canonicalId);
 assertUnique(canonicalIds, 'canonicalId');
 assert.deepEqual([...canonicalIds].sort(), [...EXPECTED_CANONICAL_IDS].sort());
 
 const approved = mapping.mappings.filter((item) => item.mappingStatus === 'approved');
-assert.equal(approved.length, 17);
+assert.equal(approved.length, 18);
 
 for (const item of approved) {
   assert.equal(typeof item.canonicalId, 'string');
