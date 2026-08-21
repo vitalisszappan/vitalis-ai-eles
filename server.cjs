@@ -1898,10 +1898,11 @@ function sendJson(
 }
 
 function serveFile(
+  req,
   res,
   filePath,
   contentType,
-  cache = 'no-store'
+  cache = 'public, max-age=0, must-revalidate'
 ) {
 
   fs.readFile(
@@ -1927,6 +1928,23 @@ function serveFile(
         return;
       }
 
+      const stats = fs.statSync(filePath);
+      const etag = `"${data.length.toString(16)}-${Math.trunc(stats.mtimeMs).toString(16)}"`;
+      const lastModified = stats.mtime.toUTCString();
+
+      if (
+        req.headers['if-none-match'] === etag ||
+        (!req.headers['if-none-match'] && req.headers['if-modified-since'] === lastModified)
+      ) {
+        res.writeHead(304, {
+          'Cache-Control': cache,
+          'ETag': etag,
+          'Last-Modified': lastModified
+        });
+        res.end();
+        return;
+      }
+
       res.writeHead(
         200,
         {
@@ -1936,6 +1954,15 @@ function serveFile(
 
           'Cache-Control':
             cache,
+
+          'Content-Length':
+            data.length,
+
+          'ETag':
+            etag,
+
+          'Last-Modified':
+            lastModified,
 
           'Access-Control-Allow-Origin':
             '*'
@@ -3793,6 +3820,7 @@ const server =
         ) {
 
           serveFile(
+            req,
             res,
 
             path.join(
@@ -3818,6 +3846,7 @@ const server =
         ) {
 
           serveFile(
+            req,
             res,
 
             path.join(
@@ -3843,6 +3872,7 @@ const server =
         ) {
 
           serveFile(
+            req,
             res,
 
             path.join(
@@ -3874,6 +3904,7 @@ const server =
             ];
 
           serveFile(
+            req,
             res,
 
             path.join(
@@ -3881,7 +3912,12 @@ const server =
               staticFile.file
             ),
 
-            staticFile.type
+            staticFile.type,
+            staticFile.type === 'image/jpeg'
+              ? 'public, max-age=86400, must-revalidate'
+              : staticFile.type.startsWith('text/javascript') || staticFile.type.startsWith('text/css')
+                ? 'public, max-age=3600, must-revalidate'
+                : 'public, max-age=0, must-revalidate'
           );
 
           return;
