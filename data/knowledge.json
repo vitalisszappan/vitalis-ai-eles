@@ -2794,5 +2794,35 @@
     "intents": ["product_type_comparison"],
     "source": "approved-knowledge",
     "priority": 100
+  },
+  {
+    "id": "kb_forgotten_password_reset",
+    "title": "Elfelejtett jelszó és új jelszó kérése",
+    "canonicalQuestion": "Elfelejtettem a jelszavam.",
+    "questionVariants": [
+      "Elfelejtettem a jelszavam.",
+      "Elfelejtettem a jelszót.",
+      "Nem emlékszem a jelszavamra.",
+      "Hogyan kérek új jelszót?",
+      "Jelszó visszaállítás.",
+      "Nem tudok belépni."
+    ],
+    "shortAnswer": "Ha elfelejtetted a jelszavad, kérj új jelszót a webshop belépési felületén. Add meg a regisztrációhoz használt email-címedet, és elküldjük az új jelszó megadásához szükséges linket. Ha ezután sem sikerül belépned, írj nekünk, és segítünk.",
+    "fullAnswer": "Ha elfelejtetted a jelszavad, kérj új jelszót a webshop belépési felületén. Add meg a regisztrációhoz használt email-címedet, és elküldjük az új jelszó megadásához szükséges linket. Ha ezután sem sikerül belépned, írj nekünk, és segítünk.",
+    "category": "fiokkezeles",
+    "subcategory": "jelszo-visszaallitas",
+    "products": [],
+    "keywords": [
+      "elfelejtett jelszo",
+      "uj jelszo",
+      "jelszo visszaallitas",
+      "nem emlekszem",
+      "nem tudok belepni",
+      "belepesi adatok",
+      "regisztracios email"
+    ],
+    "intents": ["account_password_reset"],
+    "source": "approved-knowledge",
+    "priority": 100
   }
 ]
