@@ -255,6 +255,7 @@ function add(text, role, options = {}) {
     role: role === 'user' ? 'user' : 'assistant',
     content: text,
     ...(role === 'bot' ? {
+      links: Array.isArray(options.links) ? options.links.map(normalizeProduct).filter(Boolean).slice(0, 3) : [],
       route: safeText(options.route),
       intent: safeText(options.intent),
       domain: safeText(options.domain),

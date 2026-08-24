@@ -33,7 +33,7 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
   const problem = detectProblemIntent(question);
   const safety = evaluateSafety(question, problem);
   const derivedContext = buildConversationContext(history, normalize);
-  const context = conversationState ? {...derivedContext,lastRecommendedProducts:conversationState.lastOrdinalProductList||conversationState.lastRecommendedProducts||[],lastFocusProduct:conversationState.lastMentionedProduct,lastProduct:conversationState.lastMentionedProduct,lastProblemDomain:conversationState.activeProblemDomains?.at(-1)||derivedContext.lastProblemDomain} : derivedContext;
+  const context = conversationState ? {...derivedContext,lastRecommendedProducts:conversationState.lastOrdinalProductList||conversationState.lastRecommendedProducts||[],lastSelectedProduct:conversationState.selectedProductId??derivedContext.lastSelectedProduct,lastFocusProduct:Object.hasOwn(conversationState,'focusedProductId')?conversationState.focusedProductId:conversationState.lastMentionedProduct,lastProduct:Object.hasOwn(conversationState,'focusedProductId')?conversationState.focusedProductId:conversationState.lastMentionedProduct,purchaseProductId:Object.hasOwn(conversationState,'purchaseProductId')?conversationState.purchaseProductId:derivedContext.lastFocusProduct,productContextStatus:conversationState.productContextStatus||derivedContext.productContextStatus,lastProblemDomain:conversationState.activeProblemDomains?.at(-1)||derivedContext.lastProblemDomain} : {...derivedContext,purchaseProductId:derivedContext.productContextStatus==='ambiguous'?null:derivedContext.lastFocusProduct};
   const excludedProductTypes=detectExcludedProductTypes(question);
   let productTypeConstraint=detectProductTypeConstraint(question);
   if (!productTypeConstraint && productQuestionIntent === 'recommendation' && /\b(zsiros\w* haj\w*|gyorsan zsiros\w*)\b/.test(normalize(question))) productTypeConstraint = 'solid_shampoo';
@@ -59,11 +59,16 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
   const commerce = detectCommerceIntent(question);
   if (commerce) {
     const needsProduct = ['price_query', 'availability_query'].includes(commerce.intent);
-    const commerceTarget = directCanonical || context.lastFocusProduct;
+    const purchaseReference = commerce.intent === 'order_start' ? resolveProductReference(question, context) : null;
+    if (commerce.intent === 'order_start' && !directCanonical && (purchaseReference?.ambiguous || (context.productContextStatus === 'ambiguous' && purchaseReference?.resolvedFrom !== 'ordered_list'))) {
+      return decision({ ...base, route: 'clarification', intent: commerce.intent, contextUsed: true, contextTarget: 'product', confidence: 1, threshold: 1, rejectionReasons: ['ambiguous_product_reference'], responseSource: 'conversation-context' });
+    }
+    const purchaseScoped = ['order_start', 'checkout_problem'].includes(commerce.intent);
+    const commerceTarget = directCanonical || purchaseReference?.productId || (purchaseScoped ? context.purchaseProductId : context.lastFocusProduct);
     if (needsProduct && !commerceTarget) {
       return decision({ ...base, route: 'clarification', contextUsed: history.length > 0, contextTarget: 'product', confidence: 1, threshold: 1, rejectionReasons: ['missing_product_argument'], responseSource: 'commerce-clarification' });
     }
-    const usesOptionalTarget = commerce.intent === 'order_start' && Boolean(commerceTarget);
+    const usesOptionalTarget = ['order_start', 'checkout_problem'].includes(commerce.intent) && Boolean(commerceTarget);
     return decision({ ...base, route: 'commerce', contextUsed: (needsProduct || usesOptionalTarget) && !directCanonical, contextTarget: (needsProduct || usesOptionalTarget) ? commerceTarget : null, matchedProductIds: (needsProduct || usesOptionalTarget) ? [commerceTarget] : [], confidence: 1, threshold: 1, responseSource: 'commerce-intent' });
   }
 
