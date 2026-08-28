@@ -45,4 +45,18 @@ function resolveComplaint({ complaint, complaintSubjectProduct = null } = {}) {
   };
 }
 
-module.exports = { resolveComplaint };
+function resolveResolvedComplaint({ resolvedFromHistory = false, complaintSubjectProduct = null } = {}) {
+  return {
+    resolutionFamily: 'complaint_resolved',
+    resolutionOwner: 'complaint', ownershipApplied: true, ownershipClass: 'resolved_complaint',
+    complaintState: 'resolved', resolvedTransitionApplied: true, resolvedFromHistory: Boolean(resolvedFromHistory),
+    complaintSubjectProductId: complaintSubjectProduct?.id || null,
+    clarificationRequired: false, clarificationType: null,
+    recommendationAllowed: false, purchaseAllowed: false, productLinksAllowed: false,
+    source: 'complaint-resolution', intent: 'complaint_resolved', confidence: 100,
+    answer: 'Örülök, hogy elmúlt.', links: [], suggestions: [], ruleId: null, matchedKnowledgeIds: [],
+    targetProductId: null, recommendedProductIds: [], primaryRecommendedProduct: null
+  };
+}
+
+module.exports = { resolveComplaint, resolveResolvedComplaint };

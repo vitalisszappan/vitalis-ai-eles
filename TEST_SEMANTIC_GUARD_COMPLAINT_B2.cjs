@@ -47,7 +47,6 @@ const controls = [
   'tegnap irritált, még most is piros',
   'múltkor csípett, de még mindig érzem',
   'a balzsamtól irritált lett a bőröm',
-  'a balzsamtól irritált lett a bőröm, de már elmúlt',
   'irritált bőrre keresek krémet',
   'érzékeny a bőröm',
   'nem irritáló szappant keresek',
@@ -58,8 +57,6 @@ const controls = [
   'nem irritál',
   'nem pirosodtam ki',
   'egyáltalán nem csíp',
-  'tegnap irritált, de már elmúlt',
-  'múltkor csípett, most nincs baj',
   'már elmúlt és nincs baj',
   'csípős illatot keresek',
   'égetően szükségem van szappanra',
@@ -77,6 +74,12 @@ const controls = [
   ,'pattanásos bőrre mit ajánlasz?'
   ,'ráncos bőrre keresek valamit'
   ,'mit ajánlasz érzékeny bőrre?'
+];
+
+const resolvedCases = [
+  'a balzsamtól irritált lett a bőröm, de már elmúlt',
+  'tegnap irritált, de már elmúlt',
+  'múltkor csípett, most nincs baj'
 ];
 
 const safetyCases = [
@@ -128,6 +131,15 @@ try {
     const answer = ask(question);
     assert.notEqual(answer.route, 'complaint', question);
     assert.notEqual(answer.routing.semanticGuard.ownershipApplied, true, question);
+  }
+
+  for (const question of resolvedCases) {
+    const answer = ask(question);
+    assert.equal(answer.route, 'complaint', question);
+    assert.equal(answer.intent, 'complaint_resolved', question);
+    assert.equal(answer.routing.semanticGuard.ownershipClass, 'resolved_complaint', question);
+    assert.equal(answer.resolvedTransitionApplied, true, question);
+    assert.deepEqual(answer.links, [], question);
   }
 
   for (const question of safetyCases) {
@@ -200,4 +212,4 @@ try {
   else process.env.SEMANTIC_GUARD_ENFORCEMENT = originalFlag;
 }
 
-console.log(`Semantic Guard Complaint B2 P0: PASS (${complaintCases.length + controls.length + safetyCases.length} matrix cases + multi-turn + flag-off)`);
+console.log(`Semantic Guard Complaint B2 P0: PASS (${complaintCases.length + controls.length + resolvedCases.length + safetyCases.length} matrix cases + multi-turn + flag-off)`);

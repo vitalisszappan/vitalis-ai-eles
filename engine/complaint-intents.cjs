@@ -19,6 +19,8 @@ const REPLACEMENT_REQUEST = /\b(helyette|melyik\w*.*ajanl\w*|mit hasznalj\w*|van
 const RECOMMENDATION_NEED = /\b(melyik\w*.*ajanl\w*|mit\s+(?:hasznalj\w*|ajanl\w*))\b/;
 const SERVICE_INTERSECTION = /\b(visszakap\w*.*penz\w*|refund\w*|visszaterit\w*|kicserel\w*|panaszt szeretnek)\b/;
 const METAPHORICAL = /\b(csipos illat\w*|egetoen szukseg\w*)\b/;
+const RESOLVED_FOLLOWUP = /^(?:mar elmult|elmult|mar nem piros|(?:most )?mar nem csip\w*|mar nincs semmi baj|rendbe jott|most mar jol vagyok|nem irrital\w* mar|tegnap volt de elmult)(?: koszonom)?$/;
+const RESOLVED_MIXED_PREFIX = /^(?:mar elmult|elmult|mar nem piros|(?:most )?mar nem csip\w*|nem irrital\w* mar)(?: de)?\s+(.+)$/;
 
 function detectSubject(text) {
   if (/\b(gyerek\w*|gyermek\w*|fiam\w*|lanyom\w*|babam\w*)\b/.test(text)) return 'child';
@@ -96,4 +98,21 @@ function isP0ComplaintEligible(complaint, routing = {}) {
   return ['product_category', 'exact_product', 'expert_rule', 'problem_domain', 'context_followup', 'commerce', 'clarification', 'hard_fallback'].includes(routing.route);
 }
 
-module.exports = { detectComplaintIntent, isP0ComplaintEligible };
+function detectResolvedComplaintTransition(question, { complaint = null, relevantComplaintHistory = false } = {}) {
+  const text = normalize(question).replace(/[.,!?;:]+/g, ' ').replace(/\s+/g, ' ').trim();
+  if (complaint?.resolved && complaint.polarity === 'positive') {
+    return { applied: true, resolvedFromHistory: false, explicitGoal: null, complaint };
+  }
+  if (!relevantComplaintHistory || !text) return null;
+  if (RESOLVED_FOLLOWUP.test(text)) {
+    return { applied: true, resolvedFromHistory: true, explicitGoal: null, complaint: null };
+  }
+  const mixed = RESOLVED_MIXED_PREFIX.exec(text);
+  if (!mixed) return null;
+  const explicitGoal = mixed[1].replace(/^de\s+/, '').trim();
+  const goalLike = /\b(ajanl\w*|hasznalj\w*|szeretn\w*|keres\w*|mutass\w*|van\s+masik|mennyibe\s+kerul|ara\b|rendel\w*|email\w*|e-mail\w*|elerhetoseg\w*)\b/.test(explicitGoal);
+  if (!goalLike) return null;
+  return { applied: true, resolvedFromHistory: true, explicitGoal, complaint: null };
+}
+
+module.exports = { detectComplaintIntent, isP0ComplaintEligible, detectResolvedComplaintTransition };

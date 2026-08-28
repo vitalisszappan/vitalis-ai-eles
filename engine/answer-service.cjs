@@ -47,7 +47,9 @@ const { planAnswer } = require('./answer-planner.cjs');
 const { buildSemanticEvidence } = require('./semantic-evidence.cjs');
 const { validateSemanticRoute } = require('./semantic-route-guard.cjs');
 const { applySemanticGuardEnforcement } = require('./semantic-guard-enforcement.cjs');
-const { resolveComplaint } = require('./complaint-resolution.cjs');
+const { resolveComplaint, resolveResolvedComplaint } = require('./complaint-resolution.cjs');
+const { detectResolvedComplaintTransition } = require('./complaint-intents.cjs');
+const { structuredState } = require('./conversation-memory.cjs');
 const { resolveBusinessInfo } = require('./business-info.cjs');
 
 const decisionCatalog = createCatalogSearch();
@@ -1560,9 +1562,35 @@ function complaintRouting(routing, complaint) {
   };
 }
 
+function latestComplaintBoundary(history = []) {
+  return [...history].map((item, index) => ({ item, index })).reverse().find(({ item }) =>
+    item?.role === 'assistant' && (item.route === 'complaint' || ['complaint', 'resolved_complaint'].includes(item.routing?.semanticGuard?.ownershipClass))) || null;
+}
+
+function resolvedComplaintRouting(routing, transition, { preserveRoute = false } = {}) {
+  const resolvedRoute = preserveRoute
+    ? { route: routing.route || null, goal: routing.goal || null, intent: routing.intent || null, domain: routing.domain || null, source: routing.responseSource || null }
+    : { route: 'complaint', goal: 'resolve_complaint', intent: 'complaint_resolved', domain: 'complaint', source: 'complaint-resolution' };
+  const semanticGuard = {
+    ...routing.semanticGuard,
+    resolutionOwner: 'complaint', ownershipApplied: true, ownershipClass: 'resolved_complaint',
+    complaintState: 'resolved', resolvedTransitionApplied: true,
+    resolvedFromHistory: Boolean(transition.resolvedFromHistory), resolvedRoute
+  };
+  if (preserveRoute) return { ...routing, semanticGuard };
+  return {
+    ...routing,
+    route: 'complaint', goal: 'resolve_complaint', intent: 'complaint_resolved', domain: 'complaint',
+    responseSource: 'complaint-resolution', answerMode: 'DIRECT', contextUsed: false, contextTarget: null,
+    matchedCanonicalIds: [], matchedProductIds: [], primaryProductId: null, targetProductId: null,
+    focusedProductId: null, purchaseProductId: null, recommendedProductIds: [], matchedRuleId: null,
+    semanticGuard
+  };
+}
+
 function historyAfterComplaintBoundary(history = []) {
   const boundary = [...history].map((item, index) => ({ item, index })).reverse().find(({ item }) =>
-    item?.role === 'assistant' && (item.route === 'complaint' || item.routing?.semanticGuard?.ownershipClass === 'complaint'));
+    item?.role === 'assistant' && (item.route === 'complaint' || ['complaint', 'resolved_complaint'].includes(item.routing?.semanticGuard?.ownershipClass)));
   return boundary ? history.slice(boundary.index + 1) : history;
 }
 
@@ -1581,19 +1609,53 @@ function createAnswer({
   logDiagnostic
 }) {
 
+  const complaintBoundary = latestComplaintBoundary(history);
   const effectiveHistory = historyAfterComplaintBoundary(history);
-  const selectedRouting = routeAnswer({ question, history: effectiveHistory, knowledge, ruleEngine, conversationState });
-  const semanticEvidence = buildSemanticEvidence({ question, routing: selectedRouting, history: effectiveHistory, conversationState });
+  const effectiveState = complaintBoundary ? structuredState(effectiveHistory) : conversationState;
+  const selectedRouting = routeAnswer({ question, history: effectiveHistory, knowledge, ruleEngine, conversationState: effectiveState });
+  const semanticEvidence = buildSemanticEvidence({ question, routing: selectedRouting, history: effectiveHistory, conversationState: effectiveState });
   const semanticGuard = validateSemanticRoute({ routing: selectedRouting, evidence: semanticEvidence });
   const { routing } = applySemanticGuardEnforcement({ routing: selectedRouting, guard: semanticGuard });
+  const relevantComplaintHistory = Boolean(complaintBoundary
+    && complaintBoundary.index === history.length - 1
+    && complaintBoundary.item.intent !== 'complaint_resolved'
+    && complaintBoundary.item.routing?.semanticGuard?.ownershipClass !== 'resolved_complaint');
+  const resolvedTransition = detectResolvedComplaintTransition(question, {
+    complaint: semanticEvidence.complaint,
+    relevantComplaintHistory
+  });
+  if (routing.route !== 'safety' && routing.semanticGuard.enforcementEnabled && resolvedTransition) {
+    if (!resolvedTransition.explicitGoal) {
+      const subjectProduct = resolvedTransition.resolvedFromHistory ? null : complaintSubjectProduct(selectedRouting, semanticEvidence, effectiveState || {});
+      const resolvedRouting = resolvedComplaintRouting(routing, resolvedTransition);
+      const resolvedDraft = resolveResolvedComplaint({ resolvedFromHistory: resolvedTransition.resolvedFromHistory, complaintSubjectProduct: subjectProduct });
+      return composeCommunication({ decision: resolvedRouting, draft: attachDecision(resolvedDraft, resolvedRouting), question, history: effectiveHistory });
+    }
+    const goalQuestion = resolvedTransition.explicitGoal;
+    const goalState = structuredState(effectiveHistory);
+    const goalSelectedRouting = routeAnswer({ question: goalQuestion, history: effectiveHistory, knowledge, ruleEngine, conversationState: goalState });
+    const goalEvidence = buildSemanticEvidence({ question: goalQuestion, routing: goalSelectedRouting, history: effectiveHistory, conversationState: goalState });
+    const goalGuard = validateSemanticRoute({ routing: goalSelectedRouting, evidence: goalEvidence });
+    const { routing: enforcedGoalRouting } = applySemanticGuardEnforcement({ routing: goalSelectedRouting, guard: goalGuard });
+    const goalRouting = resolvedComplaintRouting(enforcedGoalRouting, resolvedTransition, { preserveRoute: true });
+    const goalPlan = planAnswer({ question: goalQuestion, routing: goalRouting, conversationState: goalState });
+    const goalDraft = materializeDecision({ routing: goalRouting, question: goalQuestion, history: effectiveHistory, knowledge, ruleEngine, logGap, conversationState: goalState, technicalFailure, logDiagnostic, answerPlan: goalPlan });
+    const composed = composeCommunication({ decision: goalRouting, draft: goalDraft, question, history: effectiveHistory });
+    return {
+      ...composed,
+      answer: `Örülök, hogy elmúlt. ${composed.answer}`,
+      complaintState: 'resolved', resolvedTransitionApplied: true,
+      resolvedFromHistory: Boolean(resolvedTransition.resolvedFromHistory)
+    };
+  }
   if (routing.semanticGuard.enforcementEnabled && routing.semanticGuard.resolutionOwner === 'complaint') {
-    const subjectProduct = complaintSubjectProduct(selectedRouting, semanticEvidence, conversationState || {});
+    const subjectProduct = complaintSubjectProduct(selectedRouting, semanticEvidence, effectiveState || {});
     const resolvedRouting = complaintRouting(routing, semanticEvidence.complaint);
     const complaintDraft = resolveComplaint({ complaint: semanticEvidence.complaint, complaintSubjectProduct: subjectProduct });
     return composeCommunication({ decision: resolvedRouting, draft: attachDecision(complaintDraft, resolvedRouting), question, history: effectiveHistory });
   }
-  const answerPlan = planAnswer({ question, routing, conversationState });
-  const draft = materializeDecision({ routing, question, history: effectiveHistory, knowledge, ruleEngine, logGap, conversationState, technicalFailure, logDiagnostic, answerPlan });
+  const answerPlan = planAnswer({ question, routing, conversationState: effectiveState });
+  const draft = materializeDecision({ routing, question, history: effectiveHistory, knowledge, ruleEngine, logGap, conversationState: effectiveState, technicalFailure, logDiagnostic, answerPlan });
   return composeCommunication({ decision: routing, draft, question, history: effectiveHistory });
 
   /* Legacy pipeline retained temporarily as a rollback reference during the
