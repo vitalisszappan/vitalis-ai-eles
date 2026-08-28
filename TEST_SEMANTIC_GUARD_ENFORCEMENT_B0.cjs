@@ -36,6 +36,7 @@ try {
   assert.equal(blocked.routing.semanticGuard.decision, 'REJECT');
   assert.equal(blocked.routing.semanticGuard.hardConflict, true);
   assert(blocked.routing.semanticGuard.reasonCodes.includes('EXACT_MATCH_SUBSTRING_ONLY'));
+  assert.equal(blocked.routing.semanticGuard.enforcementClass, 'exact_product_substring');
   assert.equal(blocked.routing.semanticGuard.enforcementEligible, true);
   assert.equal(blocked.routing.semanticGuard.enforcementApplied, true);
   assert.equal(blocked.route, 'clarification');
@@ -71,9 +72,10 @@ try {
   for (const question of ['kifingottam egy ekcemat', 'tegnap vacsoraztam egy szappant', 'tegnap leugrottam egy 3 emeletes szallitasrol']) {
     const result = ask(question);
     assert.equal(result.routing.semanticGuard.decision, 'REJECT', question);
-    assert.equal(result.routing.semanticGuard.enforcementEligible, false, question);
-    assert.equal(result.routing.semanticGuard.enforcementApplied, false, question);
-    assert.equal(result.route, result.routing.semanticGuard.originalRoute.route, question);
+    assert.equal(result.routing.semanticGuard.enforcementClass, 'semantic_role_mismatch', question);
+    assert.notEqual(result.routing.semanticGuard.enforcementClass, 'exact_product_substring', question);
+    assert.equal(result.routing.semanticGuard.reasonCodes.includes('EXACT_MATCH_SUBSTRING_ONLY'), false, question);
+    assert.notEqual(result.routing.semanticGuard.originalRoute.route, 'exact_product', question);
   }
 
   const matrix = ['ránc', 'ráncos bőr', 'ránctalanítás', 'rác', 'rácok', 'narancs', 'narancsos'];
@@ -83,8 +85,12 @@ try {
     const guard = validateSemanticRoute({ routing: selected, evidence });
     const resolved = applySemanticGuardEnforcement({ routing: selected, guard, enabled: true });
     const expected = selected.route === 'exact_product' && guard.decision === 'REJECT' && guard.hardConflict && guard.reasonCodes.includes('EXACT_MATCH_SUBSTRING_ONLY');
-    assert.equal(resolved.telemetry.enforcementApplied, expected, question);
-    if (!expected) assert.equal(resolved.routing.route, selected.route, question);
+    if (expected) {
+      assert.equal(resolved.telemetry.enforcementClass, 'exact_product_substring', question);
+      assert.equal(resolved.telemetry.enforcementApplied, true, question);
+    } else {
+      assert.notEqual(resolved.telemetry.enforcementClass, 'exact_product_substring', question);
+    }
   }
 } finally {
   restoreFlag();
