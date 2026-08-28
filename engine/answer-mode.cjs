@@ -16,12 +16,12 @@ function determineAnswerMode(question, routing) {
 
   const explanatory = routing.route === 'hair_type_knowledge' ||
     ['ask_usage', 'ask_child_usage', 'clarify_previous_answer'].includes(routing.goal) ||
-    ['product_usage', 'product_information', 'ingredients', 'compare_products', 'product_type_comparison'].includes(routing.intent) ||
+    ['product_usage', 'product_information', 'scent', 'ingredients', 'compare_products', 'product_type_comparison'].includes(routing.intent) ||
     /\b(kulonbseg|miben mas|hogyan|hogy hasznal|miert|jelsz\w*|belep\w*)\b/.test(text);
   if (explanatory) return ANSWER_MODES.EXPLANATORY;
 
   const asksRecommendation = /\b(ajanl\w*|javasol\w*|mit valassz\w*|melyiket valassz\w*|melyiket|melyik jobb|mit hasznalj\w*)\b/.test(text);
-  if (asksRecommendation || ['problem_domain', 'expert_rule'].includes(routing.route) || routing.goal === 'solve_problem') {
+  if (asksRecommendation || routing.intent === 'product_recommendation' || ['problem_domain', 'expert_rule'].includes(routing.route) || routing.goal === 'solve_problem') {
     return ANSWER_MODES.RECOMMENDATION;
   }
 

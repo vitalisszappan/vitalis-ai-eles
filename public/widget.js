@@ -255,10 +255,12 @@ function add(text, role, options = {}) {
     role: role === 'user' ? 'user' : 'assistant',
     content: text,
     ...(role === 'bot' ? {
+      links: Array.isArray(options.links) ? options.links.map(normalizeProduct).filter(Boolean).slice(0, 3) : [],
       route: safeText(options.route),
       intent: safeText(options.intent),
       domain: safeText(options.domain),
-      responseType: safeText(options.responseType, options.route)
+      responseType: safeText(options.responseType, options.route),
+      targetProductId: safeText(options.targetProductId)
     } : {})
   });
   storedMessages.push({
@@ -268,7 +270,8 @@ function add(text, role, options = {}) {
     route: safeText(options.route),
     intent: safeText(options.intent),
     domain: safeText(options.domain),
-    responseType: safeText(options.responseType, options.route)
+    responseType: safeText(options.responseType, options.route),
+    targetProductId: safeText(options.targetProductId)
   });
   storedMessages = storedMessages.slice(-MAX_STORED_MESSAGES);
   if (options.persist !== false) persistState();
@@ -429,6 +432,7 @@ async function ask(question) {
       intent: data.intent,
       domain: data.domain,
       responseType: data.responseSource || data.route,
+      targetProductId: data.targetProductId,
       answerMode: data.answerMode
     });
     (data.answerMode === 'RECOMMENDATION' ? (Array.isArray(data.links) ? data.links : []) : []).slice(0, 3).forEach((item, index) => {

@@ -43,6 +43,10 @@ const { composeCommunication } = require('./communication-engine.cjs');
 const {classifyFallback,gapDisposition}=require('./fallback-classifier.cjs');
 const {matchesProductType}=require('./product-type-constraint.cjs');
 const {comparisonAnswer,recommendation:hairRecommendation,availability:hairAvailability}=require('./hair-wash-products.cjs');
+const { planAnswer } = require('./answer-planner.cjs');
+const { buildSemanticEvidence } = require('./semantic-evidence.cjs');
+const { validateSemanticRoute } = require('./semantic-route-guard.cjs');
+const { applySemanticGuardEnforcement } = require('./semantic-guard-enforcement.cjs');
 
 const decisionCatalog = createCatalogSearch();
 
@@ -117,7 +121,71 @@ function lowerInitial(value) {
   return text ? `${text[0].toLocaleLowerCase('hu-HU')}${text.slice(1)}` : text;
 }
 
-function materializeDecision({ routing, question, history, knowledge, ruleEngine, logGap, conversationState, technicalFailure, logDiagnostic }) {
+function plannedMetadata(plan) {
+  return { answerIntent: plan.answerIntent, targetProductId: plan.targetProductId, factsUsed: plan.factsUsed, groundingStatus: plan.groundingStatus, responseStrategy: plan.responseStrategy, ctaStrategy: plan.ctaStrategy };
+}
+
+function materializePlannedAnswer(plan, routing) {
+  if (!plan || plan.responseStrategy === 'existing_commerce') return null;
+  const metadata = plannedMetadata(plan);
+  const productIds = plan.targetProductId ? [plan.targetProductId, ...(plan.relatedProductIds || [])] : [];
+  const links = productCards([...new Set(productIds)]);
+  const base = { source: 'answer-planner', confidence: 100, links, suggestions: [], ruleId: null, intent: routing?.intent || plan.answerIntent, matchedKnowledgeIds: [], ...metadata };
+  if (plan.responseStrategy === 'clarify_product') return { ...base, answer: 'Melyik termékre gondolsz?', links: [] };
+  const byType = Object.fromEntries(plan.factsUsed.map((fact) => [fact.factType, fact]));
+  const firstClaim = (fact) => fact?.status === 'grounded' && Array.isArray(fact.value) ? fact.value[0]?.claim : null;
+  if (plan.answerIntent === 'product_recommendation') {
+    const claim = firstClaim(byType.productBenefits);
+    if (plan.responseStrategy === 'expert_relationship') {
+      const names = links.map((link, index) => index === 0 ? recommendationName(link.name) : lowerInitial(recommendationName(link.name)));
+      const listed = names.length > 1 ? `${names.slice(0, -1).join(', ')} és a ${names.at(-1)}` : names[0] || 'kapcsolódó terméket';
+      return { ...base, answer: `Az ${listed} tudom kapcsolódó termékként megmutatni. Részletes, termékspecifikus előnyről most nincs elég bizonyított adatom.`, links: links.map((link) => ({ ...link, reason: 'Kapcsolódó termék az ajánláshoz.', reasonSource: 'expert_relationship' })) };
+    }
+    if (plan.groundingStatus !== 'grounded' || !claim) return { ...base, answer: 'Ehhez még pontosítanod kell, milyen bőrproblémára keresel terméket.', links: [] };
+    return { ...base, answer: `Ezt ajánlom: ${links[0]?.name || 'a kiválasztott termék'}. ${claim}`, links: links.map((link, index) => index === 0 ? { ...link, reason: claim, reasonSource: 'grounded_product_fact' } : { ...link, reason: 'Kapcsolódó termék az ajánláshoz.', reasonSource: 'expert_relationship' }) };
+  }
+  if (plan.answerIntent === 'product_benefits') {
+    const claim = firstClaim(byType.productBenefits);
+    return { ...base, answer: claim || 'Ehhez a termékhez nincs jóváhagyott, termékspecifikus előnyállításunk.' };
+  }
+  if (plan.answerIntent === 'ingredients') {
+    const ingredients = byType.ingredients;
+    const existence = byType.ingredientExistence;
+    if (existence) {
+      const label = plan.requestedIngredientId === 'urea' ? 'urea' : plan.requestedIngredientId;
+      if (existence.status !== 'grounded') return { ...base, answer: 'Erről az összetevőről nincs elég bizonyított termékadatunk.' };
+      const article = /^[aeiou]/i.test(label || '') ? 'az' : 'a';
+      return { ...base, answer: existence.value ? `Igen, az összetevők között szerepel ${article} ${label}.` : `A jelenlegi bizonyított összetevőlistában nem szerepel ${label}.` };
+    }
+    if (ingredients?.status !== 'grounded') return { ...base, answer: 'Ehhez a termékhez nincs elérhető, bizonyított összetevőlistánk.' };
+    return { ...base, answer: `Az összetevői: ${ingredients.value.map((item) => item.rawName).join(', ')}.` };
+  }
+  if (plan.answerIntent === 'ingredient_benefit') {
+    const existence = byType.ingredientExistence;
+    const benefits = byType.ingredientBenefits;
+    const label = plan.requestedIngredientId === 'urea' ? 'urea' : plan.requestedIngredientId || 'összetevő';
+    if (existence?.status === 'grounded' && existence.value === false) return { ...base, answer: `A jelenlegi bizonyított összetevőlistában nem szerepel ${label}.` };
+    const claim = benefits?.status === 'grounded' ? benefits.value.find((item) => item.ingredientId === plan.requestedIngredientId) : null;
+    if (existence?.status === 'grounded' && existence.value === true && claim) return { ...base, answer: claim.benefit };
+    if (existence?.status === 'grounded' && existence.value === true) return { ...base, answer: `Az összetevők között szerepel az ${label}, de a jelenlegi jóváhagyott termékadatainkban nincs külön bizonyított leírás arról, hogy ebben a termékben milyen szerepet tölt be.` };
+    return { ...base, answer: 'Ehhez az összetevőhöz nincs elég bizonyított termékadatunk.' };
+  }
+  if (plan.answerIntent === 'usage') {
+    const usage = byType.usageInstructions;
+    return { ...base, answer: usage?.status === 'grounded' ? usage.value : 'Ehhez a termékhez nincs elérhető, bizonyított használati útmutatónk.' };
+  }
+  if (plan.answerIntent === 'price_query') {
+    const price = byType.price, currency = byType.currency;
+    if (price?.status !== 'grounded' || currency?.status !== 'grounded') return { ...base, answer: 'Ehhez a termékhez nincs elérhető, bizonyított aktuális árunk.' };
+    const unit = currency.value === 'HUF' ? 'Ft' : currency.value;
+    return { ...base, answer: `A termék jelenlegi ára ${formatWholeForint(price.value)} ${unit}.` };
+  }
+  return { ...base, answer: 'Ehhez nincs elég bizonyított termékadatunk.' };
+}
+
+function materializeDecision({ routing, question, history, knowledge, ruleEngine, logGap, conversationState, technicalFailure, logDiagnostic, answerPlan = null }) {
+  const planned = materializePlannedAnswer(answerPlan, routing);
+  if (planned) return attachDecision(planned, routing);
   if (routing.responseSource === 'meta-intent') return attachDecision(resolveMetaIntent(question), routing);
   if(routing.route==='hair_type_knowledge')return attachDecision(comparisonAnswer(),routing);
   if(routing.route==='hair_product_type')return attachDecision(routing.intent==='product_type_availability'?hairAvailability(question,routing.productTypeConstraint):hairRecommendation(question,routing.productTypeConstraint),routing);
@@ -149,7 +217,7 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
       payment: 'Az elérhető fizetési módokat a pénztárban tudod kiválasztani.',
       order_status: 'A rendelés állapotáról a rendelési visszaigazolás és az ügyfélszolgálat tud pontos tájékoztatást adni.'
     };
-    return attachDecision({ source: 'commerce-intent', answer: byIntent[routing.intent] || 'Miben segíthetek a rendeléssel kapcsolatban?', confidence: 100, links: cards, suggestions: [], ruleId: routing.matchedRuleId, intent: routing.intent, matchedKnowledgeIds: [] }, routing);
+    return attachDecision({ source: 'commerce-intent', answer: byIntent[routing.intent] || 'Miben segíthetek a rendeléssel kapcsolatban?', confidence: 100, links: cards, suggestions: [], ruleId: routing.matchedRuleId, intent: routing.intent, matchedKnowledgeIds: [], ...(answerPlan ? plannedMetadata(answerPlan) : {}) }, routing);
   }
 
   if (routing.route === 'clarification') {
@@ -164,6 +232,8 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
     }
     const answer = routing.contextTarget === 'excluded_product_type'
       ? 'Milyen terméktípust keresel a sampon helyett?'
+      : routing.contextTarget === 'semantic_product_match'
+      ? 'Nem találtam biztos termékegyezést. Meg tudod írni pontosabban, mit keresel?'
       : routing.contextTarget === 'product'
       ? (routing.intent === 'product_recommendation' ? 'Milyen problémára vagy milyen terméktípusból keresel ajánlást?' : 'Melyik termékre gondolsz?')
       : 'Mire gondolsz pontosan?';
@@ -1442,8 +1512,12 @@ function createAnswer({
   logDiagnostic
 }) {
 
-  const routing = routeAnswer({ question, history, knowledge, ruleEngine, conversationState });
-  const draft = materializeDecision({ routing, question, history, knowledge, ruleEngine, logGap, conversationState, technicalFailure, logDiagnostic });
+  const selectedRouting = routeAnswer({ question, history, knowledge, ruleEngine, conversationState });
+  const semanticEvidence = buildSemanticEvidence({ question, routing: selectedRouting, history, conversationState });
+  const semanticGuard = validateSemanticRoute({ routing: selectedRouting, evidence: semanticEvidence });
+  const { routing } = applySemanticGuardEnforcement({ routing: selectedRouting, guard: semanticGuard });
+  const answerPlan = planAnswer({ question, routing, conversationState });
+  const draft = materializeDecision({ routing, question, history, knowledge, ruleEngine, logGap, conversationState, technicalFailure, logDiagnostic, answerPlan });
   return composeCommunication({ decision: routing, draft, question, history });
 
   /* Legacy pipeline retained temporarily as a rollback reference during the

@@ -69,13 +69,15 @@ const recommendationCases = [
     question: 'Mit ajánlasz száraz bőrre?',
     intent: 'dry_skin',
     ids: ['shea_vajas_szappan'],
-    answerParts: ['Shea vajas szappant']
+    groundedPrimaryIdentity: 'Shea vajas szappan',
+    groundedClaim: 'Száraz, húzódó bőr kímélő mindennapi tisztítására.'
   },
   {
     question: 'Mit ajánlasz pikkelysömörös fejbőrre?',
     intent: 'scalp_psoriasis',
     ids: ['dermavital_sampon', 'rozmaringos_samponszappan'],
-    answerParts: ['Dermavital sampont', 'rozmaringos samponszappan']
+    groundedPrimaryIdentity: 'Dermavital Sampon',
+    groundedClaim: 'Problémás, korpás, viszkető vagy hámló fejbőr kímélő tisztítására.'
   },
   {
     question: 'Mit ajánlasz rosaceára?',
@@ -94,10 +96,28 @@ const recommendationCases = [
 for (const test of recommendationCases) {
   const result = ask(test.question);
   assert.strictEqual(result.intent, test.intent, test.question);
+  if (test.groundedPrimaryIdentity) {
+    assert.strictEqual(result.route, 'expert_rule', test.question);
+    assert.strictEqual(result.answerIntent, 'product_recommendation', test.question);
+    assert.strictEqual(result.groundingStatus, 'grounded', test.question);
+    assert.strictEqual(result.targetProductId, test.ids[0], test.question);
+    assert(normalize(result.answer).includes(normalize(test.groundedPrimaryIdentity)), `${test.question}: ${test.groundedPrimaryIdentity}`);
+    assert(normalize(result.answer).includes(normalize(test.groundedClaim)), `${test.question}: ${test.groundedClaim}`);
+  }
+  if (test.intent === 'acne') assert.strictEqual(result.answerIntent, 'product_recommendation', test.question);
   assert.deepStrictEqual(cardIds(result), test.ids, test.question);
+  if (test.groundedPrimaryIdentity) {
+    assert.strictEqual(result.links[0].reasonSource, 'grounded_product_fact', test.question);
+    assert.strictEqual(normalize(result.links[0].reason), normalize(test.groundedClaim), test.question);
+    assert(result.links.slice(1).every((card) => card.reasonSource === 'expert_relationship' && card.reason), test.question);
+  }
+  if (test.intent === 'acne') {
+    assert.strictEqual(result.groundingStatus, 'unavailable', test.question);
+    assert(result.links.every((card) => card.reasonSource === 'expert_relationship' && card.reason), test.question);
+  }
   assert.notStrictEqual(result.source, 'knowledge-fallback', test.question);
-  for (const text of test.answerParts) {
-    assert(result.answer.includes(text), `${test.question}: ${text}`);
+  for (const text of test.answerParts || []) {
+    assert(normalize(result.answer).includes(normalize(text)), `${test.question}: ${text}`);
   }
   assert(!/Kecsketejes|Olíva/.test(result.answer), test.question);
 }

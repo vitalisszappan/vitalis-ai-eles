@@ -20,7 +20,7 @@ const RELATIONS = {
     companion: 'rozmaringos_samponszappan',
     answers: {
       soap: 'A Dermavital sampon mellé kiegészítőként a rozmaringos samponszappant javaslom, különösen viszkető vagy pikkelysömörre hajlamos fejbőrnél.',
-      companion: 'A Dermavital sampon mellé kiegészítőként a rozmaringos samponszappan használható.'
+      companion: 'A Dermavital sampon mellé a rozmaringos samponszappant ajánlom.'
     }
   },
   psorivital_csomag: {

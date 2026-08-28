@@ -1,11 +1,11 @@
 'use strict';
 
 const {
-  findProductInText,
-  findProductsInText
+  findProductInText
 } = require(
   './product-faq.cjs'
 );
+const { resolvePersistedProductEvidence } = require('./persisted-product-evidence.cjs');
 
 /* =========================================================
    SEGÉDFÜGGVÉNYEK
@@ -321,49 +321,57 @@ function resolveProductReference(text, context) {
   let index = null;
 
   if (/\b(az )?elsot?\b/.test(value)) index = 0;
-  if (/\b(a )?masodikat?\b/.test(value)) index = 1;
+  if (/\b(a )?masodik(?:at)?\b/.test(value)) index = 1;
+  if (/\b(a )?harmadikat?\b/.test(value)) index = 2;
+  if (/\b(az )?elobbit?\b/.test(value)) index = products.length === 2 ? 0 : -1;
+  if (/\b(az )?utobbit?\b/.test(value)) index = products.length === 2 ? 1 : -1;
 
   if (index !== null) {
-    return products[index]
-      ? { productId: products[index], ambiguous: false }
+    return index >= 0 && products[index]
+      ? { productId: products[index], ambiguous: false, resolvedFrom: 'ordered_list' }
       : { productId: null, ambiguous: true };
   }
 
   if (/\b(a )?masikat\b/.test(value)) {
-    if (products.length === 2 && context.lastProduct) {
+    const selectedProduct = context.lastSelectedProduct || context.purchaseProductId;
+    if (products.length === 2 && selectedProduct && products.includes(selectedProduct)) {
       return {
-        productId: products.find((id) => id !== context.lastProduct) || null,
-        ambiguous: false
+        productId: products.find((id) => id !== selectedProduct) || null,
+        ambiguous: false,
+        resolvedFrom: 'ordered_list'
       };
     }
     return { productId: null, ambiguous: true };
   }
 
-  if (/^(es\s+)?(ez|az)(\s+.*)?$|\b(ezt|ennek|errol)\b/.test(value)) {
+  if (/^(es\s+)?(ez|az)(\s+.*)?$|\b(ezt|ennek|ennel|ebben|benne|errol)\b/.test(value)) {
     if (context.lastSelectedProduct) {
-      return { productId: context.lastSelectedProduct, ambiguous: false };
+      return { productId: context.lastSelectedProduct, ambiguous: false, resolvedFrom: 'explicit_focus' };
     }
     if (context.lastUserProduct) {
-      return { productId: context.lastUserProduct, ambiguous: false };
+      return { productId: context.lastUserProduct, ambiguous: false, resolvedFrom: 'explicit_focus' };
     }
-    if (context.lastFocusProduct) {
-      return { productId: context.lastFocusProduct, ambiguous: false };
+    if (context.lastFocusProduct && context.productContextStatus !== 'ambiguous') {
+      return { productId: context.lastFocusProduct, ambiguous: false, resolvedFrom: 'focus' };
     }
     if (products.length === 1) {
-      return { productId: products[0], ambiguous: false };
+      return { productId: products[0], ambiguous: false, resolvedFrom: 'single_product' };
     }
     return { productId: null, ambiguous: products.length > 1 };
   }
 
   if (/\b(ebbol|belole|ezt|azt)\b/.test(value)) {
     if (context.lastSelectedProduct) {
-      return { productId: context.lastSelectedProduct, ambiguous: false };
+      return { productId: context.lastSelectedProduct, ambiguous: false, resolvedFrom: 'explicit_focus' };
     }
     if (context.lastUserProduct) {
-      return { productId: context.lastUserProduct, ambiguous: false };
+      return { productId: context.lastUserProduct, ambiguous: false, resolvedFrom: 'explicit_focus' };
+    }
+    if (context.lastFocusProduct && context.productContextStatus !== 'ambiguous') {
+      return { productId: context.lastFocusProduct, ambiguous: false, resolvedFrom: 'focus' };
     }
     if (products.length === 1) {
-      return { productId: products[0], ambiguous: false };
+      return { productId: products[0], ambiguous: false, resolvedFrom: 'single_product' };
     }
     return { productId: null, ambiguous: products.length > 1 };
   }
@@ -428,7 +436,10 @@ function buildConversationContext(
       null,
 
     lastCommerceIntent:
-      null
+      null,
+
+    productContextStatus:
+      'unresolved'
   };
 
   for (
@@ -474,6 +485,7 @@ function buildConversationContext(
       const reference = resolveProductReference(originalText, context);
       if (reference?.productId) {
         context.lastSelectedProduct = reference.productId;
+        context.productContextStatus = 'resolved';
       }
 
       if (
@@ -496,16 +508,38 @@ function buildConversationContext(
         text;
 
       context.lastResponseType = message.responseType || message.route || message.source || 'answer';
+
+      if (message.targetProductId) {
+        context.lastAssistantProduct = String(message.targetProductId);
+        context.primaryRecommendedProduct = String(message.targetProductId);
+        context.productContextStatus = 'resolved';
+      }
     }
 
     /* -------------------------
        TERMÉK
     ------------------------- */
 
-    const products = findProductsInText(text);
-    const product = message.role === 'assistant'
-      ? products[0]
-      : findProductInText(text, false);
+    const linkedProducts = Array.isArray(message.links)
+      ? message.links.map((item) => String(item?.id || '')).filter(Boolean)
+      : [];
+    const persistedEvidence = linkedProducts.length ? null : resolvePersistedProductEvidence(text);
+    const products = linkedProducts.length ? linkedProducts : persistedEvidence.orderedProductIds;
+    const productEvidenceAmbiguous = !linkedProducts.length && persistedEvidence.status === 'ambiguous';
+    const product = message.role === 'assistant' ? message.targetProductId || products[0] || null : products.length === 1 ? products[0] : null;
+
+    if ((products.length > 1 && !message.targetProductId) || productEvidenceAmbiguous) {
+      context.productContextStatus = 'ambiguous';
+      if (message.role === 'user') {
+        context.lastUserProduct = null;
+        context.lastSelectedProduct = null;
+      }
+      if (message.role === 'assistant') {
+        context.lastAssistantProduct = null;
+        context.primaryRecommendedProduct = null;
+        context.lastRecommendedProducts = productEvidenceAmbiguous && products.length < 2 ? [] : products;
+      }
+    }
 
     if (
       product
@@ -554,6 +588,8 @@ function buildConversationContext(
 
       context.lastProduct =
         product;
+
+      if (products.length === 1 && !productEvidenceAmbiguous) context.productContextStatus = 'resolved';
     }
 
     /* -------------------------
@@ -582,6 +618,7 @@ function buildConversationContext(
     context.lastProduct;
 
   context.lastFocusProduct = context.lastSelectedProduct || context.lastUserProduct || context.primaryRecommendedProduct || context.lastProduct;
+  if (!context.lastFocusProduct && context.productContextStatus !== 'ambiguous') context.productContextStatus = 'unresolved';
 
   const lastUserText = context.lastUserMessage || '';
   if (/\b(mennyibe kerul|keszleten|nagyobb|kisebb)\b/.test(lastUserText) && !context.lastFocusProduct) {

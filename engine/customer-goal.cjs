@@ -18,10 +18,10 @@ function detectCustomerGoal(question) {
   const productQuestion = detectProductQuestionIntent(question);
   if (/^(micsoda|mit jelent|ezt nem ertem)$/.test(text)) return { goal: 'clarify_previous_answer', intent: 'clarify_previous_answer', domain: 'conversation', evidence: ['followup:clarify'] };
   if (/^(melyik|melyiket|az elsot|az elso|a masodikat|a masodik)$/.test(text)) return { goal: 'compare_products', intent: 'select_recommendation', domain: 'conversation', evidence: ['followup:selection'] };
-  if (productQuestion === 'usage') return { goal: 'ask_usage', intent: 'product_usage', domain: 'product', evidence: ['followup:usage'] };
-  if (productQuestion === 'product_information') return { goal: 'ask_product_information', intent: 'product_information', domain: 'product', evidence: ['followup:product-information'] };
+  if (productQuestion === 'usage' || /^(es )?(hogyan|hogy) hasznaljam/.test(text)) return { goal: 'ask_usage', intent: 'product_usage', domain: 'product', evidence: ['followup:usage'] };
+  if (['product_information', 'scent'].includes(productQuestion)) return { goal: 'ask_product_information', intent: productQuestion, domain: 'product', evidence: [`followup:${productQuestion}`] };
   if (/\b(gyereknek|gyermeknek|babanak|[0-9]{1,2} eves)\b/.test(text)) return { goal: 'ask_child_usage', intent: 'child_usage', domain: 'child_usage', evidence: ['goal:child_usage'] };
-  if (/\b(nagyobb|kisebb|kiszereles|meret|valtozat)\b/.test(text)) return { goal: 'ask_variant', intent: 'variant_query', domain: 'product', evidence: ['followup:variant'] };
+  if (productQuestion === 'variant' || /\b(nagyobb|kisebb|kiszereles|meret|valtozat)\b/.test(text)) return { goal: 'ask_variant', intent: 'variant_query', domain: 'product', evidence: ['followup:variant'] };
   const problem = detectProblemIntent(question);
   if (problem) return { goal: problem.domain.includes('medical') || problem.domain === 'circulation_claim' ? 'medical_boundary' : 'solve_problem', intent: 'problem_recommendation', domain: problem.domain, evidence: problem.evidence };
   if (productQuestion === 'recommendation') return { goal: 'find_product', intent: 'product_recommendation', domain: 'product', evidence: ['goal:explicit-recommendation'] };

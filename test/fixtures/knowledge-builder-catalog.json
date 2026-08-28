@@ -164,6 +164,18 @@
       "actualPriceGross": 2600,
       "currency": "HUF",
       "url": "https://www.vitalis-szappan.hu/szilard-sampon-zsiros-hajra"
+    },
+    {
+      "unasId": "1120057029",
+      "sku": "CS001",
+      "name": "PsoriVital csomag – Pikkelysömörrel érintett, hámlásra hajlamos bőr ápolására",
+      "categoryNames": ["Csomagajánlatok"],
+      "public": true,
+      "active": true,
+      "orderable": true,
+      "actualPriceGross": 6500,
+      "currency": "HUF",
+      "url": "https://www.vitalis-szappan.hu/psorivital-csomag-ekcemas-borre"
     }
   ],
   "categories": []

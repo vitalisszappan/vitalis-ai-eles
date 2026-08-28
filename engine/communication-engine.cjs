@@ -87,12 +87,14 @@ function reasonFor(link, decision) {
   return humanize(link?.description) || 'Jól illeszkedik ahhoz a mindennapi ápolási célhoz, amit leírtál.';
 }
 
-function enrichLinks(links, decision) {
+function enrichLinks(links, decision, options = {}) {
   return (Array.isArray(links) ? links : []).slice(0, 3).map((link, index) => ({
     ...link,
     recommendationType: decision.answerMode === ANSWER_MODES.DIRECT ? 'available' : decision.answerMode === ANSWER_MODES.RECOMMENDATION ? (index === 0 ? 'primary' : index === 1 ? 'secondary' : 'related') : 'context',
     recommendationLabel: decision.answerMode === ANSWER_MODES.DIRECT ? 'Elérhető termék' : decision.answerMode === ANSWER_MODES.RECOMMENDATION ? (index === 0 ? 'Vitalis ajánlása' : index === 1 ? 'Alternatíva' : 'Kapcsolódó termék') : 'Az érintett termék',
-    reason: decision.answerMode === ANSWER_MODES.RECOMMENDATION ? reasonFor(link, decision) : ''
+    reason: decision.answerMode === ANSWER_MODES.RECOMMENDATION
+      ? (options.preserveGroundedReason ? (link.reason || '') : reasonFor(link, decision))
+      : ''
   }));
 }
 
@@ -125,7 +127,8 @@ function responseRange(decision) {
 
 function composeCommunication({ decision, draft, question = '', history = [] }) {
   if (!draft || !decision) return draft;
-  const links = enrichLinks(draft.links, decision);
+  const preserveGroundedReason = ['product_recommendation', 'product_benefits'].includes(draft.answerIntent);
+  const links = enrichLinks(draft.links, decision, { preserveGroundedReason });
   const range = responseRange(decision);
   const answer = limitWords(applyMinimalAnswerPolicy(draft.answer, decision), range.maximum);
   const primaryName = links[0]?.name || '';

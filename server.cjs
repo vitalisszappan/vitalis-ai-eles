@@ -1221,7 +1221,52 @@ async function persistConversation(
             matchedCanonicalIds: Array.isArray(record.routing_trace.matchedCanonicalIds) ? record.routing_trace.matchedCanonicalIds.filter(Boolean).slice(0, 20) : [],
             matchedKnowledgeIds: Array.isArray(record.routing_trace.matchedKnowledgeIds) ? record.routing_trace.matchedKnowledgeIds.filter(Boolean).slice(0, 20) : [],
             confidence: Number.isFinite(Number(record.routing_trace.confidence)) ? Number(record.routing_trace.confidence) : null,
-            rejectionReasons: Array.isArray(record.routing_trace.rejectionReasons) ? record.routing_trace.rejectionReasons.filter(Boolean).slice(0, 20) : []
+            rejectionReasons: Array.isArray(record.routing_trace.rejectionReasons) ? record.routing_trace.rejectionReasons.filter(Boolean).slice(0, 20) : [],
+            semanticGuard: record.routing_trace.semanticGuard && typeof record.routing_trace.semanticGuard === 'object'
+              ? {
+                  decision: cleanText(record.routing_trace.semanticGuard.decision, 20),
+                  enforcement: cleanText(record.routing_trace.semanticGuard.enforcement, 30),
+                  resolutionOwner: cleanText(record.routing_trace.semanticGuard.resolutionOwner, 40),
+                  evidenceStrength: cleanText(record.routing_trace.semanticGuard.evidenceStrength, 20),
+                  hardConflict: record.routing_trace.semanticGuard.hardConflict === true,
+                  reasonCodes: Array.isArray(record.routing_trace.semanticGuard.reasonCodes) ? record.routing_trace.semanticGuard.reasonCodes.map((value) => cleanText(value, 80)).filter(Boolean).slice(0, 20) : [],
+                  contextUsed: record.routing_trace.semanticGuard.contextUsed === true,
+                  contextTrustRecommendation: cleanText(record.routing_trace.semanticGuard.contextTrustRecommendation, 30),
+                  enforcementEnabled: record.routing_trace.semanticGuard.enforcementEnabled === true,
+                  enforcementEligible: record.routing_trace.semanticGuard.enforcementEligible === true,
+                  enforcementApplied: record.routing_trace.semanticGuard.enforcementApplied === true,
+                  originalRoute: record.routing_trace.semanticGuard.originalRoute && typeof record.routing_trace.semanticGuard.originalRoute === 'object'
+                    ? {
+                        route: cleanText(record.routing_trace.semanticGuard.originalRoute.route, 40),
+                        goal: cleanText(record.routing_trace.semanticGuard.originalRoute.goal, 60),
+                        intent: cleanText(record.routing_trace.semanticGuard.originalRoute.intent, 80),
+                        domain: cleanText(record.routing_trace.semanticGuard.originalRoute.domain, 80),
+                        source: cleanText(record.routing_trace.semanticGuard.originalRoute.source, 80)
+                      }
+                    : null,
+                  resolvedRoute: record.routing_trace.semanticGuard.resolvedRoute && typeof record.routing_trace.semanticGuard.resolvedRoute === 'object'
+                    ? {
+                        route: cleanText(record.routing_trace.semanticGuard.resolvedRoute.route, 40),
+                        goal: cleanText(record.routing_trace.semanticGuard.resolvedRoute.goal, 60),
+                        intent: cleanText(record.routing_trace.semanticGuard.resolvedRoute.intent, 80),
+                        domain: cleanText(record.routing_trace.semanticGuard.resolvedRoute.domain, 80),
+                        source: cleanText(record.routing_trace.semanticGuard.resolvedRoute.source, 80)
+                      }
+                    : null,
+                  suggestedCapability: cleanText(record.routing_trace.semanticGuard.suggestedCapability, 80),
+                  complaint: record.routing_trace.semanticGuard.complaint && typeof record.routing_trace.semanticGuard.complaint === 'object'
+                    ? {
+                        intent: cleanText(record.routing_trace.semanticGuard.complaint.intent, 60),
+                        subject: cleanText(record.routing_trace.semanticGuard.complaint.subject, 20),
+                        temporality: cleanText(record.routing_trace.semanticGuard.complaint.temporality, 20),
+                        polarity: cleanText(record.routing_trace.semanticGuard.complaint.polarity, 20),
+                        causality: cleanText(record.routing_trace.semanticGuard.complaint.causality, 20),
+                        severity: cleanText(record.routing_trace.semanticGuard.complaint.severity, 20)
+                      }
+                    : null,
+                  timingMs: Number.isFinite(Number(record.routing_trace.semanticGuard.timingMs)) ? Number(record.routing_trace.semanticGuard.timingMs) : null
+                }
+              : null
           }
         : null
   };

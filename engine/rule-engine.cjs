@@ -123,6 +123,7 @@ class ExpertRuleEngine {
       source: 'expert-rule',
       ruleId: rule.id,
       intent: rule.intent,
+      primaryProductId: rule.primaryProduct || null,
       answer,
       confidence: 100,
       links: productCards(ids),
