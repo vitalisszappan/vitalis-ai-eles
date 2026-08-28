@@ -2,6 +2,10 @@
 
 const assert = require('assert/strict');
 const fs = require('fs');
+const path = require('node:path');
+const { installCatalogFixture } = require('./test/helpers/install-catalog-fixture.cjs');
+const restoreCatalogFixture = installCatalogFixture(path.join(__dirname, 'test', 'fixtures', 'knowledge-builder-catalog.json'));
+process.once('exit', restoreCatalogFixture);
 const { performance } = require('perf_hooks');
 const { buildSemanticEvidence } = require('./engine/semantic-evidence.cjs');
 const { validateSemanticRoute } = require('./engine/semantic-route-guard.cjs');

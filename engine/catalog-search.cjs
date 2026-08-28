@@ -1,11 +1,11 @@
 'use strict';
 
 const fs = require('fs');
-const path = require('path');
 const { normalize } = require('./normalizer.cjs');
 const {inferredHairType}=require('./product-type-constraint.cjs');
+const { resolveUnasCatalogSnapshotPath } = require('./unas-catalog-path.cjs');
 
-const DEFAULT_SNAPSHOT = path.join(__dirname, '..', 'data', 'unas-catalog-snapshot.json');
+const DEFAULT_SNAPSHOT = resolveUnasCatalogSnapshotPath();
 const CATEGORY_DEFINITIONS = [
   { id: 'shower_gel', label: 'tusfürdő', query: /\b(tusfurdo|tusfurdotok|folyekony szappan)\w*/, product: /\b(tusfurdo|folyekony szappan)\w*/ },
   { id: 'sunscreen', label: 'naptej/fényvédő', query: /\b(naptej|fenyvedo|fenyvedelem|spf)\w*/, product: /\b(naptej|fenyvedo|spf ?[0-9]*)\w*/ },

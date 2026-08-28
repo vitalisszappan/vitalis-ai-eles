@@ -1,6 +1,7 @@
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
+const { resolveUnasCatalogSnapshotPath } = require('./engine/unas-catalog-path.cjs');
 const { XMLParser, XMLValidator } = require('fast-xml-parser');
 const { tagSyncError, tagTransportError } = require('./engine/unas-sync-diagnostics.cjs');
 
@@ -11,7 +12,7 @@ const UNAS_API_BASE_URL = String(
 
 const ROOT = __dirname;
 const DATA_DIR = path.join(ROOT, 'data');
-const UNAS_CATALOG_PATH = path.join(DATA_DIR, 'unas-catalog-snapshot.json');
+const UNAS_CATALOG_PATH = resolveUnasCatalogSnapshotPath();
 const DEFAULT_PAGE_SIZE = positiveInteger(process.env.UNAS_PAGE_SIZE, 100);
 const DEFAULT_MAX_PAGES = positiveInteger(process.env.UNAS_MAX_PAGES, 1000);
 

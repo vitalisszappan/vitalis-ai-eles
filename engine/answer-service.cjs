@@ -212,7 +212,8 @@ function materializePlannedAnswer(plan, routing) {
     const price = byType.price, currency = byType.currency;
     if (price?.status !== 'grounded' || currency?.status !== 'grounded') return { ...base, answer: 'Ehhez a termékhez nincs elérhető, bizonyított aktuális árunk.' };
     const unit = currency.value === 'HUF' ? 'Ft' : currency.value;
-    return { ...base, answer: `A termék jelenlegi ára ${formatWholeForint(price.value)} ${unit}.` };
+    const productName = PRODUCTS[plan.targetProductId]?.name || links[0]?.name || null;
+    return { ...base, answer: `A ${productName || 'termék'} jelenlegi ára ${formatWholeForint(price.value)} ${unit}.` };
   }
   return { ...base, answer: 'Ehhez nincs elég bizonyított termékadatunk.' };
 }

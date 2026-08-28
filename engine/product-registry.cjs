@@ -2,10 +2,11 @@
 
 const fs = require('fs');
 const path = require('path');
+const { resolveUnasCatalogSnapshotPath } = require('./unas-catalog-path.cjs');
 
 const ROOT = path.join(__dirname, '..');
 const DEFAULT_MAPPING_PATH = path.join(ROOT, 'data', 'canonical-unas-mapping.json');
-const DEFAULT_SNAPSHOT_PATH = path.join(ROOT, 'data', 'unas-catalog-snapshot.json');
+const DEFAULT_SNAPSHOT_PATH = resolveUnasCatalogSnapshotPath();
 
 function cleanText(value) {
   if (typeof value !== 'string') return '';

@@ -2,6 +2,9 @@
 
 const assert = require('assert');
 const path = require('path');
+const { installCatalogFixture } = require('./test/helpers/install-catalog-fixture.cjs');
+const restoreCatalogFixture = installCatalogFixture(path.join(__dirname, 'test', 'fixtures', 'knowledge-builder-catalog.json'));
+process.once('exit', restoreCatalogFixture);
 const knowledge = require('./data/knowledge.json');
 const { createAnswer } = require('./engine/answer-service.cjs');
 const { ExpertRuleEngine } = require('./engine/rule-engine.cjs');

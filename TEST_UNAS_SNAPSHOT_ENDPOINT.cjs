@@ -3,13 +3,15 @@
 const assert = require('assert');
 const fs = require('fs');
 const http = require('http');
+const os = require('os');
 const path = require('path');
 const { spawn } = require('child_process');
 
 const PORT = 3398;
 const ADMIN_TOKEN = 'snapshot-endpoint-test-token';
 const ROOT = __dirname;
-const SNAPSHOT_PATH = path.join(ROOT, 'data', 'unas-catalog-snapshot.json');
+const TEMP_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'vitalis-unas-snapshot-endpoint-'));
+const SNAPSHOT_PATH = path.join(TEMP_DIR, 'unas-catalog-snapshot.json');
 const PID_PATH = path.join(ROOT, 'chatbot.pid');
 
 function request(pathname, headers = {}) {
@@ -62,11 +64,8 @@ async function stopServer(child) {
 }
 
 async function main() {
-  const hadSnapshot = fs.existsSync(SNAPSHOT_PATH);
-  const originalSnapshot = hadSnapshot ? fs.readFileSync(SNAPSHOT_PATH) : null;
   const hadPid = fs.existsSync(PID_PATH);
   const originalPid = hadPid ? fs.readFileSync(PID_PATH) : null;
-  if (hadSnapshot) fs.unlinkSync(SNAPSHOT_PATH);
 
   const child = spawn(process.execPath, ['server.cjs'], {
     cwd: ROOT,
@@ -75,6 +74,7 @@ async function main() {
       PORT: String(PORT),
       HOST: '127.0.0.1',
       ADMIN_TOKEN,
+      UNAS_CATALOG_SNAPSHOT_PATH: SNAPSHOT_PATH,
       UNAS_API_KEY: '',
       UNAS_SYNC_INTERVAL_MS: '0'
     },
@@ -135,8 +135,7 @@ async function main() {
     assert.deepEqual(JSON.parse(success.body.toString('utf8')), snapshot);
   } finally {
     await stopServer(child);
-    if (fs.existsSync(SNAPSHOT_PATH)) fs.unlinkSync(SNAPSHOT_PATH);
-    if (hadSnapshot) fs.writeFileSync(SNAPSHOT_PATH, originalSnapshot);
+    fs.rmSync(TEMP_DIR, { recursive: true, force: true });
     if (fs.existsSync(PID_PATH)) fs.unlinkSync(PID_PATH);
     if (hadPid) fs.writeFileSync(PID_PATH, originalPid);
   }

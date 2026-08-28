@@ -1,6 +1,10 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const path = require('node:path');
+const { installCatalogFixture } = require('./test/helpers/install-catalog-fixture.cjs');
+const restoreCatalogFixture = installCatalogFixture(path.join(__dirname, 'test', 'fixtures', 'knowledge-builder-catalog.json'));
+process.once('exit', restoreCatalogFixture);
 const { createProductFactsResolver, normalizeIngredient } = require('./engine/product-facts.cjs');
 
 const resolver = createProductFactsResolver();

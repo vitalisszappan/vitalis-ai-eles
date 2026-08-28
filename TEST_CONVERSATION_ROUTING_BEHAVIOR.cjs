@@ -74,8 +74,12 @@ assert.equal(price.answer, 'A Dermavital sampon jelenlegi ára 3 400 Ft.');
 const information = ask('Mit tud ez?', productHistory);
 assert.equal(information.route, 'context_followup');
 assert.equal(information.answerMode, 'EXPLANATORY');
-assert.equal(information.intent, 'product_information');
+assert.equal(information.intent, 'benefits');
+assert.equal(information.answerIntent, 'product_benefits');
 assert.equal(information.contextTarget, 'dermavital_sampon');
+assert.equal(information.targetProductId, 'dermavital_sampon');
+assert.equal(information.groundingStatus, 'grounded');
+assert.match(information.answer, /fejbőr/i);
 
 const guarded = enrichLinks([{ name: 'Sampon – Hajnövekedés és hajdúsítás természetesen', description: 'Serkenti a hajnövekedést.' }], { answerMode: 'DIRECT', domain: 'shampoo' });
 assert.equal(guarded[0].reason, '');

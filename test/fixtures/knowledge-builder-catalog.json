@@ -4,11 +4,23 @@
   "source": "deterministic-test-fixture",
   "pagination": {
     "pages": 1,
-    "pageSize": 13,
-    "rawRecords": 13
+    "pageSize": 17,
+    "rawRecords": 17
   },
   "audit": {},
   "products": [
+    {
+      "unasId": "test-orange-soap",
+      "sku": "TEST-ORANGE-SOAP",
+      "name": "Narancs szappan teszttermék",
+      "categoryNames": ["Szappanok"],
+      "public": true,
+      "active": true,
+      "orderable": true,
+      "actualPriceGross": 1200,
+      "currency": "HUF",
+      "url": "https://www.vitalis-szappan.hu/test-narancs-szappan"
+    },
     {
       "unasId": "1462570616",
       "sku": "VDVSZ",
@@ -55,6 +67,7 @@
       "orderable": true,
       "actualPriceGross": 1600,
       "currency": "HUF",
+      "longDescription": "INCI: Aqua, Rosmarinus Officinalis Leaf Oil. Használat: A szintetikus tesztterméket nedves hajon használd.",
       "url": "https://www.vitalis-szappan.hu/termek/sampon-szappan-normal-hajra-rozmaring"
     },
     {
@@ -67,6 +80,7 @@
       "orderable": true,
       "actualPriceGross": 3700,
       "currency": "HUF",
+      "longDescription": "INCI: Aqua, Urea (Karbamid), Glycerin. Használat: naponta 1–3 alkalommal használd a szintetikus tesztterméket.",
       "url": "https://www.vitalis-szappan.hu/dermavital-balzsam-100-ml"
     },
     {
@@ -80,6 +94,42 @@
       "actualPriceGross": 1490,
       "currency": "HUF",
       "url": "https://www.vitalis-szappan.hu/termek/shea-vajas-szappan"
+    },
+    {
+      "unasId": "163833663",
+      "sku": "VEM02",
+      "name": "Holt-tengeri só balzsam – szintetikus teszttermék 250 ml",
+      "categoryNames": ["Krémek és balzsamok"],
+      "public": true,
+      "active": true,
+      "orderable": true,
+      "actualPriceGross": 4290,
+      "currency": "HUF",
+      "url": "https://www.vitalis-szappan.hu/holt-tengeri-so-balzsam"
+    },
+    {
+      "unasId": "111374965",
+      "sku": "PSSZ01",
+      "name": "Parajdi sótömb – szintetikus teszttermék",
+      "categoryNames": ["Szappanok"],
+      "public": true,
+      "active": true,
+      "orderable": true,
+      "actualPriceGross": 1000,
+      "currency": "HUF",
+      "url": "https://www.vitalis-szappan.hu/parajdi-sotomb"
+    },
+    {
+      "unasId": "111374984",
+      "sku": "VSZ002",
+      "name": "Gyógyászati Kátrány Szappan - Ichtiol Hatóanyaggal a Zsíros és Problémás Bőrért 100 g",
+      "categoryNames": ["Szappanok"],
+      "public": true,
+      "active": true,
+      "orderable": true,
+      "actualPriceGross": 1800,
+      "currency": "HUF",
+      "url": "https://www.vitalis-szappan.hu/gyogyaszati-katrany-szappan"
     },
     {
       "unasId": "test-shower-gel",
