@@ -1,6 +1,7 @@
 'use strict';
 
 const { normalize } = require('./normalizer.cjs');
+const { hasLiteralAcneSignal } = require('./acne-decision.cjs');
 
 const DOMAIN_PATTERNS = [
   ['edema_medical_boundary', /\b(odema|vizenyos|vizesedes)\w*/],
@@ -26,7 +27,10 @@ const EXPERT_DOMAIN_MAP = Object.freeze({
 function detectProblemIntent(question) {
   const text = normalize(question);
   for (const [domain, pattern] of DOMAIN_PATTERNS) {
-    if (pattern.test(text)) return { domain, evidence: [`problem:${domain}`], expertRuleId: EXPERT_DOMAIN_MAP[domain] || null };
+    if (pattern.test(text)) {
+      if (domain === 'acne' && !hasLiteralAcneSignal(text)) continue;
+      return { domain, evidence: [`problem:${domain}`], expertRuleId: EXPERT_DOMAIN_MAP[domain] || null };
+    }
   }
   return null;
 }

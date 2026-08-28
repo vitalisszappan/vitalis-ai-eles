@@ -80,9 +80,29 @@ assert.equal(result.targetProductId, 'aktiv_szenes_szappan');
 result = ask('Csíp a Kátrány szappan.'); assert.equal(result.route, 'complaint'); assert.deepEqual(result.links, []);
 result = ask('Bedagadt az arcom és nehezen kapok levegőt.'); assert.equal(result.route, 'safety'); assert.deepEqual(result.links, []);
 
-for (const query of ['pattanásig feszült a helyzet', 'kátrányos az út', 'aktív vagyok', 'szenes lett a grill', 'zsíros lett a serpenyő']) {
-  result = ask(query); assert.notEqual(result.intent, 'acne'); assert.deepEqual(result.links, []);
+for (const query of ['pattanásig feszült a helyzet', 'kátrányos az út', 'aktív vagyok', 'szenes lett a grill', 'zsíros lett a serpenyő', 'ráncos lett a pólóm', 'száraz a humorom', 'érzékeny vagyok erre a témára']) {
+  result = ask(query); assert.notEqual(result.intent, 'acne'); assert.notEqual(result.route, 'problem_domain'); assert.notEqual(result.domain, 'acne'); assert.deepEqual(result.links, []);
 }
+result = ask('pattanásig feszült a helyzet');
+assert.doesNotMatch(result.answer, /pattanás|akné|bőr/i);
+let cleanHistory = add([], 'pattanásig feszült a helyzet', result);
+let cleanState = structuredState(cleanHistory);
+assert.equal(cleanState.acneDecision, null);
+assert.equal(cleanState.activeProblemDomains.includes('acne'), false);
+assert.equal(cleanState.focusedProductId, null);
+assert.deepEqual(cleanState.lastRecommendedProducts, []);
+assert.equal(cleanState.purchaseProductId, null);
+result = ask('Mit ajánlasz érzékeny bőrre?', cleanHistory);
+assert.equal(result.routing.guidedDiscovery.needState.value, 'sensitive_skin');
+assert.notEqual(result.intent, 'acne');
+assert.deepEqual(result.links, []);
+
+for (const query of ['Mit ajánlasz pattanásos bőrre?', 'Pattanásos a bőröm.', 'Gyakran vannak pattanásaim.', 'Pattanások vannak az arcomon.', 'Pattanások vannak a hátamon.', 'Pattanások vannak a vállamon.']) {
+  result = ask(query); assert.equal(result.intent, 'acne'); assert.ok(result.routing.acneDecision);
+}
+result = ask('Pattanások vannak a fejbőrömön.'); assert.equal(result.targetProductId, 'katrany_szappan');
+result = ask('Mitesszeres, kombinált a bőröm.'); assert.equal(result.targetProductId, 'aktiv_szenes_szappan');
+result = ask('Nagyon zsíros és rendszeresen pattanásos.'); assert.equal(result.targetProductId, 'katrany_szappan');
 result = ask('mitesszer'); assert.deepEqual(result.links, []); assert.equal(result.route, 'clarification');
 result = ask('Néha enyhe, máskor rendszeresen erős pattanásaim vannak, a bőröm kombinált és nagyon zsíros is.');
 assert.equal(result.route, 'clarification'); assert.equal(result.routing.acneDecision.reasonCode, 'contradictory_evidence'); assert.deepEqual(result.links, []);

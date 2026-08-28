@@ -6,6 +6,7 @@ const {
   './product-faq.cjs'
 );
 const { resolvePersistedProductEvidence } = require('./persisted-product-evidence.cjs');
+const { hasLiteralAcneSignal } = require('./acne-decision.cjs');
 
 /* =========================================================
    SEGÉDFÜGGVÉNYEK
@@ -155,6 +156,13 @@ function detectProblem(
       PROBLEM_PATTERNS
     )
   ) {
+
+    if (
+      id === 'acne' &&
+      !hasLiteralAcneSignal(normalized)
+    ) {
+      continue;
+    }
 
     for (
       const pattern of
