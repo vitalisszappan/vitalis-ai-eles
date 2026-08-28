@@ -1,18 +1,22 @@
 const path = require('path');
+const fs = require('fs');
 const { ExpertRuleEngine } = require('./engine/rule-engine.cjs');
 const engine = new ExpertRuleEngine(path.join(__dirname, 'data', 'rules', 'expert-rules.json'));
+const mapping = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'canonical-unas-mapping.json'), 'utf8'));
+const approvedNames = new Map((mapping.mappings || []).filter(item => item.mappingStatus === 'approved').map(item => [item.canonicalId, item.verifiedName]));
 const tests = [
-  ['Mit ajánlasz ekcémára?', ['Dermavital krém', 'Dermavital szappan']],
-  ['Mit ajánlasz zsíros, pattanásos bőrre?', ['Aktív szenes szappan', 'Gyógyászati kátrány szappan']],
-  ['Korpás a fejbőröm.', ['Dermavital sampon']]
+  ['Mit ajánlasz ekcémára?', ['dermavital_krem', 'dermavital_szappan']],
+  ['Mit ajánlasz zsíros, pattanásos bőrre?', ['aktiv_szenes_szappan', 'katrany_szappan']],
+  ['Korpás a fejbőröm.', ['dermavital_sampon']]
 ];
 let failed = 0;
 for (const [q, expected] of tests) {
   const result = engine.resolve(q, []);
   const cards = result?.links || [];
-  const names = cards.map(x => x.name);
+  const ids = cards.map(x => x.id);
   const valid = cards.every(x => x && typeof x.name === 'string' && x.name.trim() && !/undefined|null/i.test(x.name));
-  const ok = valid && expected.every(name => names.includes(name));
+  const authoritativeNames = cards.every(card => !approvedNames.has(card.id) || card.name === approvedNames.get(card.id));
+  const ok = valid && authoritativeNames && expected.every(id => ids.includes(id));
   console.log(ok ? 'OK' : 'HIBA', q, '=>', JSON.stringify(cards));
   if (!ok) failed++;
 }
