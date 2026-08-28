@@ -8,7 +8,8 @@ const { detectProductQuestionIntent } = require('./product-question-intent.cjs')
 const COMMERCE_GOALS = Object.freeze({
   order_start: 'start_order', purchase_location: 'start_order', price_query: 'ask_price',
   availability_query: 'ask_availability', shipping_general: 'ask_shipping',
-  shipping_cost: 'ask_shipping', shipping_time: 'ask_shipping', payment: 'ask_payment', order_status: 'start_order'
+  shipping_cost: 'ask_shipping', shipping_time: 'ask_shipping', payment: 'ask_payment', order_status: 'start_order',
+  ordering_help: 'start_order', order_confirmation_problem: 'start_order', checkout_problem: 'start_order'
 });
 
 function detectCustomerGoal(question) {

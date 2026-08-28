@@ -2,7 +2,7 @@
 
 const { normalize } = require('./normalizer.cjs');
 const { detectCustomerGoal } = require('./customer-goal.cjs');
-const { detectCommerceIntent } = require('./commerce-intents.cjs');
+const { detectCommerceIntent, hasCommerceDomainEvidence } = require('./commerce-intents.cjs');
 const { detectProblemIntent } = require('./problem-intents.cjs');
 const { evaluateSafety } = require('./safety-gate.cjs');
 const { createCatalogSearch } = require('./catalog-search.cjs');
@@ -77,18 +77,26 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
   }
   const commerce = detectCommerceIntent(question);
   if (commerce) {
+    const guardedCommerceIntent = ['order_start', 'checkout_problem'].includes(commerce.intent);
+    if (guardedCommerceIntent && !hasCommerceDomainEvidence(question, {
+      hasProductContext: context.productContextStatus === 'resolved' || Boolean(context.lastRecommendedProducts?.length),
+      directProduct: Boolean(directCanonical)
+    })) {
+      return decision({ ...base, route: 'hard_fallback', intent: null, goal: 'unknown', domain: null, confidence: 0, threshold: 1, rejectionReasons: ['commerce_domain_evidence_missing'], responseSource: 'hard-fallback' });
+    }
     const needsProduct = ['price_query', 'availability_query'].includes(commerce.intent);
     const referenceEligible = ['order_start', 'price_query', 'availability_query'].includes(commerce.intent);
     const purchaseReference = referenceEligible ? resolveProductReference(question, context) : null;
     if (referenceEligible && !directCanonical && (purchaseReference?.ambiguous || (context.productContextStatus === 'ambiguous' && !purchaseReference?.authoritative))) {
       return decision({ ...base, route: 'clarification', intent: commerce.intent, contextUsed: true, contextTarget: 'product', confidence: 1, threshold: 1, rejectionReasons: ['ambiguous_product_reference'], responseSource: 'conversation-context' });
     }
-    const purchaseScoped = ['order_start', 'checkout_problem'].includes(commerce.intent);
-    const commerceTarget = directCanonical || purchaseReference?.productId || (purchaseScoped ? context.purchaseProductId : context.lastFocusProduct);
+    const purchaseScoped = ['order_start', 'checkout_problem', 'ordering_help'].includes(commerce.intent);
+    const preservedOrderingTarget = commerce.intent === 'ordering_help' && context.productContextStatus === 'resolved' ? context.lastFocusProduct : null;
+    const commerceTarget = directCanonical || purchaseReference?.productId || preservedOrderingTarget || (purchaseScoped ? context.purchaseProductId : context.lastFocusProduct);
     if (needsProduct && !commerceTarget) {
       return decision({ ...base, route: 'clarification', contextUsed: history.length > 0, contextTarget: 'product', confidence: 1, threshold: 1, rejectionReasons: ['missing_product_argument'], responseSource: 'commerce-clarification' });
     }
-    const usesOptionalTarget = ['order_start', 'checkout_problem'].includes(commerce.intent) && Boolean(commerceTarget);
+    const usesOptionalTarget = ['order_start', 'checkout_problem', 'ordering_help'].includes(commerce.intent) && Boolean(commerceTarget);
     return decision({ ...base, route: 'commerce', contextUsed: (needsProduct || usesOptionalTarget) && !directCanonical, contextTarget: (needsProduct || usesOptionalTarget) ? commerceTarget : null, matchedProductIds: (needsProduct || usesOptionalTarget) ? [commerceTarget] : [], referenceType: purchaseReference?.type || null, referenceAuthoritative: Boolean(purchaseReference?.authoritative), confidence: 1, threshold: 1, responseSource: 'commerce-intent' });
   }
 

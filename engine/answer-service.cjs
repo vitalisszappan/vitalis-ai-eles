@@ -51,8 +51,10 @@ const { resolveComplaint, resolveResolvedComplaint } = require('./complaint-reso
 const { detectResolvedComplaintTransition } = require('./complaint-intents.cjs');
 const { structuredState } = require('./conversation-memory.cjs');
 const { resolveBusinessInfo } = require('./business-info.cjs');
+const { createCommerceAssistance } = require('./commerce-assistance.cjs');
 
 const decisionCatalog = createCatalogSearch();
+const commerceAssistance = createCommerceAssistance({ catalog: decisionCatalog });
 
 function attachDecision(answer, routing) {
   return {
@@ -240,6 +242,8 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
 
   if (routing.route === 'commerce') {
     if (routing.responseSource === 'admin-intent') return attachDecision(ruleEngine.resolve(question, history), routing);
+    const assisted = commerceAssistance.resolve({ routing, question, conversationState });
+    if (assisted) return attachDecision({ ...assisted, ruleId: routing.matchedRuleId, matchedKnowledgeIds: [], ...(answerPlan ? plannedMetadata(answerPlan) : {}) }, routing);
     const target = routing.contextTarget;
     const cards = target ? productCards([target]) : [];
     const byIntent = {
