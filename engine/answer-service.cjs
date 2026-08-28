@@ -47,6 +47,7 @@ const { planAnswer } = require('./answer-planner.cjs');
 const { buildSemanticEvidence } = require('./semantic-evidence.cjs');
 const { validateSemanticRoute } = require('./semantic-route-guard.cjs');
 const { applySemanticGuardEnforcement } = require('./semantic-guard-enforcement.cjs');
+const { resolveComplaint } = require('./complaint-resolution.cjs');
 
 const decisionCatalog = createCatalogSearch();
 
@@ -1497,6 +1498,39 @@ function clarificationAnswer(context, candidates = []) {
   };
 }
 
+function complaintSubjectProduct(routing, evidence, conversationState = {}) {
+  const candidates = [
+    ...(routing.matchedCanonicalIds || []),
+    routing.contextTarget,
+    evidence?.complaint?.causality === 'asserted' ? conversationState.focusedProductId : null
+  ].filter(Boolean);
+  const id = candidates.find((candidate) => PRODUCTS[candidate]);
+  return id ? { id, ...PRODUCTS[id] } : null;
+}
+
+function complaintRouting(routing, complaint) {
+  const semanticGuard = {
+    ...routing.semanticGuard,
+    ownershipApplied: true,
+    ownershipClass: 'complaint',
+    resolvedRoute: { route: 'complaint', goal: 'resolve_complaint', intent: complaint.intent, domain: 'complaint', source: 'complaint-resolution' }
+  };
+  return {
+    ...routing,
+    route: 'complaint', goal: 'resolve_complaint', intent: complaint.intent, domain: 'complaint',
+    responseSource: 'complaint-resolution', answerMode: 'DIRECT', contextUsed: false, contextTarget: null,
+    matchedCanonicalIds: [], matchedProductIds: [], primaryProductId: null, targetProductId: null,
+    focusedProductId: null, purchaseProductId: null, recommendedProductIds: [], matchedRuleId: null,
+    semanticGuard
+  };
+}
+
+function historyAfterComplaintBoundary(history = []) {
+  const boundary = [...history].map((item, index) => ({ item, index })).reverse().find(({ item }) =>
+    item?.role === 'assistant' && (item.route === 'complaint' || item.routing?.semanticGuard?.ownershipClass === 'complaint'));
+  return boundary ? history.slice(boundary.index + 1) : history;
+}
+
 /* =========================================================
    FŐ VÁLASZKÉPZÉS
 ========================================================= */
@@ -1512,13 +1546,20 @@ function createAnswer({
   logDiagnostic
 }) {
 
-  const selectedRouting = routeAnswer({ question, history, knowledge, ruleEngine, conversationState });
-  const semanticEvidence = buildSemanticEvidence({ question, routing: selectedRouting, history, conversationState });
+  const effectiveHistory = historyAfterComplaintBoundary(history);
+  const selectedRouting = routeAnswer({ question, history: effectiveHistory, knowledge, ruleEngine, conversationState });
+  const semanticEvidence = buildSemanticEvidence({ question, routing: selectedRouting, history: effectiveHistory, conversationState });
   const semanticGuard = validateSemanticRoute({ routing: selectedRouting, evidence: semanticEvidence });
   const { routing } = applySemanticGuardEnforcement({ routing: selectedRouting, guard: semanticGuard });
+  if (routing.semanticGuard.enforcementEnabled && routing.semanticGuard.resolutionOwner === 'complaint') {
+    const subjectProduct = complaintSubjectProduct(selectedRouting, semanticEvidence, conversationState || {});
+    const resolvedRouting = complaintRouting(routing, semanticEvidence.complaint);
+    const complaintDraft = resolveComplaint({ complaint: semanticEvidence.complaint, complaintSubjectProduct: subjectProduct });
+    return composeCommunication({ decision: resolvedRouting, draft: attachDecision(complaintDraft, resolvedRouting), question, history: effectiveHistory });
+  }
   const answerPlan = planAnswer({ question, routing, conversationState });
-  const draft = materializeDecision({ routing, question, history, knowledge, ruleEngine, logGap, conversationState, technicalFailure, logDiagnostic, answerPlan });
-  return composeCommunication({ decision: routing, draft, question, history });
+  const draft = materializeDecision({ routing, question, history: effectiveHistory, knowledge, ruleEngine, logGap, conversationState, technicalFailure, logDiagnostic, answerPlan });
+  return composeCommunication({ decision: routing, draft, question, history: effectiveHistory });
 
   /* Legacy pipeline retained temporarily as a rollback reference during the
      incremental Decision Engine migration. */

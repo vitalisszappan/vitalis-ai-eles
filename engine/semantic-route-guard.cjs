@@ -1,5 +1,7 @@
 'use strict';
 
+const { isP0ComplaintEligible } = require('./complaint-intents.cjs');
+
 const DECISIONS = new Set(['ACCEPT', 'REJECT', 'UNCERTAIN']);
 
 function result({ decision, enforcement = 'ALLOW', resolutionOwner = 'router', strength, hardConflict = false, reasonCodes = [], contextUsed = false, trust, routing, suggestedCapability = null, complaint = null, timingMs = 0 }) {
@@ -34,7 +36,7 @@ function validateSemanticRoute({ routing = {}, evidence } = {}) {
 
   if (evidence.complaint && evidence.complaint.polarity !== 'negative') {
     if (evidence.complaint.severity === 'critical' || evidence.complaint.severity === 'high') return done({ decision: 'REJECT', enforcement: 'MANDATORY_ESCALATION', resolutionOwner: 'safety', strength: 'strong', hardConflict: true, reasonCodes: ['SAFETY_OVERRIDE', 'COMPLAINT_DETECTED'], trust: 'DO_NOT_TRUST' });
-    if (['product_category', 'exact_product', 'expert_rule', 'problem_domain'].includes(routing.route)) return done({ decision: 'REJECT', enforcement: 'BLOCK', resolutionOwner: 'complaint', strength: evidence.complaint.polarity === 'uncertain' ? 'sufficient' : 'strong', hardConflict: true, reasonCodes: ['COMPLAINT_OVERRIDES_RECOMMENDATION'], trust: 'DO_NOT_TRUST' });
+    if (isP0ComplaintEligible(evidence.complaint, routing)) return done({ decision: 'REJECT', enforcement: 'BLOCK', resolutionOwner: 'complaint', strength: 'strong', hardConflict: true, reasonCodes: ['COMPLAINT_OVERRIDES_RECOMMENDATION'], trust: 'DO_NOT_TRUST' });
   }
 
   if (routing.route === 'exact_product') {
