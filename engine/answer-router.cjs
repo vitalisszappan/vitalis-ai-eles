@@ -32,13 +32,17 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
   const goal = detectCustomerGoal(question);
   const productQuestionIntent = detectProductQuestionIntent(question);
   const problem = detectProblemIntent(question);
+  const normalizedCurrent = normalize(question);
+  const currentExplicitNeed = Boolean(problem)
+    || /\b\w+\s+(?:borre|fejborre|hajra|kezre|sarokra)\b/.test(normalizedCurrent)
+    || /\b(?:bor|fejbor|haj|kez|sarok)\w*\b.*\b(?:keres\w*|erdekel\w*|ajanl\w*|van\s+valami)\b/.test(normalizedCurrent);
   const safety = evaluateSafety(question, problem);
   const derivedContext = buildConversationContext(history, normalize);
   const context = conversationState ? {...derivedContext,lastRecommendedProducts:conversationState.lastOrdinalProductList||conversationState.lastRecommendedProducts||[],lastSelectedProduct:conversationState.selectedProductId??derivedContext.lastSelectedProduct,lastFocusProduct:Object.hasOwn(conversationState,'focusedProductId')?conversationState.focusedProductId:conversationState.lastMentionedProduct,lastProduct:Object.hasOwn(conversationState,'focusedProductId')?conversationState.focusedProductId:conversationState.lastMentionedProduct,purchaseProductId:Object.hasOwn(conversationState,'purchaseProductId')?conversationState.purchaseProductId:derivedContext.lastFocusProduct,productContextStatus:conversationState.productContextStatus||derivedContext.productContextStatus,lastProblemDomain:conversationState.activeProblemDomains?.at(-1)||derivedContext.lastProblemDomain} : {...derivedContext,purchaseProductId:derivedContext.productContextStatus==='ambiguous'?null:derivedContext.lastFocusProduct};
   const excludedProductTypes=detectExcludedProductTypes(question);
   let productTypeConstraint=detectProductTypeConstraint(question);
   if (!productTypeConstraint && productQuestionIntent === 'recommendation' && /\b(zsiros\w* haj\w*|gyorsan zsiros\w*)\b/.test(normalize(question))) productTypeConstraint = 'solid_shampoo';
-  if (!productTypeConstraint && /\b(ajanl\w*|javasol\w*|melyiket|mit valassz\w*)\b/.test(normalize(question))) {
+  if (!productTypeConstraint && !currentExplicitNeed && /\b(ajanl\w*|javasol\w*|melyiket|mit valassz\w*)\b/.test(normalize(question))) {
     const rememberedTypes = [...new Set((context.lastRecommendedProducts || []).map((id) => inferredHairType({ id })).filter(Boolean))];
     const allowedRememberedTypes=rememberedTypes.filter((type)=>!excludedProductTypes.includes(type)&&!excludedProductTypes.includes('shampoo'));
     if (allowedRememberedTypes.length === 1 && HAIR_WASH_TYPES.includes(allowedRememberedTypes[0])) productTypeConstraint = allowedRememberedTypes[0];
@@ -65,8 +69,9 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
   const commerce = detectCommerceIntent(question);
   if (commerce) {
     const needsProduct = ['price_query', 'availability_query'].includes(commerce.intent);
-    const purchaseReference = commerce.intent === 'order_start' ? resolveProductReference(question, context) : null;
-    if (commerce.intent === 'order_start' && !directCanonical && (purchaseReference?.ambiguous || (context.productContextStatus === 'ambiguous' && purchaseReference?.resolvedFrom !== 'ordered_list'))) {
+    const referenceEligible = ['order_start', 'price_query', 'availability_query'].includes(commerce.intent);
+    const purchaseReference = referenceEligible ? resolveProductReference(question, context) : null;
+    if (referenceEligible && !directCanonical && (purchaseReference?.ambiguous || (context.productContextStatus === 'ambiguous' && !purchaseReference?.authoritative))) {
       return decision({ ...base, route: 'clarification', intent: commerce.intent, contextUsed: true, contextTarget: 'product', confidence: 1, threshold: 1, rejectionReasons: ['ambiguous_product_reference'], responseSource: 'conversation-context' });
     }
     const purchaseScoped = ['order_start', 'checkout_problem'].includes(commerce.intent);
@@ -75,7 +80,7 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
       return decision({ ...base, route: 'clarification', contextUsed: history.length > 0, contextTarget: 'product', confidence: 1, threshold: 1, rejectionReasons: ['missing_product_argument'], responseSource: 'commerce-clarification' });
     }
     const usesOptionalTarget = ['order_start', 'checkout_problem'].includes(commerce.intent) && Boolean(commerceTarget);
-    return decision({ ...base, route: 'commerce', contextUsed: (needsProduct || usesOptionalTarget) && !directCanonical, contextTarget: (needsProduct || usesOptionalTarget) ? commerceTarget : null, matchedProductIds: (needsProduct || usesOptionalTarget) ? [commerceTarget] : [], confidence: 1, threshold: 1, responseSource: 'commerce-intent' });
+    return decision({ ...base, route: 'commerce', contextUsed: (needsProduct || usesOptionalTarget) && !directCanonical, contextTarget: (needsProduct || usesOptionalTarget) ? commerceTarget : null, matchedProductIds: (needsProduct || usesOptionalTarget) ? [commerceTarget] : [], referenceType: purchaseReference?.type || null, referenceAuthoritative: Boolean(purchaseReference?.authoritative), confidence: 1, threshold: 1, responseSource: 'commerce-intent' });
   }
 
   if (/\b(sls|sles|sodium lauryl sulfate|sodium laureth sulfate)\b/.test(normalize(question))) {
@@ -91,10 +96,12 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
 
   const reference = resolveProductReference(question, context);
   if (reference?.productId) {
-    return decision({ ...base, route: 'context_followup', contextUsed: true, contextTarget: reference.productId, matchedCanonicalIds: [reference.productId], matchedProductIds: [reference.productId], confidence: 1, threshold: 1, responseSource: 'conversation-context' });
+    const referenceGoal = reference.type === 'alternative' ? 'select_recommendation' : base.goal;
+    const referenceIntent = reference.type === 'alternative' ? 'alternative_reference' : base.intent;
+    return decision({ ...base, goal: referenceGoal, intent: referenceIntent, route: 'context_followup', contextUsed: true, contextTarget: reference.productId, matchedCanonicalIds: [reference.productId], matchedProductIds: [reference.productId], referenceType: reference.type || null, referenceAuthoritative: Boolean(reference.authoritative), confidence: 1, threshold: 1, responseSource: 'conversation-context' });
   }
   if (reference?.ambiguous) {
-    if (goal.goal === 'ask_variant' && context.lastFocusProduct) {
+    if (goal.goal === 'ask_variant' && reference.type !== 'alternative' && context.lastFocusProduct) {
       return decision({ ...base, route: 'context_followup', contextUsed: true, contextTarget: context.lastFocusProduct, matchedCanonicalIds: [context.lastFocusProduct], matchedProductIds: [context.lastFocusProduct], confidence: 1, threshold: 1, responseSource: 'conversation-context' });
     }
     return decision({ ...base, route: 'clarification', contextUsed: true, contextTarget: 'product', confidence: 1, threshold: 1, rejectionReasons: ['ambiguous_product_reference'], responseSource: 'conversation-context' });
@@ -126,6 +133,9 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
   }
   if (directCanonical) {
     return decision({ ...base, route: 'exact_product', goal: 'find_product', intent: 'product_detail', domain: 'product', matchedCanonicalIds: [directCanonical], matchedProductIds: [directCanonical], confidence: 1, threshold: 1, responseSource: 'product-context' });
+  }
+  if (currentExplicitNeed && !problem && !productTypeConstraint) {
+    return decision({ ...base, route: 'clarification', intent: 'product_recommendation', goal: 'find_product', domain: base.domain || 'product', contextUsed: false, contextTarget: 'product', confidence: 1, threshold: 1, rejectionReasons: ['unsupported_current_need'], responseSource: 'conversation-context' });
   }
   let category = catalog.detectCategory(question);
   const categoryExcluded=category?.id==='shampoo'&&(excludedProductTypes.includes('shampoo')||excludedProductTypes.includes('shampoo_soap'));

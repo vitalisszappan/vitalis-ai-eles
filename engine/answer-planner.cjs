@@ -54,7 +54,8 @@ function planAnswer({ question, routing, conversationState, factsApi = productFa
   const targetProductId = answerIntent === 'product_recommendation'
     ? recommendationTarget(routing)
     : targetFrom({ routing, conversationState });
-  const ambiguous = routing?.route === 'clarification' || conversationState?.productContextStatus === 'ambiguous';
+  const authoritativeReference = Boolean(routing?.referenceAuthoritative && targetProductId);
+  const ambiguous = routing?.route === 'clarification' || (conversationState?.productContextStatus === 'ambiguous' && !authoritativeReference);
   const requiredByIntent = {
     product_recommendation: ['productBenefits'], product_benefits: ['productBenefits'],
     ingredients: ['ingredients'], ingredient_benefit: ['ingredients', 'ingredientBenefits'],

@@ -320,6 +320,11 @@ function resolveProductReference(text, context) {
   const products = context?.lastRecommendedProducts || [];
   let index = null;
 
+  const result = (overrides = {}) => ({
+    type: 'existing', productId: null, authoritative: false, ambiguous: false,
+    resolvedFrom: null, ...overrides
+  });
+
   if (/\b(az )?elsot?\b/.test(value)) index = 0;
   if (/\b(a )?masodik(?:at)?\b/.test(value)) index = 1;
   if (/\b(a )?harmadikat?\b/.test(value)) index = 2;
@@ -328,52 +333,80 @@ function resolveProductReference(text, context) {
 
   if (index !== null) {
     return index >= 0 && products[index]
-      ? { productId: products[index], ambiguous: false, resolvedFrom: 'ordered_list' }
-      : { productId: null, ambiguous: true };
+      ? result({ type: 'ordinal', productId: products[index], authoritative: true, resolvedFrom: 'ordered_list' })
+      : result({ type: 'ordinal', ambiguous: true, resolvedFrom: 'ordered_list' });
   }
 
-  if (/\b(a )?masikat\b/.test(value)) {
+  if (/\bmasik\s+valtozat\b/.test(value)) {
+    const target = context.lastSelectedProduct || context.lastUserProduct || context.lastFocusProduct || (products.length === 1 ? products[0] : null);
+    return target
+      ? result({ type: 'variant', productId: target, authoritative: true, resolvedFrom: 'focus' })
+      : result({ type: 'variant', ambiguous: true, resolvedFrom: 'focus' });
+  }
+
+  if (/\b(a )masikat\b/.test(value)) {
     const selectedProduct = context.lastSelectedProduct || context.purchaseProductId;
     if (products.length === 2 && selectedProduct && products.includes(selectedProduct)) {
-      return {
+      return result({
+        type: 'alternative',
         productId: products.find((id) => id !== selectedProduct) || null,
-        ambiguous: false,
+        authoritative: true,
         resolvedFrom: 'ordered_list'
-      };
+      });
     }
-    return { productId: null, ambiguous: true };
+    return result({ type: 'alternative', ambiguous: true, resolvedFrom: products.length ? 'ordered_list' : 'focus' });
+  }
+
+  if (/\bmutass\w*\s+masikat\b|\bbelole\s+masik\b|\bvan\s+masik\b/.test(value)) {
+    if (products.length > 1) {
+      const primary = context.primaryRecommendedProduct || context.lastFocusProduct || products[0];
+      const alternative = products.find((id) => id !== primary) || null;
+      if (alternative) return result({ type: 'alternative', productId: alternative, authoritative: true, resolvedFrom: 'ordered_list' });
+    }
+    return result({ type: 'alternative', ambiguous: true, resolvedFrom: products.length ? 'ordered_list' : 'focus' });
+  }
+
+  const relativeType = /^(es\s+)?a\s+(szappan|krem|balzsam|sampon)(?:\?|$)/.exec(value);
+  if (relativeType && context.lastFocusProduct) {
+    const { resolveRelation } = require('./product-relations.cjs');
+    const relation = resolveRelation(context.lastFocusProduct, relativeType[2]);
+    if (relation?.relatedProduct) return result({
+      type: 'companion', productId: relation.relatedProduct, authoritative: true,
+      resolvedFrom: 'product_relation', relationType: relation.type
+    });
+    return result({ type: 'category', ambiguous: true, resolvedFrom: 'product_relation' });
   }
 
   if (/^(es\s+)?(ez|az)(\s+.*)?$|\b(ezt|ennek|ennel|ebben|benne|errol)\b/.test(value)) {
-    if (context.lastSelectedProduct) {
-      return { productId: context.lastSelectedProduct, ambiguous: false, resolvedFrom: 'explicit_focus' };
+    if (context.lastSelectedProduct && context.productContextStatus !== 'ambiguous') {
+      return result({ type: 'focus', productId: context.lastSelectedProduct, authoritative: true, resolvedFrom: 'explicit_focus' });
     }
-    if (context.lastUserProduct) {
-      return { productId: context.lastUserProduct, ambiguous: false, resolvedFrom: 'explicit_focus' };
+    if (context.lastUserProduct && context.productContextStatus !== 'ambiguous') {
+      return result({ type: 'focus', productId: context.lastUserProduct, authoritative: true, resolvedFrom: 'explicit_focus' });
     }
     if (context.lastFocusProduct && context.productContextStatus !== 'ambiguous') {
-      return { productId: context.lastFocusProduct, ambiguous: false, resolvedFrom: 'focus' };
+      return result({ type: 'focus', productId: context.lastFocusProduct, authoritative: true, resolvedFrom: 'focus' });
     }
-    if (products.length === 1) {
-      return { productId: products[0], ambiguous: false, resolvedFrom: 'single_product' };
+    if (products.length === 1 && context.productContextStatus !== 'ambiguous') {
+      return result({ type: 'focus', productId: products[0], authoritative: true, resolvedFrom: 'single_product' });
     }
-    return { productId: null, ambiguous: products.length > 1 };
+    return result({ type: 'focus', ambiguous: products.length > 1 });
   }
 
   if (/\b(ebbol|belole|ezt|azt)\b/.test(value)) {
-    if (context.lastSelectedProduct) {
-      return { productId: context.lastSelectedProduct, ambiguous: false, resolvedFrom: 'explicit_focus' };
+    if (context.lastSelectedProduct && context.productContextStatus !== 'ambiguous') {
+      return result({ type: 'focus', productId: context.lastSelectedProduct, authoritative: true, resolvedFrom: 'explicit_focus' });
     }
-    if (context.lastUserProduct) {
-      return { productId: context.lastUserProduct, ambiguous: false, resolvedFrom: 'explicit_focus' };
+    if (context.lastUserProduct && context.productContextStatus !== 'ambiguous') {
+      return result({ type: 'focus', productId: context.lastUserProduct, authoritative: true, resolvedFrom: 'explicit_focus' });
     }
     if (context.lastFocusProduct && context.productContextStatus !== 'ambiguous') {
-      return { productId: context.lastFocusProduct, ambiguous: false, resolvedFrom: 'focus' };
+      return result({ type: 'focus', productId: context.lastFocusProduct, authoritative: true, resolvedFrom: 'focus' });
     }
-    if (products.length === 1) {
-      return { productId: products[0], ambiguous: false, resolvedFrom: 'single_product' };
+    if (products.length === 1 && context.productContextStatus !== 'ambiguous') {
+      return result({ type: 'focus', productId: products[0], authoritative: true, resolvedFrom: 'single_product' });
     }
-    return { productId: null, ambiguous: products.length > 1 };
+    return result({ type: 'focus', ambiguous: products.length > 1 });
   }
 
   return null;

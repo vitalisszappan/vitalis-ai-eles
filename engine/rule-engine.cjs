@@ -37,6 +37,8 @@ class ExpertRuleEngine {
     if (administrative) return administrative;
 
     const current = normalize(question);
+    const currentDomainBarrier = /\b\w+\s+(?:borre|fejborre|hajra|kezre|sarokra)\b/.test(current)
+      || /\b(?:bor|fejbor|haj|kez|sarok)\w*\b.*\b(?:keres\w*|erdekel\w*|ajanl\w*|van\s+valami)\b/.test(current);
     const combined = normalize([
       ...history.filter((m) => m && m.role === 'user').slice(-3).map((m) => m.content || ''),
       question
@@ -112,7 +114,7 @@ class ExpertRuleEngine {
     }
 
     if (!rule) rule = this.rules.find((r) => this.matches(r, current));
-    if (!rule && /^(es |ezt |azt |milyen gyakran|hogyan hasznaljam|gyereknek is)/.test(current)) {
+    if (!rule && !currentDomainBarrier && /^(es |ezt |azt |milyen gyakran|hogyan hasznaljam|gyereknek is)/.test(current)) {
       rule = this.rules.find((r) => this.matches(r, combined));
     }
     if (!rule) return null;
