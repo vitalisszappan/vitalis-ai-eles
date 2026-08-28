@@ -16,6 +16,7 @@ const {isTypeComparison}=require('./hair-wash-products.cjs');
 const {determineAnswerMode}=require('./answer-mode.cjs');
 const {detectProductQuestionIntent}=require('./product-question-intent.cjs');
 const { detectBusinessInfo } = require('./business-info.cjs');
+const { resolveGuidedDiscovery } = require('./guided-discovery.cjs');
 
 const catalog = createCatalogSearch();
 
@@ -48,6 +49,7 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
     if (allowedRememberedTypes.length === 1 && HAIR_WASH_TYPES.includes(allowedRememberedTypes[0])) productTypeConstraint = allowedRememberedTypes[0];
   }
   const base = { goal: goal.goal, intent: goal.intent, domain: goal.domain || problem?.domain || null, safetyClass: safety.safetyClass, evidence: [...goal.evidence, ...(problem?.evidence || []), ...safety.evidence], excludedProductTypes, productTypeConstraint, productQuestionIntent };
+  const guided = resolveGuidedDiscovery({ question, conversationState });
 
   const meta = resolveMetaIntent(question);
   if (meta) return decision({ ...base, route: 'meta', intent: meta.intent, goal: 'unknown', domain: 'meta', matchedRuleId: meta.ruleId, confidence: 1, threshold: 1, responseSource: 'meta-intent' });
@@ -58,6 +60,10 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
   }
   if (safety.safetyClass === 'caution_with_boundary') {
     return decision({ ...base, route: 'safety', goal: 'medical_boundary', intent: 'cosmetic_boundary', confidence: 1, threshold: 1, responseSource: 'safety-gate' });
+  }
+
+  if (guided?.kind === 'browse') {
+    return decision({ ...base, route: 'business_info', intent: 'general_catalog', goal: 'browse_catalog', domain: 'business_info', guidedDiscovery: guided.dimensions, confidence: 1, threshold: 1, responseSource: 'guided-discovery' });
   }
 
   const businessInfo = detectBusinessInfo(question);
@@ -98,6 +104,34 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
     }
     const usesOptionalTarget = ['order_start', 'checkout_problem', 'ordering_help'].includes(commerce.intent) && Boolean(commerceTarget);
     return decision({ ...base, route: 'commerce', contextUsed: (needsProduct || usesOptionalTarget) && !directCanonical, contextTarget: (needsProduct || usesOptionalTarget) ? commerceTarget : null, matchedProductIds: (needsProduct || usesOptionalTarget) ? [commerceTarget] : [], referenceType: purchaseReference?.type || null, referenceAuthoritative: Boolean(purchaseReference?.authoritative), confidence: 1, threshold: 1, responseSource: 'commerce-intent' });
+  }
+
+  const guidedDecision = () => {
+    if (!guided || guided.kind === 'defer') return null;
+    const reason = guided.kind === 'clarify_product_type' ? 'guided_missing_product_type'
+      : guided.kind === 'clarify_need' ? 'guided_missing_need_state' : 'guided_suitability_unavailable';
+    return decision({ ...base, route: 'clarification', intent: 'product_recommendation', goal: 'find_product', domain: guided.dimensions.needState?.value || 'product', contextTarget: 'guided_discovery', contextUsed: Boolean(conversationState?.guidedDiscovery), guidedDiscovery: guided.dimensions, confidence: 1, threshold: 1, rejectionReasons: [reason], responseSource: 'guided-discovery' });
+  };
+
+  // Unsupported current needs and completion of an earlier discovery turn own
+  // the turn before stale product references can be resolved.
+  const unsupportedGuidedNeed = ['sensitive_skin', 'dry_hands', 'wrinkles_or_mature_skin'].includes(guided?.dimensions?.needState?.value)
+    && guided?.dimensions?.needState?.source === 'current-turn';
+  const completesInheritedNeed = guided?.dimensions?.productType?.source === 'current-turn'
+    && Boolean(guided?.dimensions?.needState)
+    && guided?.dimensions?.needState?.source !== 'current-turn';
+  const standaloneTypeOnly = guided?.dimensions?.productType?.source === 'current-turn'
+    && !guided?.dimensions?.needState
+    && !problem
+    && excludedProductTypes.length === 0
+    && productQuestionIntent !== 'availability'
+    && !/\b(?:haj|fejbor)\w*/.test(normalizedCurrent)
+    && /\b(?:keres\w*|erdekel\w*)\b/.test(normalizedCurrent)
+    && !conversationState?.focusedProductId
+    && !(conversationState?.lastRecommendedProducts || []).length;
+  if (!directCanonical && guided && (unsupportedGuidedNeed || completesInheritedNeed || standaloneTypeOnly)) {
+    const resolved = guidedDecision();
+    if (resolved) return resolved;
   }
 
   if (/\b(sls|sles|sodium lauryl sulfate|sodium laureth sulfate)\b/.test(normalize(question))) {
@@ -149,11 +183,19 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
   if (expert?.source === 'admin-intent') {
     return decision({ ...base, route: 'commerce', intent: expert.intent, goal: goal.goal === 'unknown' ? 'ask_shipping' : goal.goal, matchedRuleId: expert.ruleId, confidence: 1, threshold: 1, responseSource: 'admin-intent' });
   }
-  if (expert) {
+  const effectiveProductTypeConstraint = productTypeConstraint || guided?.dimensions?.productType?.value || null;
+  const expertMatchesConstraint = !effectiveProductTypeConstraint || (expert?.links || []).some((item) => effectiveProductTypeConstraint === 'shampoo'
+    ? Boolean(inferredHairType(item))
+    : require('./product-type-constraint.cjs').matchesProductType(item, effectiveProductTypeConstraint));
+  if (expert && expertMatchesConstraint) {
     return decision({ ...base, route: 'expert_rule', intent: expert.intent, matchedRuleId: expert.ruleId, primaryProductId: expert.primaryProductId || null, matchedProductIds: (expert.links || []).map((item) => item.id).filter(Boolean), confidence: 1, threshold: 1, responseSource: expert.source });
   }
   if (directCanonical) {
     return decision({ ...base, route: 'exact_product', goal: 'find_product', intent: 'product_detail', domain: 'product', matchedCanonicalIds: [directCanonical], matchedProductIds: [directCanonical], confidence: 1, threshold: 1, responseSource: 'product-context' });
+  }
+  if (guided?.dimensions?.needState && (unsupportedGuidedNeed || guided?.dimensions?.productType)) {
+    const resolved = guidedDecision();
+    if (resolved) return resolved;
   }
   if (currentExplicitNeed && !problem && !productTypeConstraint) {
     return decision({ ...base, route: 'clarification', intent: 'product_recommendation', goal: 'find_product', domain: base.domain || 'product', contextUsed: false, contextTarget: 'product', confidence: 1, threshold: 1, rejectionReasons: ['unsupported_current_need'], responseSource: 'conversation-context' });

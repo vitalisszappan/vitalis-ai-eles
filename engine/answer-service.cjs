@@ -270,14 +270,25 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
     if (routing.matchedCanonicalIds?.length) {
       return attachDecision({ ...clarificationAnswer(buildConversationContext(history, normalize), routing.matchedCanonicalIds), ...(contextMissing?{fallbackRootCause:'context_missing'}:{}) }, routing);
     }
-    const answer = routing.contextTarget === 'excluded_product_type'
+    const guidedNeed = routing.guidedDiscovery?.needState?.value;
+    const guidedType = routing.guidedDiscovery?.productType?.value;
+    const guidedAnswer = routing.contextTarget === 'guided_discovery'
+      ? guidedNeed === 'sensitive_skin' && !guidedType ? 'Érzékeny bőrre szappant vagy krémet/balzsamot keresel?'
+      : guidedNeed === 'dry_hands' && !guidedType ? 'Kézkrémet vagy szappant keresel?'
+      : guidedNeed === 'wrinkles_or_mature_skin' && !guidedType ? 'Krémet vagy balzsamot keresel?'
+      : !guidedNeed && guidedType ? `Milyen bőrigényre keresel ${guidedType === 'krem' ? 'krémet' : guidedType === 'szappan' ? 'szappant' : guidedType === 'balzsam' ? 'balzsamot' : 'sampont'}?`
+      : guidedNeed === 'dry_hands' ? 'Megmutathatom a választott terméktípus kínálatát, de száraz kézre való alkalmasságot most nem tudok biztosan állítani.'
+      : guidedNeed === 'wrinkles_or_mature_skin' ? 'Megmutathatom a krémek és balzsamok kínálatát, de ránccsökkentő hatást most nem tudok biztosan állítani.'
+      : 'Megmutathatom a választott kategória kínálatát, de ehhez a bőrigényhez most nem tudok biztos termékalkalmasságot állítani.'
+      : null;
+    const answer = guidedAnswer || (routing.contextTarget === 'excluded_product_type'
       ? 'Milyen terméktípust keresel a sampon helyett?'
       : routing.contextTarget === 'semantic_product_match'
       ? 'Nem találtam biztos termékegyezést. Meg tudod írni pontosabban, mit keresel?'
       : routing.contextTarget === 'product'
       ? (routing.intent === 'product_recommendation' ? 'Milyen problémára vagy milyen terméktípusból keresel ajánlást?' : 'Melyik termékre gondolsz?')
-      : 'Mire gondolsz pontosan?';
-    return attachDecision({ source: routing.responseSource, answer, confidence: 100, links: [], suggestions: [], ruleId: 'clarify-missing-argument', intent: routing.intent, matchedKnowledgeIds: [], ...(contextMissing ? { fallbackRootCause: 'context_missing' } : {}) }, routing);
+      : 'Mire gondolsz pontosan?');
+    return attachDecision({ source: routing.responseSource, answer, confidence: 100, links: [], suggestions: [], ruleId: 'clarify-missing-argument', intent: routing.contextTarget === 'guided_discovery' ? 'conversation-clarification' : routing.intent, matchedKnowledgeIds: [], ...(contextMissing ? { fallbackRootCause: 'context_missing' } : {}) }, routing);
   }
 
   if (routing.route === 'context_followup') {
