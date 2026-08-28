@@ -9,7 +9,7 @@ const ENFORCEMENT_CLASSES = Object.freeze({
 });
 
 function enforcementEnabled(value = process.env.SEMANTIC_GUARD_ENFORCEMENT) {
-  return String(value || '').trim().toLowerCase() === 'true';
+  return String(value ?? '').trim().toLowerCase() !== 'false';
 }
 
 function phaseB0Eligible(routing = {}, guard = {}) {

@@ -62,7 +62,7 @@ function restoreFlag() {
 }
 
 try {
-  delete process.env.SEMANTIC_GUARD_ENFORCEMENT;
+  process.env.SEMANTIC_GUARD_ENFORCEMENT = 'false';
   const shadow = roleMismatchCases.map(([question, originalRoute]) => {
     const result = ask(question);
     assert.equal(result.route, originalRoute, `${question}: flag-off route`);
@@ -97,7 +97,7 @@ try {
     'Mennyibe kerul a szallitas?',
     'Dermavital krem'
   ];
-  delete process.env.SEMANTIC_GUARD_ENFORCEMENT;
+  process.env.SEMANTIC_GUARD_ENFORCEMENT = 'false';
   const validShadow = validQueries.map((question) => responseContract(ask(question)));
   process.env.SEMANTIC_GUARD_ENFORCEMENT = 'true';
   validQueries.forEach((question, index) => {

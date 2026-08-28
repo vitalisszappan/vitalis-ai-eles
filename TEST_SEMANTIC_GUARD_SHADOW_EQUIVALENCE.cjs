@@ -10,6 +10,7 @@ const realGuard = require(guardPath);
 const parsed = JSON.parse(fs.readFileSync('./data/knowledge.json', 'utf8'));
 const knowledge = Array.isArray(parsed) ? parsed : parsed.items || parsed.knowledge || [];
 const ruleEngine = new ExpertRuleEngine('./data/rules/expert-rules.json');
+const originalFlag = process.env.SEMANTIC_GUARD_ENFORCEMENT;
 
 function loadService(validateSemanticRoute) {
   require.cache[guardPath].exports = { validateSemanticRoute };
@@ -38,12 +39,15 @@ const scenarios = [
   { family: 'knowledge_fallback', question: 'elérhetőség', history: [] }
 ];
 
+process.env.SEMANTIC_GUARD_ENFORCEMENT = 'false';
 const baselineService = loadService(neutralGuard);
 const baseline = scenarios.map((scenario) => baselineService.createAnswer({ ...scenario, knowledge, ruleEngine, logGap: () => {} }));
 const guardedService = loadService(realGuard.validateSemanticRoute);
 const guarded = scenarios.map((scenario) => guardedService.createAnswer({ ...scenario, knowledge, ruleEngine, logGap: () => {} }));
 require.cache[guardPath].exports = realGuard;
 delete require.cache[servicePath];
+if (originalFlag === undefined) delete process.env.SEMANTIC_GUARD_ENFORCEMENT;
+else process.env.SEMANTIC_GUARD_ENFORCEMENT = originalFlag;
 
 for (let index = 0; index < scenarios.length; index++) {
   const before = baseline[index];

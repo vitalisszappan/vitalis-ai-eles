@@ -19,6 +19,8 @@ const complaintCases = [
   'ettől a krémtől kipirosodtam',
   'csíp a krém használat után',
   'a szappantól viszket a bőröm',
+  'a krém használata után viszketni kezdett a bőröm',
+  'bekentem ezzel, utána kipirosodott',
   'a sampontól kipirosodott a fejbőröm',
   'a balzsamtól irritált lett a bőröm, és még most is irritált',
   'felkenés után csíp a krém',
@@ -29,20 +31,21 @@ const complaintCases = [
   'Dermavital krémtől kipirosodtam',
   'Dermavital sampon irritálja a fejbőröm',
   'Aktív szenes szappan csíp',
-  'tegnap irritált, még most is piros',
-  'múltkor csípett, de még mindig érzem',
   'barátnőmnek csíp a krém használat után',
   'gyerekem bőrét irritálja a szappan',
   'irritál a szappan, mit használjak helyette?',
-  'kipirosodtam, melyik szappant ajánlod?',
   'csíp a krém, van másik?',
   'csíp a krém, de ezt szeretném megrendelni',
   'irritál a szappan, akkor a másodikat kérem',
-  'ettől kipirosodtam',
-  'kipirosodtam, visszakaphatom a pénzem?'
+  'ettől kipirosodtam'
 ];
 
 const controls = [
+  'kipirosodtam, melyik szappant ajánlod?',
+  'viszket a fejbőröm. Melyik sampont ajánlod?',
+  'kipirosodtam, visszakaphatom a pénzem?',
+  'tegnap irritált, még most is piros',
+  'múltkor csípett, de még mindig érzem',
   'a balzsamtól irritált lett a bőröm',
   'a balzsamtól irritált lett a bőröm, de már elmúlt',
   'irritált bőrre keresek krémet',
@@ -65,6 +68,15 @@ const controls = [
   'törött',
   'elszíneződött',
   'rossz az állaga'
+  ,'viszkető fejbőrre mit használjak?'
+  ,'viszket a fejbőröm'
+  ,'hámlik a fejbőröm'
+  ,'viszket és hámlik a fejbőröm'
+  ,'kipirosodásra keresek krémet'
+  ,'száraz bőrre mit ajánlasz?'
+  ,'pattanásos bőrre mit ajánlasz?'
+  ,'ráncos bőrre keresek valamit'
+  ,'mit ajánlasz érzékeny bőrre?'
 ];
 
 const safetyCases = [
@@ -138,7 +150,7 @@ try {
   assert.equal(unknown.complaintSubjectProductId, null);
   assert.match(unknown.answer, /Melyik termékről/);
 
-  const status = ask('tegnap irritált, még most is piros');
+  const status = ask('a krémtől tegnap irritált lett, még most is piros');
   assert.equal(status.resolutionFamily, 'complaint_status_unclear');
   assert.match(status.answer, /Most is fennáll/);
 

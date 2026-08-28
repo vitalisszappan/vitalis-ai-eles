@@ -7,7 +7,7 @@ const { createAnswer } = require('./engine/answer-service.cjs');
 const { routeAnswer } = require('./engine/answer-router.cjs');
 const { buildSemanticEvidence } = require('./engine/semantic-evidence.cjs');
 const { validateSemanticRoute } = require('./engine/semantic-route-guard.cjs');
-const { applySemanticGuardEnforcement } = require('./engine/semantic-guard-enforcement.cjs');
+const { applySemanticGuardEnforcement, enforcementEnabled } = require('./engine/semantic-guard-enforcement.cjs');
 const { structuredState } = require('./engine/conversation-memory.cjs');
 
 const parsed = JSON.parse(fs.readFileSync('./data/knowledge.json', 'utf8'));
@@ -22,7 +22,14 @@ function restoreFlag() {
 }
 
 try {
-  delete process.env.SEMANTIC_GUARD_ENFORCEMENT;
+  assert.equal(enforcementEnabled(undefined), true);
+  assert.equal(enforcementEnabled('true'), true);
+  assert.equal(enforcementEnabled('TRUE'), true);
+  assert.equal(enforcementEnabled('false'), false);
+  assert.equal(enforcementEnabled('FALSE'), false);
+  assert.equal(enforcementEnabled('unexpected'), true);
+
+  process.env.SEMANTIC_GUARD_ENFORCEMENT = 'false';
   const shadow = ask('ránc');
   assert.equal(shadow.route, 'exact_product');
   assert.equal(shadow.routing.semanticGuard.enforcementEnabled, false);

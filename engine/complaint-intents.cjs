@@ -11,10 +11,12 @@ const NEGATED = /\b(nem|se|sem|egyaltalan nem)\s+(?:\w+\s+){0,3}?(irrital\w*|csi
 const HYPOTHETICAL = /\b(lehet\w*|irritalhat\w*|csiphet\w*|egethet\w*|kipirosodhat\w*|bedagadhat\w*|okozhat\w*|hasznalhat\w*)\b|\bmi van ha\b/;
 const REPORTED = /\b(azt olvastam|azt irjak|a reklam\w*|hallottam)\b/;
 const NEED_STATE = /\b(irritalt|erzekeny|kipirosodasra|pirosodasra|viszketo)\b.*\b(bor\w*|krem\w*|szappan\w*|termek\w*)\b.*\b(keres\w*|szeretnek|ajanl\w*)\b|\b(irritalt|erzekeny|kipirosodasra|pirosodasra)\s+borre\b/;
+const TARGET_NEED_STATE = /\b\w+(?:ra|re)\b.*\b(?:mit\s+(?:hasznalj\w*|ajanl\w*)|keres\w*|szeretn\w*)\b/;
 const RESOLVED = /\b(mar elmult|most nincs baj|mar nincs baj|mar jol vagyok|teljesen elmult|nincs mar baj)\b/;
 const STILL_RELEVANT = /\b(meg most is|most is|tovabbra is|meg mindig)\b.*\b(irrital\w*|csip\w*|eget\w*|piros\w*|viszket\w*)\b|\b(irrital\w*|csip\w*|eget\w*|piros\w*|viszket\w*)\b.*\b(meg most is|most is|tovabbra is|meg mindig)\b/;
-const CAUSAL_MARKER = /\b(ettol|attol|miatta|hasznalat utan|felkenes utan)\b|\b\w+tol\b/;
+const CAUSAL_MARKER = /\b(ettol|attol|miatta|hasznalat\w* utan|felkenes utan|amikor ezt kentem)\b|\bbekentem ezzel\b.*\butana\b|\b\w+tol\b/;
 const REPLACEMENT_REQUEST = /\b(helyette|melyik\w*.*ajanl\w*|mit hasznalj\w*|van masik)\b/;
+const RECOMMENDATION_NEED = /\b(melyik\w*.*ajanl\w*|mit\s+(?:hasznalj\w*|ajanl\w*))\b/;
 const SERVICE_INTERSECTION = /\b(visszakap\w*.*penz\w*|refund\w*|visszaterit\w*|kicserel\w*|panaszt szeretnek)\b/;
 const METAPHORICAL = /\b(csipos illat\w*|egetoen szukseg\w*)\b/;
 
@@ -48,7 +50,7 @@ function symptomLabel(text) {
 
 function detectComplaintIntent(question, context = {}) {
   const text = normalize(question);
-  if (!text || METAPHORICAL.test(text) || NEED_STATE.test(text)) return null;
+  if (!text || METAPHORICAL.test(text) || NEED_STATE.test(text) || TARGET_NEED_STATE.test(text)) return null;
   const quality = QUALITY.test(text);
   const critical = CRITICAL.test(text);
   const symptom = SYMPTOM.test(text) || critical || HIGH.test(text);
@@ -60,6 +62,7 @@ function detectComplaintIntent(question, context = {}) {
   const temporality = detectTemporality(text);
   const polarity = negated ? 'negative' : hypothetical ? 'uncertain' : 'positive';
   const explicitRelation = CAUSAL_MARKER.test(text) || (PRODUCT.test(text) && /\b(irrital\w*|csip\w*|eget\w*)\b/.test(text));
+  if (RECOMMENDATION_NEED.test(text) && !explicitRelation) return null;
   const impliedComplaintFlow = REPLACEMENT_REQUEST.test(text) || SERVICE_INTERSECTION.test(text) || temporality === 'still_relevant_past';
   const causality = quality ? 'asserted' : explicitRelation ? 'asserted'
     : context.focusedProductId && /\b(ettol|attol|utana|miatta)\b/.test(text) ? 'asserted'
@@ -88,7 +91,7 @@ function isP0ComplaintEligible(complaint, routing = {}) {
   if (complaint.polarity !== 'positive' || complaint.resolved) return false;
   if (!['current', 'still_relevant_past'].includes(complaint.temporality)) return false;
   if (!['low', 'moderate'].includes(complaint.severity)) return false;
-  if (!['asserted', 'sufficient'].includes(complaint.causality)) return false;
+  if (complaint.causality !== 'asserted' && !(complaint.causality === 'sufficient' && complaint.productPresent)) return false;
   if (routing.route === 'safety' || routing.safetyClass === 'medical_escalation') return false;
   return ['product_category', 'exact_product', 'expert_rule', 'problem_domain', 'context_followup', 'commerce', 'clarification', 'hard_fallback'].includes(routing.route);
 }
