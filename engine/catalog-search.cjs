@@ -13,7 +13,7 @@ const CATEGORY_DEFINITIONS = [
   { id: 'shampoo', label: 'sampon', query: /\b(sampon|samponotok)\w*/, product: /\b(sampon|samponszappan)\w*/ },
   { id: 'soap', label: 'szappan', query: /\b(szappan|szappanotok)\w*/, product: /\b(szappan)\w*/ },
   { id: 'hand_cream', label: 'kézkrém', query: /\b(kezkrem|kezapolo)\w*/, product: /\b(kezkrem|kezapolo|testapolo krem|shea vaj)\w*/ },
-  { id: 'heel_care', label: 'sarokápoló', query: /\b(sarokkrem|sarokapol|repedt sarok|szaraz sarok)\w*/, product: /\b(sarokkrem|labapolo|testapolo krem|shea vaj)\w*/ },
+  { id: 'heel_care', label: 'sarokápoló', query: /\b(sarokkrem|sarokapol|repedt sarok|szaraz sarok)\w*/, product: /\b(sarokkrem|sarokapol|labapolo)\w*/ },
   { id: 'cream', label: 'krém', query: /\b(krem|balzsam)\w*/, product: /\b(krem|balzsam)\w*/ }
 ];
 
