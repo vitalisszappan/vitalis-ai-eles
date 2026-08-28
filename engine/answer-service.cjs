@@ -222,6 +222,37 @@ function materializePlannedAnswer(plan, routing) {
 
 function materializeDecision({ routing, question, history, knowledge, ruleEngine, logGap, conversationState, technicalFailure, logDiagnostic, answerPlan = null }) {
   if (routing.route === 'business_info') return attachDecision(resolveBusinessInfo(routing.intent, decisionCatalog), routing);
+  if (routing.responseSource === 'acne-decision') {
+    const selected = routing.acneDecision?.selectedProductId || null;
+    const factType = routing.acneDecision?.kind === 'usage' ? 'usageInstructions' : 'productBenefits';
+    const factsApi = require('./product-facts.cjs');
+    const fact = selected ? factsApi.getFact(selected, factType) : null;
+    const evidence = fact?.provenance || [];
+    if (!selected) return attachDecision({
+      source: 'owner-approved-acne-decision',
+      answer: 'Mennyire zsíros a bőröd, inkább néha vagy rendszeresen jelentkeznek a pattanások, és az arcodon, a fejbőrödön vagy a hátad, vállad területén érintett?',
+      confidence: 100, links: [], suggestions: [], ruleId: 'acne-decision-clarification', intent: 'acne', matchedKnowledgeIds: [],
+      answerIntent: 'product_recommendation', targetProductId: null, factsUsed: [], groundingStatus: 'ambiguous', responseStrategy: 'targeted_clarification', ctaStrategy: 'clarify_need'
+    }, routing);
+    const rawCard = productCards([selected])[0] || null;
+    const card = rawCard && selected === 'aktiv_szenes_szappan'
+      ? { ...rawCard, url: '', commerce: undefined, price: undefined, priceGross: undefined, actualPriceGross: undefined, currency: undefined, availability: undefined }
+      : rawCard;
+    let answer;
+    if (routing.acneDecision.kind === 'usage') answer = 'Igen, a Kátrány szappan hajmosásra is használható.';
+    else if (routing.acneDecision.reasonCode === 'scalp_acne') answer = 'A Kátrány szappant ajánlom. Hajmosásra is használható, és fejbőrön jelentkező pattanásoknál ajánlott.';
+    else if (selected === 'aktiv_szenes_szappan') answer = 'Az Aktív szenes szappant ajánlom. Kombinált, enyhén zsíros és mitesszeres bőrre ajánljuk.';
+    else answer = 'A Kátrány szappant ajánlom. Zsíros, problémás, pattanásos és aknés bőrre ajánljuk.';
+    const usedFacts = routing.acneDecision.reasonCode === 'scalp_acne'
+      ? ['usageInstructions', 'recommendedFor'].map((type) => { const item = factsApi.getFact(selected, type); return { factType: type, status: item.status, value: item.status === 'grounded' ? item.value : null, provenance: item.provenance || [] }; })
+      : [{ factType, status: fact?.status || 'unavailable', value: fact?.status === 'grounded' ? fact.value : null, provenance: evidence }];
+    return attachDecision({
+      source: 'owner-approved-acne-decision', answer, confidence: 100, links: card ? [card] : [], suggestions: [], ruleId: routing.matchedRuleId, intent: routing.intent, matchedKnowledgeIds: [],
+      answerIntent: routing.acneDecision.kind === 'usage' ? 'usage' : 'product_recommendation', targetProductId: selected,
+      factsUsed: usedFacts,
+      groundingStatus: usedFacts.every((item) => item.status === 'grounded') ? 'grounded' : 'unavailable', responseStrategy: 'owner_approved_acne_decision', ctaStrategy: selected === 'aktiv_szenes_szappan' ? 'none' : 'view_product'
+    }, routing);
+  }
   const planned = materializePlannedAnswer(answerPlan, routing);
   if (planned) return attachDecision(planned, routing);
   if (routing.responseSource === 'meta-intent') return attachDecision(resolveMetaIntent(question), routing);

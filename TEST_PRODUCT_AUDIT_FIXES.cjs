@@ -63,12 +63,6 @@ for (const name of [
 
 const recommendationCases = [
   {
-    question: 'Mit ajánlasz pattanásos bőrre?',
-    intent: 'acne',
-    ids: ['aktiv_szenes_szappan', 'katrany_szappan'],
-    answerParts: ['Aktív szenes szappant', 'kátrány szappan']
-  },
-  {
     question: 'Mit ajánlasz száraz bőrre?',
     intent: 'dry_skin',
     ids: ['shea_vajas_szappan'],
@@ -95,6 +89,15 @@ const recommendationCases = [
     answerParts: ['Dermavital krém']
   }
 ];
+
+const genericAcne = ask('Mit ajánlasz pattanásos bőrre?');
+assert.strictEqual(genericAcne.route, 'clarification');
+assert.strictEqual(genericAcne.intent, 'acne');
+assert.strictEqual(genericAcne.routing.primaryProductId, null);
+assert.deepStrictEqual(cardIds(genericAcne), []);
+assert(normalize(genericAcne.answer).includes('zsiros'));
+assert(normalize(genericAcne.answer).includes('rendszeresen'));
+assert(normalize(genericAcne.answer).includes('fejbor'));
 
 for (const test of recommendationCases) {
   const result = ask(test.question);

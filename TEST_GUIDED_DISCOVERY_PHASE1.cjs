@@ -83,10 +83,14 @@ assert.equal(run.result.route, 'clarification');
 assert.notEqual(run.result.routing.primaryProductId, 'shea_vajas_szappan');
 noCards(run.result);
 
-for (const query of ['Van valami száraz bőrre?', 'Mit ajánlasz pattanásos bőrre?', 'Mit ajánlotok pikkelysömörre?', 'Mit ajánlasz ekcémára?', 'Viszket és hámlik a fejbőröm.']) {
+for (const query of ['Van valami száraz bőrre?', 'Mit ajánlotok pikkelysömörre?', 'Mit ajánlasz ekcémára?', 'Viszket és hámlik a fejbőröm.']) {
   const expert = ask(query);
   assert.equal(expert.route, 'expert_rule');
 }
+const genericAcne = ask('Mit ajánlasz pattanásos bőrre?');
+assert.equal(genericAcne.route, 'clarification');
+assert.equal(genericAcne.intent, 'acne');
+noCards(genericAcne);
 
 for (const query of ['Érzékeny vagyok erre a témára.', 'Száraz a humorom.', 'Ráncos lett a pólóm.', 'Öreg a telefonom.', 'Kezet mostam.', 'Sarkon fordultam.']) {
   const control = ask(query);

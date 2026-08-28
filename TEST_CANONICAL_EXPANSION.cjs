@@ -97,6 +97,11 @@ for (const [question, expectedIds] of expectedRecommendations) {
     ruleEngine: expert,
     logGap() {}
   });
+  if (question === 'akné') {
+    assert.equal(serviceAnswer.route, 'clarification');
+    assert.deepStrictEqual(serviceAnswer.links, []);
+    continue;
+  }
   assert.deepStrictEqual(
     serviceAnswer.links.map((card) => card.id),
     expectedIds,

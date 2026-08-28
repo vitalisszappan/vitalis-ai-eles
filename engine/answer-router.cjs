@@ -17,6 +17,7 @@ const {determineAnswerMode}=require('./answer-mode.cjs');
 const {detectProductQuestionIntent}=require('./product-question-intent.cjs');
 const { detectBusinessInfo } = require('./business-info.cjs');
 const { resolveGuidedDiscovery } = require('./guided-discovery.cjs');
+const { resolveAcneDecision } = require('./acne-decision.cjs');
 
 const catalog = createCatalogSearch();
 
@@ -60,6 +61,27 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
   }
   if (safety.safetyClass === 'caution_with_boundary') {
     return decision({ ...base, route: 'safety', goal: 'medical_boundary', intent: 'cosmetic_boundary', confidence: 1, threshold: 1, responseSource: 'safety-gate' });
+  }
+
+  const acneDecision = resolveAcneDecision({ question, history, conversationState });
+  if (acneDecision) {
+    const resolved = acneDecision.kind === 'resolved' || acneDecision.kind === 'usage';
+    return decision({
+      ...base,
+      route: resolved ? 'expert_rule' : 'clarification',
+      intent: acneDecision.kind === 'usage' ? 'product_usage' : 'acne',
+      goal: acneDecision.kind === 'usage' ? 'ask_usage' : resolved ? 'find_product' : 'clarify_need',
+      domain: 'acne',
+      contextUsed: acneDecision.source === 'conversation-context',
+      contextTarget: resolved ? acneDecision.selectedProductId : 'acne_decision',
+      matchedRuleId: acneDecision.kind === 'usage' ? 'acne-katrany-hair-washing' : 'acne-decision',
+      primaryProductId: acneDecision.selectedProductId,
+      matchedProductIds: acneDecision.selectedProductId ? [acneDecision.selectedProductId] : [],
+      confidence: 1,
+      threshold: 1,
+      responseSource: 'acne-decision',
+      acneDecision
+    });
   }
 
   if (guided?.kind === 'browse') {

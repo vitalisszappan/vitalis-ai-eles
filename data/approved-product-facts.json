@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "facts": [
+    {
+      "productId": "aktiv_szenes_szappan",
+      "factType": "productBenefits",
+      "value": [{ "claim": "Az Aktív szenes szappant kombinált, enyhén zsíros és mitesszeres bőrre ajánljuk." }],
+      "sourceType": "owner_approved",
+      "sourceId": "owner-approved:acne:aktiv-szenes:contexts:v1",
+      "approved": true
+    },
+    {
+      "productId": "aktiv_szenes_szappan",
+      "factType": "recommendedFor",
+      "value": ["kombinált bőr", "enyhén zsíros bőr", "mitesszeres bőr"],
+      "sourceType": "owner_approved",
+      "sourceId": "owner-approved:acne:aktiv-szenes:contexts:v1",
+      "approved": true
+    },
+    {
+      "productId": "katrany_szappan",
+      "factType": "productBenefits",
+      "value": [{ "claim": "A Kátrány szappant zsíros, problémás, pattanásos és aknés bőrre ajánljuk." }],
+      "sourceType": "owner_approved",
+      "sourceId": "owner-approved:acne:katrany:contexts:v1",
+      "approved": true
+    },
+    {
+      "productId": "katrany_szappan",
+      "factType": "usageInstructions",
+      "value": "A Kátrány szappan hajmosásra is használható.",
+      "sourceType": "owner_approved",
+      "sourceId": "owner-approved:acne:katrany:hair-washing:v1",
+      "approved": true
+    },
+    {
+      "productId": "katrany_szappan",
+      "factType": "recommendedFor",
+      "value": ["zsíros bőr", "problémás bőr", "pattanásos bőr", "aknés bőr", "fejbőrön jelentkező pattanások"],
+      "sourceType": "owner_approved",
+      "sourceId": "owner-approved:acne:katrany:contexts:v1",
+      "approved": true
+    }
+  ]
+}

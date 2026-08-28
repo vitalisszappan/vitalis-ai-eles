@@ -162,7 +162,6 @@ function ids(result) {
 const recommendationBaselines = [
   ['Mit ajánlasz pikkelysömörre?', ['psorivital_csomag', 'dermavital_szappan', 'tengeri_soszappan']],
   ['Mit ajánlasz ekcémára?', ['dermavital_krem', 'dermavital_szappan']],
-  ['Mit ajánlasz aknéra?', ['aktiv_szenes_szappan', 'katrany_szappan']],
   ['Mit ajánlasz száraz bőrre?', ['shea_vajas_szappan']],
   ['Mit ajánlasz pikkelysömörös fejbőrre?', ['dermavital_sampon', 'rozmaringos_samponszappan']],
   ['Mit ajánlasz hajhullásra?', ['rozmaringos_samponszappan']]
@@ -170,6 +169,9 @@ const recommendationBaselines = [
 for (const [question, expectedIds] of recommendationBaselines) {
   assert.deepEqual(ids(ask(question)), expectedIds, question);
 }
+const genericAcne = ask('Mit ajánlasz aknéra?');
+assert.equal(genericAcne.route, 'clarification');
+assert.deepEqual(ids(genericAcne), []);
 
 const history = [
   { role: 'user', content: 'Mit ajánlasz pikkelysömörre?' },

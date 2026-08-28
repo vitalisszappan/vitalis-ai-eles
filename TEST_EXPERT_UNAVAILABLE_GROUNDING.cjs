@@ -20,12 +20,11 @@ assert.equal(expert.cardStrategy, 'expert_products');
 const result = createAnswer({ question: 'Mit ajánlasz pattanásos bőrre?', history: [], conversationState: {}, knowledge, ruleEngine: new ExpertRuleEngine('./data/rules/expert-rules.json'), logGap() {} });
 assert.equal(result.intent, 'acne');
 assert.equal(result.answerIntent, 'product_recommendation');
-assert.equal(result.groundingStatus, 'unavailable');
-assert.deepEqual(result.links.map((link) => link.id), ['aktiv_szenes_szappan', 'katrany_szappan']);
-assert.match(result.answer, /Aktív szenes szappan/);
-assert.match(result.answer, /Gyógyászati kátrány szappan/i);
-assert.doesNotMatch(result.answer, /segít|hatásos|kezelésére|azért ajánlom/i);
-assert(result.links.every((link) => link.reasonSource === 'expert_relationship' && link.reason));
+assert.equal(result.route, 'clarification');
+assert.equal(result.groundingStatus, 'ambiguous');
+assert.deepEqual(result.links, []);
+assert.equal(result.routing.primaryProductId, null);
+assert.match(result.answer, /zsíros/i);
 
 const generic = planAnswer({
   question: 'Mit ajánlasz?',

@@ -7,13 +7,15 @@ const { resolveUnasCatalogSnapshotPath } = require('./unas-catalog-path.cjs');
 const ROOT = path.join(__dirname, '..');
 const DEFAULT_MAPPING_PATH = path.join(ROOT, 'data', 'canonical-unas-mapping.json');
 const DEFAULT_SNAPSHOT_PATH = resolveUnasCatalogSnapshotPath();
+const DEFAULT_APPROVED_FACTS_PATH = path.join(ROOT, 'data', 'approved-product-facts.json');
 
 const SOURCE_PRIORITY = Object.freeze({
   approved_mapping: 400,
   unas_snapshot: 300,
   deterministic_product: 200,
   approved_knowledge: 150,
-  base_knowledge: 100
+  base_knowledge: 100,
+  owner_approved: 500
 });
 
 const INGREDIENT_ALIASES = Object.freeze({
@@ -89,6 +91,8 @@ function createProductFactsResolver(options = {}) {
   const snapshotData = options.snapshotData ?? readJson(options.snapshotPath || DEFAULT_SNAPSHOT_PATH);
   const deterministicProducts = options.deterministicProducts || require('./product-catalog.cjs').PRODUCTS;
   const additionalFacts = Array.isArray(options.additionalFacts) ? options.additionalFacts : [];
+  const approvedFactData = options.approvedFactData ?? readJson(options.approvedFactsPath || DEFAULT_APPROVED_FACTS_PATH);
+  const approvedFacts = (approvedFactData?.facts || []).filter((item) => item?.approved === true && item?.sourceType === 'owner_approved');
   const mappings = (mappingData?.mappings || []).filter((item) => item?.mappingStatus === 'approved');
   const mappingByCanonical = new Map();
   for (const mapping of mappings) {
@@ -103,28 +107,27 @@ function createProductFactsResolver(options = {}) {
 
   function candidates(productId, type) {
     const mapping = mappingByCanonical.get(productId);
-    if (!mapping) return [];
-    const snapshot = snapshotById.get(clean(mapping.unasId));
-    if (!snapshot || clean(snapshot.sku) !== clean(mapping.sku)) return [];
-    const updatedAt = snapshot.updatedAt || snapshotData?.generatedAt || null;
-    const source = provenance('unas_snapshot', `unas:${mapping.unasId}`, productId, updatedAt);
-    const ingredients = explicitIngredientBlock(snapshot.longDescription);
+    const snapshot = mapping ? snapshotById.get(clean(mapping.unasId)) : null;
+    const validSnapshot = Boolean(mapping && snapshot && clean(snapshot.sku) === clean(mapping.sku));
+    const updatedAt = validSnapshot ? snapshot.updatedAt || snapshotData?.generatedAt || null : null;
+    const source = validSnapshot ? provenance('unas_snapshot', `unas:${mapping.unasId}`, productId, updatedAt) : null;
+    const ingredients = validSnapshot ? explicitIngredientBlock(snapshot.longDescription) : [];
     const normalizedIngredients = ingredients.map((rawName) => ({ rawName, ingredientId: normalizeIngredient(rawName) })).filter((item) => item.ingredientId);
-    const benefits = explicitBenefits(snapshot.longDescription, normalizedIngredients);
+    const benefits = validSnapshot ? explicitBenefits(snapshot.longDescription, normalizedIngredients) : [];
     const values = {
-      name: clean(snapshot.name) || null,
-      price: Number.isFinite(snapshot.actualPriceGross) ? snapshot.actualPriceGross : Number.isFinite(snapshot.priceGross) ? snapshot.priceGross : null,
-      currency: clean(snapshot.currency) || 'HUF',
-      url: validUrl(snapshot.url), image: imageUrl(snapshot),
+      name: validSnapshot ? clean(snapshot.name) || null : null,
+      price: validSnapshot && Number.isFinite(snapshot.actualPriceGross) ? snapshot.actualPriceGross : validSnapshot && Number.isFinite(snapshot.priceGross) ? snapshot.priceGross : null,
+      currency: validSnapshot ? clean(snapshot.currency) || 'HUF' : null,
+      url: validSnapshot ? validUrl(snapshot.url) : null, image: validSnapshot ? imageUrl(snapshot) : null,
       ingredients: normalizedIngredients.length ? normalizedIngredients : null,
       inci: ingredients.length ? ingredients : null,
       keyIngredients: null,
       ingredientBenefits: benefits.length ? benefits : null,
-      usageInstructions: section(snapshot.longDescription, [/^hasznalat/, /^hogyan hasznald/]) || null,
-      recommendedFor: section(snapshot.longDescription, [/^kinek ajanljuk/, /^mire ajanljuk/]) || null,
+      usageInstructions: validSnapshot ? section(snapshot.longDescription, [/^hasznalat/, /^hogyan hasznald/]) || null : null,
+      recommendedFor: validSnapshot ? section(snapshot.longDescription, [/^kinek ajanljuk/, /^mire ajanljuk/]) || null : null,
       productBenefits: null,
       approvedClaims: null,
-      warnings: section(snapshot.longDescription, [/^fontos tudnivalok/, /^mire figyelj/]) || null
+      warnings: validSnapshot ? section(snapshot.longDescription, [/^fontos tudnivalok/, /^mire figyelj/]) || null : null
     };
     const out = values[type] == null ? [] : [{ value: values[type], priority: SOURCE_PRIORITY.unas_snapshot, evidence: source }];
     const deterministic = deterministicProducts[productId];
@@ -147,6 +150,9 @@ function createProductFactsResolver(options = {}) {
     for (const item of additionalFacts.filter((item) => item.productId === productId && item.factType === type && item.value != null)) {
       out.push({ value: item.value, priority: item.priority ?? SOURCE_PRIORITY[item.sourceType] ?? 0, evidence: provenance(item.sourceType, item.sourceId, productId, item.sourceUpdatedAt || null) });
     }
+    for (const item of approvedFacts.filter((item) => item.productId === productId && item.factType === type && item.value != null)) {
+      out.push({ value: item.value, priority: SOURCE_PRIORITY.owner_approved, evidence: provenance('owner_approved', item.sourceId, productId, item.sourceUpdatedAt || null) });
+    }
     return out;
   }
   function resolveFact(productId, type) {
@@ -162,14 +168,15 @@ function createProductFactsResolver(options = {}) {
   function getProductFacts(productId) {
     const id = clean(productId);
     const mapping = mappingByCanonical.get(id);
-    if (!id || !mapping) return null;
-    const snapshot = snapshotById.get(clean(mapping.unasId));
-    if (!snapshot || clean(snapshot.sku) !== clean(mapping.sku)) return null;
+    const snapshot = mapping ? snapshotById.get(clean(mapping.unasId)) : null;
+    const validCommerceIdentity = Boolean(mapping && snapshot && clean(snapshot.sku) === clean(mapping.sku));
+    const hasApprovedFacts = approvedFacts.some((item) => item.productId === id);
+    if (!id || (!validCommerceIdentity && !hasApprovedFacts)) return null;
     const facts = Object.fromEntries(FACT_TYPES.map((type) => [type, resolveFact(id, type)]));
     return {
       canonicalProductId: id,
       status: Object.values(facts).some((fact) => fact.status === 'conflicted') ? 'conflicted' : 'grounded',
-      identityProvenance: [provenance('approved_mapping', `mapping:${id}:${mapping.unasId}:${mapping.sku}`, id, mapping.approvedAt || null)],
+      identityProvenance: validCommerceIdentity ? [provenance('approved_mapping', `mapping:${id}:${mapping.unasId}:${mapping.sku}`, id, mapping.approvedAt || null)] : [],
       facts
     };
   }

@@ -350,12 +350,14 @@
       "pattanasos",
       "mitesszer"
     ],
-    "primaryProduct": "aktiv_szenes_szappan",
+    "excludeAny": ["pattanásig feszült", "pattanasig feszült"],
+    "primaryProduct": null,
     "secondaryProducts": [
+      "aktiv_szenes_szappan",
       "katrany_szappan"
     ],
-    "answer": "Zsíros, pattanásos bőrre elsőként az Aktív szenes szappant javaslom. Makacsabb, problémás bőrnél a gyógyászati kátrány szappan is szóba jöhet.",
-    "askFollowUp": false,
+    "answer": "Mennyire zsíros a bőröd, inkább néha vagy rendszeresen jelentkeznek a pattanások, és az arcodon, a fejbőrödön vagy a hátad, vállad területén érintett?",
+    "askFollowUp": true,
     "safetyNote": "A túl gyakori, erős tisztítás kiszáríthatja a bőrt.",
     "suggestions": [
       {
