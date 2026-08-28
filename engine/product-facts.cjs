@@ -18,7 +18,9 @@ const SOURCE_PRIORITY = Object.freeze({
 const INGREDIENT_ALIASES = Object.freeze({
   urea: 'urea',
   karbamid: 'urea',
-  carbamide: 'urea'
+  carbamide: 'urea',
+  rozmaring: 'rosmarinus officinalis leaf oil',
+  rozmaringolaj: 'rosmarinus officinalis leaf oil'
 });
 
 const FACT_TYPES = Object.freeze([

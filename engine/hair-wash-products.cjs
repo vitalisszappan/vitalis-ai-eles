@@ -13,7 +13,7 @@ const IDS = Object.freeze({
 
 function isTypeComparison(question) {
   const q = normalize(question);
-  return /szilard sampon/.test(q) && /(samponszappan|sampon szappan)/.test(q) && /(ugyanaz|kulonbseg|miben mas)/.test(q);
+  return /szilard sampon/.test(q) && /(samponszappan|sampon szappan)/.test(q) && /(ugyanaz|kulonbseg|miben mas|osszehasonlit|hasonlit\w* ossze)/.test(q);
 }
 
 function comparisonAnswer() {

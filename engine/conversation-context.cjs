@@ -344,8 +344,8 @@ function resolveProductReference(text, context) {
       : result({ type: 'variant', ambiguous: true, resolvedFrom: 'focus' });
   }
 
-  if (/\b(a )masikat\b/.test(value)) {
-    const selectedProduct = context.lastSelectedProduct || context.purchaseProductId;
+  if (/\b(a )masik(?:at|ban|ben)\b/.test(value)) {
+    const selectedProduct = context.lastSelectedProduct || context.purchaseProductId || context.lastFocusProduct;
     if (products.length === 2 && selectedProduct && products.includes(selectedProduct)) {
       return result({
         type: 'alternative',

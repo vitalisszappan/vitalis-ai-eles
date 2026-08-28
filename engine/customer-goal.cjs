@@ -16,10 +16,11 @@ function detectCustomerGoal(question) {
   const commerce = detectCommerceIntent(question);
   if (commerce) return { goal: COMMERCE_GOALS[commerce.intent], intent: commerce.intent, domain: 'commerce', evidence: commerce.evidence };
   const productQuestion = detectProductQuestionIntent(question);
+  if (productQuestion === 'comparison') return { goal: 'compare_products', intent: 'compare_products', domain: 'product', evidence: ['goal:compare'] };
   if (/^(micsoda|mit jelent|ezt nem ertem)$/.test(text)) return { goal: 'clarify_previous_answer', intent: 'clarify_previous_answer', domain: 'conversation', evidence: ['followup:clarify'] };
   if (/^(melyik|melyiket|az elsot|az elso|a masodikat|a masodik)$/.test(text)) return { goal: 'compare_products', intent: 'select_recommendation', domain: 'conversation', evidence: ['followup:selection'] };
   if (productQuestion === 'usage' || /^(es )?(hogyan|hogy) hasznaljam/.test(text)) return { goal: 'ask_usage', intent: 'product_usage', domain: 'product', evidence: ['followup:usage'] };
-  if (['product_information', 'scent'].includes(productQuestion)) return { goal: 'ask_product_information', intent: productQuestion, domain: 'product', evidence: [`followup:${productQuestion}`] };
+  if (['product_information', 'benefits', 'suitability', 'ingredients', 'ingredient_existence', 'scent'].includes(productQuestion)) return { goal: 'ask_product_information', intent: productQuestion, domain: 'product', evidence: [`followup:${productQuestion}`] };
   if (/\b(gyereknek|gyermeknek|babanak|[0-9]{1,2} eves)\b/.test(text)) return { goal: 'ask_child_usage', intent: 'child_usage', domain: 'child_usage', evidence: ['goal:child_usage'] };
   if (productQuestion === 'variant' || /\b(nagyobb|kisebb|kiszereles|meret|valtozat)\b/.test(text)) return { goal: 'ask_variant', intent: 'variant_query', domain: 'product', evidence: ['followup:variant'] };
   const problem = detectProblemIntent(question);

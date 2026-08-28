@@ -8,7 +8,7 @@ const { evaluateSafety } = require('./safety-gate.cjs');
 const { createCatalogSearch } = require('./catalog-search.cjs');
 const { evaluateKnowledgeConfidence } = require('./routing-confidence.cjs');
 const { buildConversationContext, resolveProductReference } = require('./conversation-context.cjs');
-const { findProductInText } = require('./product-faq.cjs');
+const { findProductInText, findProductsInText } = require('./product-faq.cjs');
 const { resolveMetaIntent } = require('./meta-intents.cjs');
 const { searchKnowledge } = require('./knowledge-fallback.cjs');
 const {detectExcludedProductTypes,detectProductTypeConstraint,inferredHairType,HAIR_WASH_TYPES}=require('./product-type-constraint.cjs');
@@ -66,6 +66,15 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
   }
 
   const directCanonical = findProductInText(normalize(question));
+  const directCanonicalIds = findProductsInText(normalize(question));
+  const contextualComparisonIds = productQuestionIntent === 'comparison' && directCanonicalIds.length < 2 && /\b(koztuk|kettejuk|mindketto)\b/.test(normalizedCurrent)
+    ? [...new Set(context.lastRecommendedProducts || [])].filter((id) => require('./product-catalog.cjs').PRODUCTS[id]).slice(0, 2)
+    : [];
+  const comparisonIds = directCanonicalIds.length === 2 ? directCanonicalIds : contextualComparisonIds.length === 2 ? contextualComparisonIds : [];
+  if (productQuestionIntent === 'comparison') {
+    if (comparisonIds.length === 2) return decision({ ...base, route: 'product_comparison', intent: 'compare_products', goal: 'compare_products', domain: 'product', contextUsed: directCanonicalIds.length < 2, contextTarget: null, matchedCanonicalIds: comparisonIds, matchedProductIds: comparisonIds, confidence: 1, threshold: 1, responseSource: 'product-facts' });
+    if (directCanonicalIds.length !== 1) return decision({ ...base, route: 'clarification', intent: 'compare_products', goal: 'compare_products', contextTarget: 'products', confidence: 1, threshold: 1, rejectionReasons: ['missing_comparison_products'], responseSource: 'conversation-context' });
+  }
   const commerce = detectCommerceIntent(question);
   if (commerce) {
     const needsProduct = ['price_query', 'availability_query'].includes(commerce.intent);
@@ -85,6 +94,10 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
 
   if (/\b(sls|sles|sodium lauryl sulfate|sodium laureth sulfate)\b/.test(normalize(question))) {
     return decision({ ...base, route: 'expert_rule', intent: 'ingredient-question', matchedRuleId: 'sls-sles-free', confidence: 1, threshold: 1, responseSource: 'expert-sls-sles' });
+  }
+
+  if (directCanonical && ['ingredients', 'ingredient_existence', 'benefits', 'usage', 'price'].includes(productQuestionIntent)) {
+    return decision({ ...base, route: 'exact_product', intent: productQuestionIntent === 'ingredient_existence' ? 'ingredients' : productQuestionIntent, goal: base.goal, domain: 'product', matchedCanonicalIds: [directCanonical], matchedProductIds: [directCanonical], confidence: 1, threshold: 1, responseSource: 'product-facts' });
   }
 
   const attributeIntent=/\b(osszetevo\w*|inci)\b/.test(normalize(question))?'ingredients':/\b(illat\w*)\b/.test(normalize(question))?'scent':null;

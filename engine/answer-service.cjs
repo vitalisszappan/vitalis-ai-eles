@@ -133,6 +133,36 @@ function materializePlannedAnswer(plan, routing) {
   const productIds = plan.targetProductId ? [plan.targetProductId, ...(plan.relatedProductIds || [])] : [];
   const links = productCards([...new Set(productIds)]);
   const base = { source: 'answer-planner', confidence: 100, links, suggestions: [], ruleId: null, intent: routing?.intent || plan.answerIntent, matchedKnowledgeIds: [], ...metadata };
+  if (plan.responseStrategy === 'clarify_comparison') return { ...base, answer: 'Melyik két terméket hasonlítsam össze?', links: [] };
+  if (plan.answerIntent === 'comparison') {
+    const ids = plan.comparisonProductIds || productIds;
+    const cards = productCards(ids);
+    const facts = Object.fromEntries((plan.factsUsed || []).map((fact) => [fact.productId, fact]));
+    const name = (id) => cards.find((card) => card.id === id)?.name || PRODUCTS[id]?.name || id;
+    const fact = (id) => facts[id];
+    let answer;
+    if (plan.comparisonFactType === 'price') {
+      const a = fact(ids[0]), b = fact(ids[1]);
+      if (a?.status === 'grounded' && b?.status === 'grounded') {
+        const relation = a.value === b.value ? 'azonos árú' : a.value < b.value ? `${name(ids[0])} az olcsóbb` : `${name(ids[1])} az olcsóbb`;
+        answer = `${name(ids[0])}: ${formatWholeForint(a.value)} Ft; ${name(ids[1])}: ${formatWholeForint(b.value)} Ft. ${relation}.`;
+      } else answer = `A két termék árát nem tudom teljes körűen összehasonlítani, mert ${[...ids].filter((id) => fact(id)?.status !== 'grounded').map(name).join(' és ')} aktuális ára nem elérhető bizonyított adatként.`;
+    } else if (plan.comparisonFactType === 'ingredients') {
+      const available = ids.filter((id) => fact(id)?.status === 'grounded');
+      answer = available.length === 2
+        ? `${name(ids[0])} összetevői: ${fact(ids[0]).value.map((item) => item.rawName).join(', ')}. ${name(ids[1])} összetevői: ${fact(ids[1]).value.map((item) => item.rawName).join(', ')}.`
+        : `Az összetevőket nem tudom teljes körűen összehasonlítani: ${ids.filter((id) => fact(id)?.status !== 'grounded').map(name).join(' és ')} bizonyított összetevőlistája nem elérhető.`;
+    } else if (plan.comparisonFactType === 'usageInstructions') {
+      answer = ids.every((id) => fact(id)?.status === 'grounded')
+        ? `${name(ids[0])} használata: ${fact(ids[0]).value} ${name(ids[1])} használata: ${fact(ids[1]).value}`
+        : `A használatukat nem tudom teljes körűen összehasonlítani: ${ids.filter((id) => fact(id)?.status !== 'grounded').map(name).join(' és ')} bizonyított használati útmutatója nem elérhető.`;
+    } else {
+      const description = (id) => (fact(id)?.status === 'grounded' ? fact(id).value?.[0]?.claim : null)?.replace(/[.]+$/, '');
+      answer = `${name(ids[0])}: ${description(ids[0]) || 'nincs elérhető bizonyított cél- vagy előnyleírás'}. ${name(ids[1])}: ${description(ids[1]) || 'nincs elérhető bizonyított cél- vagy előnyleírás'}.`;
+      if (plan.comparisonRequiresChoice) answer += ' Az, hogy melyik jobb választás, attól függ, milyen igényre keresed.';
+    }
+    return { ...base, answer, links: cards };
+  }
   if (plan.responseStrategy === 'clarify_product') return { ...base, answer: 'Melyik termékre gondolsz?', links: [] };
   const byType = Object.fromEntries(plan.factsUsed.map((fact) => [fact.factType, fact]));
   const firstClaim = (fact) => fact?.status === 'grounded' && Array.isArray(fact.value) ? fact.value[0]?.claim : null;
@@ -160,7 +190,7 @@ function materializePlannedAnswer(plan, routing) {
       return { ...base, answer: existence.value ? `Igen, az összetevők között szerepel ${article} ${label}.` : `A jelenlegi bizonyított összetevőlistában nem szerepel ${label}.` };
     }
     if (ingredients?.status !== 'grounded') return { ...base, answer: 'Ehhez a termékhez nincs elérhető, bizonyított összetevőlistánk.' };
-    return { ...base, answer: `Az összetevői: ${ingredients.value.map((item) => item.rawName).join(', ')}.` };
+    return { ...base, answer: `Az összetevői: ${ingredients.value.map((item) => item.rawName).join(', ').replace(/[.]+$/, '')}.` };
   }
   if (plan.answerIntent === 'ingredient_benefit') {
     const existence = byType.ingredientExistence;
@@ -298,10 +328,13 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
     const recommendation = routing.productQuestionIntent === 'recommendation';
     const preferred = /erzekeny\w* bor/.test(q) ? products.find((item) => /natur kecsketejes/.test(normalize(item.name))) : products[0];
     const recommendationReason = /erzekeny\w* bor/.test(q) ? 'Illatmentes, érzékeny és száraz bőrre készült.' : /normal\w* bor/.test(q) ? 'A leírása szerint normál bőrre készült.' : 'A leírása szerint megfelel annak, amit keresel.';
-    const answer = recommendation
+    const genericCreamDiscovery = recommendation && routing.domain === 'cream' && !/\b(?:borre|arcra|kezre|testre|szaraz|erzekeny|irritalt|ekcem|pattanas|problem)\w*\b/.test(q);
+    const answer = genericCreamDiscovery ? 'Milyen bőrigényre keresel krémet?'
+      : recommendation
       ? (preferred ? `A ${recommendationName(preferred.name)} ajánlom. ${recommendationReason}` : `Ezek felelnek meg a leírtaknak: ${names}.`)
       : /tusfurdo/.test(q) ? 'Igen. Mentás-citromos, rózsás és levendulás tusfürdőnk van.' : `Igen, van ${found.category.label}. Ezek közül választhatsz: ${names}.${distinction}`;
-    return attachDecision({ source: 'unas-catalog', answer, confidence: 100, links: products.slice(0, 3).map(catalogCard), suggestions: [], ruleId: null, intent: recommendation ? 'product_recommendation' : 'catalog_category_found', matchedKnowledgeIds: [] }, routing);
+    const discoveryLinks = genericCreamDiscovery && !(routing.excludedProductTypes || []).length ? [] : products.slice(0, 3).map(catalogCard);
+    return attachDecision({ source: 'unas-catalog', answer, confidence: 100, links: discoveryLinks, suggestions: [], ruleId: null, intent: genericCreamDiscovery ? 'conversation-clarification' : recommendation ? 'product_recommendation' : 'catalog_category_found', matchedKnowledgeIds: [] }, routing);
   }
 
   if (routing.route === 'problem_domain') {

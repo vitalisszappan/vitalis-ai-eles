@@ -16,7 +16,7 @@ function determineAnswerMode(question, routing) {
 
   const explanatory = routing.route === 'hair_type_knowledge' ||
     ['ask_usage', 'ask_child_usage', 'clarify_previous_answer'].includes(routing.goal) ||
-    ['product_usage', 'product_information', 'scent', 'ingredients', 'compare_products', 'product_type_comparison'].includes(routing.intent) ||
+    ['product_usage', 'product_information', 'benefits', 'suitability', 'scent', 'ingredients', 'compare_products', 'product_type_comparison'].includes(routing.intent) ||
     /\b(kulonbseg|miben mas|hogyan|hogy hasznal|miert|jelsz\w*|belep\w*)\b/.test(text);
   if (explanatory) return ANSWER_MODES.EXPLANATORY;
 
