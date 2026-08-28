@@ -30,8 +30,16 @@ function humanize(value = '') {
   return text;
 }
 
+const EMAIL_DOT = '\uE000';
+
+function sentenceParts(text) {
+  const protectedText = humanize(text).replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, (email) => email.replace(/\./g, EMAIL_DOT));
+  return (protectedText.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [])
+    .map((part) => clean(part.replaceAll(EMAIL_DOT, '.'))).filter(Boolean);
+}
+
 function splitSafety(text) {
-  const sentences = humanize(text).match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [];
+  const sentences = sentenceParts(text);
   const safety = [];
   const body = [];
   for (const sentence of sentences.map(clean).filter(Boolean)) {
@@ -41,7 +49,7 @@ function splitSafety(text) {
 }
 
 function sentences(text) {
-  return humanize(text).match(/[^.!?]+[.!?]+|[^.!?]+$/g)?.map(clean).filter(Boolean) || [];
+  return sentenceParts(text);
 }
 
 function sentenceMaximum(decision) {

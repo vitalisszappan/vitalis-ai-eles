@@ -175,13 +175,17 @@ const integrationCases = [
   ['tegnap leugrottam egy 3 emeletes szallitasrol', 'REJECT'],
   ['ránc', 'REJECT'],
   ['mit tegyek ha a szappan irritalja a borom?', 'REJECT'],
-  ['milyen termékeitek vannak?', 'REJECT'],
+  ['milyen termékeitek vannak?', 'ACCEPT'],
   ['garancia', 'REJECT'], ['elérhetőség', 'ACCEPT'], ['nyitvatartás', 'REJECT'], ['kedvezmény', 'REJECT']
 ];
 for (const [q, expected] of integrationCases) {
   const selected = routeAnswer({ question: q, history: [], knowledge, ruleEngine });
   const result = guard(q, selected);
   assert.equal(result.decision, expected, `${q}: route=${selected.route} ${JSON.stringify(result)}`);
+  if (q === 'milyen termékeitek vannak?') {
+    assert.equal(selected.route, 'business_info');
+    assert.equal(selected.intent, 'general_catalog');
+  }
   assertions++;
   adversarialCases++;
 }

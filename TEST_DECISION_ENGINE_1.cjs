@@ -68,8 +68,8 @@ const cases = [
   { q: 'van készleten?', route: 'clarification', goal: 'ask_availability', intent: 'availability_query' },
   { q: 'van készleten?', h: dermavitalHistory, route: 'commerce', goal: 'ask_availability', context: true, links: true },
   { q: 'hogy szállítotok?', route: 'commerce', goal: 'ask_shipping', intent: 'shipping_general' },
-  { q: 'mennyi a szállítási díj?', route: 'commerce', goal: 'ask_shipping', intent: 'shipping_cost' },
-  { q: 'mikor érkezik meg?', route: 'commerce', goal: 'ask_shipping', intent: 'shipping_time' },
+  { q: 'mennyi a szállítási díj?', route: 'business_info', goal: 'business_information', intent: 'shipping_cost' },
+  { q: 'mikor érkezik meg?', route: 'business_info', goal: 'business_information', intent: 'shipping_time' },
   { q: 'lehet utánvéttel fizetni?', route: 'commerce', goal: 'ask_payment', intent: 'payment' },
 
   // Follow-up/context

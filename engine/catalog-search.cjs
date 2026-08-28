@@ -81,7 +81,14 @@ function createCatalogSearch(snapshotPath = DEFAULT_SNAPSHOT) {
     }).filter((item) => item.exact || item.coverage === 1).sort((a, b) => Number(b.exact) - Number(a.exact) || b.product.normalizedName.length - a.product.normalizedName.length);
     return candidates[0]?.product || null;
   }
-  return { all: load, detectCategory, searchCategory, findExactProduct };
+  function categorySummary() {
+    const excluded = new Set(['osszes termekunk', 'problemak es megoldasok']);
+    return [...new Set(load().flatMap((product) => product.category)
+      .map((value) => String(value).split('|')[0].trim())
+      .filter((value) => value && !excluded.has(normalize(value))))]
+      .sort((left, right) => left.localeCompare(right, 'hu'));
+  }
+  return { all: load, detectCategory, searchCategory, findExactProduct, categorySummary };
 }
 
 module.exports = { CATEGORY_DEFINITIONS, createCatalogSearch, validUrl };

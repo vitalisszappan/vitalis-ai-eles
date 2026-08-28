@@ -48,6 +48,7 @@ const { buildSemanticEvidence } = require('./semantic-evidence.cjs');
 const { validateSemanticRoute } = require('./semantic-route-guard.cjs');
 const { applySemanticGuardEnforcement } = require('./semantic-guard-enforcement.cjs');
 const { resolveComplaint } = require('./complaint-resolution.cjs');
+const { resolveBusinessInfo } = require('./business-info.cjs');
 
 const decisionCatalog = createCatalogSearch();
 
@@ -185,6 +186,7 @@ function materializePlannedAnswer(plan, routing) {
 }
 
 function materializeDecision({ routing, question, history, knowledge, ruleEngine, logGap, conversationState, technicalFailure, logDiagnostic, answerPlan = null }) {
+  if (routing.route === 'business_info') return attachDecision(resolveBusinessInfo(routing.intent, decisionCatalog), routing);
   const planned = materializePlannedAnswer(answerPlan, routing);
   if (planned) return attachDecision(planned, routing);
   if (routing.responseSource === 'meta-intent') return attachDecision(resolveMetaIntent(question), routing);

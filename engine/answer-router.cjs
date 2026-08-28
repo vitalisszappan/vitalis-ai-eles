@@ -15,6 +15,7 @@ const {detectExcludedProductTypes,detectProductTypeConstraint,inferredHairType,H
 const {isTypeComparison}=require('./hair-wash-products.cjs');
 const {determineAnswerMode}=require('./answer-mode.cjs');
 const {detectProductQuestionIntent}=require('./product-question-intent.cjs');
+const { detectBusinessInfo } = require('./business-info.cjs');
 
 const catalog = createCatalogSearch();
 
@@ -53,6 +54,11 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
   }
   if (safety.safetyClass === 'caution_with_boundary') {
     return decision({ ...base, route: 'safety', goal: 'medical_boundary', intent: 'cosmetic_boundary', confidence: 1, threshold: 1, responseSource: 'safety-gate' });
+  }
+
+  const businessInfo = detectBusinessInfo(question);
+  if (businessInfo) {
+    return decision({ ...base, route: 'business_info', intent: businessInfo.intent, goal: 'business_information', domain: 'business_info', contextUsed: false, contextTarget: null, matchedCanonicalIds: [], matchedProductIds: [], primaryProductId: null, confidence: 1, threshold: 1, responseSource: 'business-info' });
   }
 
   const directCanonical = findProductInText(normalize(question));
