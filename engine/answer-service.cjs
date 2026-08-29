@@ -146,24 +146,64 @@ function materializePlannedAnswer(plan, routing) {
     const name = (id) => cards.find((card) => card.id === id)?.name || PRODUCTS[id]?.name || id;
     const fact = (id) => facts[id];
     let answer;
+    const missingComparisonFallback = () => {
+      const missingIds = ids.filter((id) => fact(id)?.status !== 'grounded');
+      if (missingIds.length === 0) return null;
+      if (missingIds.length === 1) {
+        return `${name(missingIds[0])} esetében jelenleg nincs elég biztos információm ahhoz, hogy a két terméket megbízhatóan összehasonlítsam.`;
+      }
+      return 'Erről a két termékről jelenleg nincs elég biztos információm ahhoz, hogy megbízhatóan összehasonlítsam őket.';
+    };
     if (plan.comparisonFactType === 'price') {
       const a = fact(ids[0]), b = fact(ids[1]);
       if (a?.status === 'grounded' && b?.status === 'grounded') {
         const relation = a.value === b.value ? 'azonos árú' : a.value < b.value ? `${name(ids[0])} az olcsóbb` : `${name(ids[1])} az olcsóbb`;
         answer = `${name(ids[0])}: ${formatWholeForint(a.value)} Ft; ${name(ids[1])}: ${formatWholeForint(b.value)} Ft. ${relation}.`;
-      } else answer = `A két termék árát nem tudom teljes körűen összehasonlítani, mert ${[...ids].filter((id) => fact(id)?.status !== 'grounded').map(name).join(' és ')} aktuális ára nem elérhető bizonyított adatként.`;
+      } else {
+        const groundedIds = ids.filter((id) => fact(id)?.status === 'grounded');
+        if (groundedIds.length === 1) {
+          const groundedId = groundedIds[0];
+          const missingId = ids.find((id) => id !== groundedId);
+          answer = `${name(groundedId)} árát tudom megerősíteni. ${name(missingId)} esetében jelenleg nincs elég biztos információm ahhoz, hogy a két terméket megbízhatóan összehasonlítsam.`;
+        } else {
+          answer = missingComparisonFallback() || 'A két termék árát nem tudom teljes körűen összehasonlítani.';
+        }
+      }
     } else if (plan.comparisonFactType === 'ingredients') {
       const available = ids.filter((id) => fact(id)?.status === 'grounded');
-      answer = available.length === 2
-        ? `${name(ids[0])} összetevői: ${fact(ids[0]).value.map((item) => item.rawName).join(', ')}. ${name(ids[1])} összetevői: ${fact(ids[1]).value.map((item) => item.rawName).join(', ')}.`
-        : `Az összetevőket nem tudom teljes körűen összehasonlítani: ${ids.filter((id) => fact(id)?.status !== 'grounded').map(name).join(' és ')} bizonyított összetevőlistája nem elérhető.`;
+      if (available.length === 2) {
+        answer = `${name(ids[0])} összetevői: ${fact(ids[0]).value.map((item) => item.rawName).join(', ')}. ${name(ids[1])} összetevői: ${fact(ids[1]).value.map((item) => item.rawName).join(', ')}.`;
+      } else if (available.length === 1) {
+        const groundedId = available[0];
+        const missingId = ids.find((id) => id !== groundedId);
+        answer = `${name(groundedId)} összetevői: ${fact(groundedId).value.map((item) => item.rawName).join(', ')}. ${name(missingId)} esetében jelenleg nincs elég biztos információm ahhoz, hogy a két terméket megbízhatóan összehasonlítsam.`;
+      } else {
+        answer = missingComparisonFallback() || 'Erről a két termékről jelenleg nincs elég biztos információm ahhoz, hogy érdemi különbséget mondjak.';
+      }
     } else if (plan.comparisonFactType === 'usageInstructions') {
-      answer = ids.every((id) => fact(id)?.status === 'grounded')
-        ? `${name(ids[0])} használata: ${fact(ids[0]).value} ${name(ids[1])} használata: ${fact(ids[1]).value}`
-        : `A használatukat nem tudom teljes körűen összehasonlítani: ${ids.filter((id) => fact(id)?.status !== 'grounded').map(name).join(' és ')} bizonyított használati útmutatója nem elérhető.`;
+      const groundedIds = ids.filter((id) => fact(id)?.status === 'grounded');
+      if (groundedIds.length === 2) {
+        answer = `${name(ids[0])} használata: ${fact(ids[0]).value} ${name(ids[1])} használata: ${fact(ids[1]).value}`;
+      } else if (groundedIds.length === 1) {
+        const groundedId = groundedIds[0];
+        const missingId = ids.find((id) => id !== groundedId);
+        answer = `${name(groundedId)} használata: ${fact(groundedId).value}. ${name(missingId)} esetében jelenleg nincs elég biztos információm ahhoz, hogy a két terméket megbízhatóan összehasonlítsam.`;
+      } else {
+        answer = missingComparisonFallback() || 'Erről a két termékről jelenleg nincs elég biztos információm ahhoz, hogy érdemi különbséget mondjak.';
+      }
     } else {
       const description = (id) => (fact(id)?.status === 'grounded' ? fact(id).value?.[0]?.claim : null)?.replace(/[.]+$/, '');
-      answer = `${name(ids[0])}: ${description(ids[0]) || 'nincs elérhető bizonyított cél- vagy előnyleírás'}. ${name(ids[1])}: ${description(ids[1]) || 'nincs elérhető bizonyított cél- vagy előnyleírás'}.`;
+      const bothMissing = ids.every((id) => fact(id)?.status !== 'grounded');
+      const groundedIds = ids.filter((id) => fact(id)?.status === 'grounded');
+      if (bothMissing) {
+        answer = 'Erről a két termékről jelenleg nincs elég biztos információm ahhoz, hogy megbízhatóan összehasonlítsam őket.';
+      } else if (groundedIds.length === 1) {
+        const groundedId = groundedIds[0];
+        const missingId = ids.find((id) => id !== groundedId);
+        answer = `${name(groundedId)}: ${description(groundedId)}. ${name(missingId)} esetében jelenleg nincs elég biztos információm ahhoz, hogy a két terméket megbízhatóan összehasonlítsam.`;
+      } else {
+        answer = `${name(ids[0])}: ${description(ids[0])}. ${name(ids[1])}: ${description(ids[1])}.`;
+      }
       if (plan.comparisonRequiresChoice) answer += ' Az, hogy melyik jobb választás, attól függ, milyen igényre keresed.';
     }
     return { ...base, answer, links: cards };
