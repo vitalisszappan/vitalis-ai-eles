@@ -787,8 +787,8 @@
     "questionVariants": [
       "Férjemnek keresek megfelelő só szappant amivel tudnám kezelni az aknés hátát arcát"
     ],
-    "shortAnswer": "A sószappannál sokkal megfelelőbb a Gyógyászati kátrány szappan és az aktív szenes szappan. Minden nap, tetőtől talpig használhatja. Mindkettőt az aknés bőrre fejlesztettük.",
-    "fullAnswer": "A sószappannál sokkal megfelelőbb a Gyógyászati kátrány szappan és az aktív szenes szappan. Minden nap, tetőtől talpig használhatja. Mindkettőt az aknés bőrre fejlesztettük.",
+    "shortAnswer": "A Kátrány szappant zsíros, problémás, pattanásos és aknés bőrre, az Aktív szenes szappant kombinált, enyhén zsíros és mitesszeres bőrre ajánljuk.",
+    "fullAnswer": "A Kátrány szappant zsíros, problémás, pattanásos és aknés bőrre, az Aktív szenes szappant kombinált, enyhén zsíros és mitesszeres bőrre ajánljuk.",
     "category": "egyeb",
     "products": [
       "kezmuves-szappan"
@@ -2623,8 +2623,8 @@
     "questionVariants": [
       "Szia! Aknés, zsíros érett bőrre (48 éves vagyok) milyen terméket tudsz ajánlani?"
     ],
-    "shortAnswer": "Szia, szappanokat fogok ajánlani, amelyekez minden nap használhatsz. Kiemelkedő hatású az aknéra a Gyógyászati kátrány szappan. Jó lehet még az Aktív szenes, Teafa és a Holt tengeri iszap szappan. Lehet váltakozva használni.",
-    "fullAnswer": "Szia, szappanokat fogok ajánlani, amelyekez minden nap használhatsz. Kiemelkedő hatású az aknéra a Gyógyászati kátrány szappan. Jó lehet még az Aktív szenes, Teafa és a Holt tengeri iszap szappan. Lehet váltakozva használni.",
+    "shortAnswer": "A Kátrány szappant zsíros, problémás, pattanásos és aknés bőrre ajánljuk.",
+    "fullAnswer": "A Kátrány szappant zsíros, problémás, pattanásos és aknés bőrre ajánljuk.",
     "category": "termekajanlas",
     "products": [
       "holt-tengeri-so-balzsam",

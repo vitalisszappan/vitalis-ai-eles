@@ -106,7 +106,10 @@ function mergeProduct(canonicalId, canonicalProduct, index) {
   const currency = cleanText(product.currency);
   const availability = availabilityFrom(product);
 
-  if (name) base.name = name;
+  if (name) {
+    base.commerceName = name;
+    if (!cleanText(base.displayName)) base.name = name;
+  }
   if (url) base.url = url;
   if (image) base.image = image;
   if (price !== null) base.price = price;

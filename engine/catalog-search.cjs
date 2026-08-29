@@ -1,11 +1,14 @@
 'use strict';
 
 const fs = require('fs');
+const path = require('path');
 const { normalize } = require('./normalizer.cjs');
 const {inferredHairType}=require('./product-type-constraint.cjs');
 const { resolveUnasCatalogSnapshotPath } = require('./unas-catalog-path.cjs');
+const { PRODUCTS } = require('./product-catalog.cjs');
 
 const DEFAULT_SNAPSHOT = resolveUnasCatalogSnapshotPath();
+const DEFAULT_MAPPING = path.join(__dirname, '..', 'data', 'canonical-unas-mapping.json');
 const CATEGORY_DEFINITIONS = [
   { id: 'shower_gel', label: 'tusfürdő', query: /\b(tusfurdo|tusfurdotok|folyekony szappan)\w*/, product: /\b(tusfurdo|folyekony szappan)\w*/ },
   { id: 'sunscreen', label: 'naptej/fényvédő', query: /\b(naptej|fenyvedo|fenyvedelem|spf)\w*/, product: /\b(naptej|fenyvedo|spf ?[0-9]*)\w*/ },
@@ -29,14 +32,17 @@ function productText(product) {
   return normalize([product.name, ...(product.categoryNames || [])].filter(Boolean).join(' '));
 }
 
-function safeProduct(product) {
+function safeProduct(product, canonicalId = null) {
   const image = validUrl(product.image?.url) || validUrl(product.image?.sefUrl);
   const price = Number.isFinite(product.actualPriceGross) ? product.actualPriceGross
     : Number.isFinite(product.priceGross) ? product.priceGross : null;
   const size = normalize(product.name).match(/\b\d+(?:[.,]\d+)?\s*(?:ml|g|kg|db)\b/)?.[0] || '';
+  const displayName = canonicalId && PRODUCTS[canonicalId]?.displayName;
   const safe={
     id: String(product.unasId || product.sku || ''), unasId: String(product.unasId || ''), sku: String(product.sku || ''),
-    name: String(product.name || '').trim(), normalizedName: normalize(product.name), aliases: [],
+    canonicalProductId: canonicalId || null,
+    name: String(displayName || product.name || '').trim(), commerceName: String(product.name || '').trim(),
+    normalizedName: normalize(displayName || product.name), aliases: [],
     category: (product.categoryNames || []).map(String), public: product.public !== false,
     active: product.active !== false && product.status?.state !== 'disabled', orderable: product.orderable !== false,
     size, price, currency: product.currency || 'HUF', url: validUrl(product.url), image
@@ -55,7 +61,15 @@ function createCatalogSearch(snapshotPath = DEFAULT_SNAPSHOT) {
     signature = next;
     try {
       const parsed = JSON.parse(fs.readFileSync(snapshotPath, 'utf8'));
-      products = (Array.isArray(parsed.products) ? parsed.products : []).map(safeProduct)
+      const mappingData = JSON.parse(fs.readFileSync(DEFAULT_MAPPING, 'utf8'));
+      const approvedByUnasId = new Map((mappingData.mappings || [])
+        .filter((item) => item?.mappingStatus === 'approved' && item.unasId && item.sku)
+        .map((item) => [String(item.unasId), item]));
+      products = (Array.isArray(parsed.products) ? parsed.products : []).map((product) => {
+        const mapping = approvedByUnasId.get(String(product?.unasId || ''));
+        const canonicalId = mapping && String(product?.sku || '') === String(mapping.sku) ? mapping.canonicalId : null;
+        return safeProduct(product, canonicalId);
+      })
         .filter((item) => item.name && item.url && item.public && item.active && item.orderable);
     } catch { products = []; }
     return products;

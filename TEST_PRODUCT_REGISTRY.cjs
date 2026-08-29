@@ -43,6 +43,7 @@ const approvedRegistry = registry(
   [snapshotProduct()]
 );
 const approvedCard = productCards(['dermavital_sampon'], { registry: approvedRegistry })[0];
+assert.equal(approvedRegistry.resolve('dermavital_sampon', PRODUCTS.dermavital_sampon).commerceName, 'UNAS hivatalos terméknév');
 assert.equal(approvedCard.url, 'https://www.vitalis-szappan.hu/unas-termek');
 assert.equal(approvedCard.image, 'https://cdn.example.invalid/product.jpg');
 assert.equal(approvedCard.price, 3490);
@@ -71,9 +72,9 @@ assert.deepEqual(
   fallbackCards,
   allIds.map((id, index) => ({
     id,
-    name: PRODUCTS[id].name,
-    title: PRODUCTS[id].name,
-    label: PRODUCTS[id].name,
+    name: PRODUCTS[id].displayName || PRODUCTS[id].name,
+    title: PRODUCTS[id].displayName || PRODUCTS[id].name,
+    label: PRODUCTS[id].displayName || PRODUCTS[id].name,
     description: PRODUCTS[id].description,
     url: validProductUrl(PRODUCTS[id].url),
     image: '',
@@ -219,7 +220,7 @@ if (fs.existsSync(liveSnapshotPath)) {
     assert(snapshotItem, mappingItem.canonicalId);
     assert.equal(snapshotItem.sku, mappingItem.sku);
     assert.equal(card.id, mappingItem.canonicalId);
-    assert.equal(card.name, snapshotItem.name);
+    assert.equal(card.name, PRODUCTS[mappingItem.canonicalId].displayName || snapshotItem.name);
     assert.equal(card.url, snapshotItem.url);
     assert.ok(card.image);
     assert.equal(card.price, snapshotItem.actualPriceGross ?? snapshotItem.priceGross);

@@ -52,6 +52,7 @@ const { detectResolvedComplaintTransition } = require('./complaint-intents.cjs')
 const { structuredState } = require('./conversation-memory.cjs');
 const { resolveBusinessInfo } = require('./business-info.cjs');
 const { createCommerceAssistance } = require('./commerce-assistance.cjs');
+const { validateStructuredOutput } = require('./structured-output-safety.cjs');
 
 const decisionCatalog = createCatalogSearch();
 const commerceAssistance = createCommerceAssistance({ catalog: decisionCatalog });
@@ -1645,7 +1646,7 @@ function historyAfterComplaintBoundary(history = []) {
    FŐ VÁLASZKÉPZÉS
 ========================================================= */
 
-function createAnswer({
+function createAnswerUnsafe({
   question,
   history,
   knowledge,
@@ -1936,6 +1937,10 @@ function createAnswer({
     best.item,
     best.score
   );
+}
+
+function createAnswer(options) {
+  return validateStructuredOutput(createAnswerUnsafe(options));
 }
 
 module.exports = {

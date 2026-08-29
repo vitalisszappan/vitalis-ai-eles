@@ -62,6 +62,7 @@ const PRODUCTS = {
   katrany_szappan: {
     id: 'katrany_szappan',
     name: 'Gyógyászati kátrány szappan',
+    displayName: 'Kátrány szappan',
     description: 'Makacsabb, problémás és pattanásos bőr tisztítására.',
     url: null,
     image: null
@@ -161,7 +162,7 @@ function productCards(ids = [], options = {}) {
       if (!canonicalProduct) return null;
       const product = registry.resolve(id, canonicalProduct);
       if (!product) return null;
-      const name = cleanText(product.name, 'Vitalis termék');
+      const name = cleanText(canonicalProduct.displayName, cleanText(product.name, 'Vitalis termék'));
       const card = {
         id: cleanText(product.id, String(id || `product_${index + 1}`)),
         name,

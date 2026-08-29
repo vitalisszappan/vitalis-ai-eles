@@ -45,7 +45,7 @@ for (const name of [
   'gyógyászati-kátrány-szappan',
   'kátrányszappan'
 ]) {
-  assertProductName(name, 'katrany_szappan', 'Gyógyászati kátrány szappan');
+  assertProductName(name, 'katrany_szappan', 'Kátrány szappan');
 }
 
 for (const name of [
