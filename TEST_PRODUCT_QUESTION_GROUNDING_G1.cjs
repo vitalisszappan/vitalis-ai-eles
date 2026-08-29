@@ -9,6 +9,7 @@ process.once('exit', restoreCatalogFixture);
 const { createAnswer } = require('./engine/answer-service.cjs');
 const { structuredState } = require('./engine/conversation-memory.cjs');
 const { ExpertRuleEngine } = require('./engine/rule-engine.cjs');
+const { detectProductQuestionIntent } = require('./engine/product-question-intent.cjs');
 
 const knowledge = JSON.parse(fs.readFileSync('data/knowledge.json', 'utf8'));
 const ruleEngine = new ExpertRuleEngine('data/rules/expert-rules.json');
@@ -39,6 +40,9 @@ result = ask('Mennyibe kerül?', history); assert.equal(result.answerIntent, 'pr
 
 result = ask('Mi a különbség a Dermavital sampon és a rozmaringos samponszappan között?');
 assert.equal(result.answerIntent, 'comparison'); assert.deepEqual(result.links.map((item) => item.id), ['dermavital_sampon', 'rozmaringos_samponszappan']); assert.match(result.answer, /Dermavital/); assert.match(result.answer, /Samponszappan/); // 14
+assert.equal(detectProductQuestionIntent('Dermavital sampon vs rozmaringos samponszappan'), 'comparison');
+result = ask('Dermavital sampon vs rozmaringos samponszappan');
+assert.equal(result.route, 'product_comparison'); assert.equal(result.intent, 'compare_products'); assert.deepEqual(result.routing.matchedProductIds, ['dermavital_sampon', 'rozmaringos_samponszappan']); assert.equal(result.groundingStatus, 'grounded'); assert.deepEqual(result.links.map((item) => item.id), ['dermavital_sampon', 'rozmaringos_samponszappan']); assert.match(result.answer, /Dermavital/); assert.match(result.answer, /Samponszappan/);
 result = ask('Hasonlítsd össze a Dermavital sampont és a rozmaringos samponszappant.'); assert.equal(result.answerIntent, 'comparison'); assert.equal(result.links.length, 2);
 result = ask('Melyik olcsóbb: Dermavital krém vagy Holt-tengeri só balzsam?'); assert.equal(result.answerIntent, 'comparison'); assert.match(result.answer, /3 700 Ft/); assert.match(result.answer, /4 290 Ft/); // 15
 result = ask('Mi a különbség a Dermavital sampon és a Holt-tengeri só balzsam összetevői között?'); assert.equal(result.groundingStatus, 'unavailable'); assert.match(result.answer, /nem tudom teljes körűen összehasonlítani/i); // 16

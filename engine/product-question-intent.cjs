@@ -4,7 +4,7 @@ const { normalize } = require('./normalizer.cjs');
 
 function detectProductQuestionIntent(question) {
   const text = normalize(question);
-  if (/\b(osszehasonlit\w*|hasonlit\w*\s+ossze|kulonbseg|miben mas|melyik jobb|melyik olcsobb|olcsobb)\b/.test(text)) return 'comparison';
+  if (/\b(osszehasonlit\w*|hasonlit\w*\s+ossze|kulonbseg|miben mas|melyik jobb|melyik olcsobb|olcsobb|vs)\b/.test(text)) return 'comparison';
   if (/\b(mi van\b.*\b(?:benne|\w+ban|\w+ben)|\bmasik(?:ban|ben)\b.*\bmi van|mik az?\b.*\bosszetevoi|osszetevo\w*|inci(?:je)?|mit tartalmaz|milyen\b.*\bosszetevo)\b/.test(text)) return 'ingredients';
   if (/\b(van\b.*\bbenne\s+\w+|van\b.*\b\w+(?:ban|ben)\s+\w+|tartalmaz\s+(?!a\b)\w+)\b/.test(text) && !/\b(van belole|van mas|van krem|van szappan|van sampon)\b/.test(text)) return 'ingredient_existence';
   if (/\b(hogyan hasznaljam|hogy hasznaljam|hogyan kell hasznalni|ezt hogyan hasznaljam|ezt hogy kell hasznalni|mikor kenjem|milyen gyakran|mennyi ideig hagyjam|hogyan alkalmazzam)\b/.test(text)) return 'usage';
