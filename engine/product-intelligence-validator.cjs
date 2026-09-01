@@ -74,7 +74,7 @@ function validateRegulatoryStatus(record) {
   if (!REGULATORY_AUTHORITIES.includes(record.authority)) errors.push('authority is invalid');
   if (!REGULATORY_EVIDENCE_STATES.includes(record.evidenceState)) errors.push('evidenceState is invalid');
   if (!PUBLIC_CLAIM_KINDS.includes(record.publicClaimKind)) errors.push('publicClaimKind is invalid');
-  if (record.evidenceState === 'evidenced' && record.provenance.sourceType !== 'authoritative') errors.push('evidenced regulatory status requires authoritative provenance');
+  if (record.evidenceState === 'evidenced' && record.provenance?.sourceType !== 'authoritative') errors.push('evidenced regulatory status requires authoritative provenance');
   if (record.evidenceState === 'evidenced' && !validTimestamp(record.effectiveAt)) errors.push('evidenced regulatory status requires effectiveAt');
   if (record.evidenceState === 'evidenced' && !validTimestamp(record.reviewedAt)) errors.push('evidenced regulatory status requires reviewedAt');
   if (record.evidenceState === 'evidenced' && record.publicClaimKind === 'authority_status' && !isNonEmptyString(record.allowedPublicWording)) errors.push('evidenced public authority claim requires allowedPublicWording');
