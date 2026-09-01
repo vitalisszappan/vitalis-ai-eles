@@ -50,13 +50,24 @@ function resolveRegulatoryStatus({ productId, scopeType = 'product', jurisdictio
   return { evidenceState: selected.record.evidenceState, publicClaimAuthorized: selected.record.publicClaimKind === 'authority_status', reasonCode: null, supportingRecordIds: [selected.record.recordId], allowedWording: selected.record.allowedPublicWording || null, enforcement: 'allow' };
 }
 
+function selectClaimAuthorization(records, claimCategory, regulatoryStatus, policy) {
+  const matches = (Array.isArray(records) ? records : []).filter((record) => record?.claimCategory === claimCategory);
+  if (!matches.length) return { record: null, reasonCode: 'MISSING_AUTHORIZATION' };
+  if (matches.some((record) => record.authorizationStatus === 'prohibited')) return { record: null, reasonCode: 'PROHIBITED_AUTHORIZATION' };
+  if (matches.some((record) => record.authorizationStatus === 'unavailable')) return { record: null, reasonCode: 'UNAVAILABLE_AUTHORIZATION' };
+  if (matches.some((record) => !usable(record, (candidate) => validateClaimAuthorization(candidate, regulatoryStatus, policy), CUSTOMER_ANSWER_APPROVALS).usable)) return { record: null, reasonCode: 'UNUSABLE_AUTHORIZATION' };
+  const authorized = matches.filter((record) => record.authorizationStatus === 'authorized');
+  if (authorized.length !== 1) return { record: null, reasonCode: 'CONFLICT' };
+  return { record: authorized[0], reasonCode: null };
+}
+
 function evaluateClaimAuthorization({ claimCategory, policies = [], authorizations = [], regulatoryStatus = null } = {}) {
   if (['diagnosis', 'treatment_cure', 'therapeutic'].includes(claimCategory)) return denied(claimCategory, 'PROHIBITED_CLAIM_CATEGORY');
   const policy = selectSingle(policies, (record) => record?.claimCategory === claimCategory, validateClaimPolicy, REQUIRED_APPROVALS);
   if (!policy.record) return denied(claimCategory, policy.reasonCode === 'CONFLICT' ? 'CONFLICT' : 'MISSING_POLICY');
   if (policy.record.defaultDisposition !== 'allowed_with_authorization') return denied(claimCategory, 'PROHIBITED_CLAIM_CATEGORY', { supportingRecordIds: [policy.record.recordId] });
-  const authorization = selectSingle(authorizations, (record) => record?.claimCategory === claimCategory && record.authorizationStatus === 'authorized', (record) => validateClaimAuthorization(record, regulatoryStatus, policy.record), CUSTOMER_ANSWER_APPROVALS);
-  if (!authorization.record) return denied(claimCategory, authorization.reasonCode === 'CONFLICT' ? 'CONFLICT' : 'MISSING_AUTHORIZATION', { supportingRecordIds: [policy.record.recordId] });
+  const authorization = selectClaimAuthorization(authorizations, claimCategory, regulatoryStatus, policy.record);
+  if (!authorization.record) return denied(claimCategory, authorization.reasonCode, { supportingRecordIds: [policy.record.recordId] });
   if (claimCategory === 'regulatory_authority' && !validateRegulatoryStatus(regulatoryStatus).usable) return denied(claimCategory, 'REGULATORY_STATUS_UNAVAILABLE', { supportingRecordIds: [policy.record.recordId] });
   return { authorized: true, status: 'authorized', reasonCode: null, claimCategory, supportingRecordIds: [policy.record.recordId, authorization.record.recordId, ...(claimCategory === 'regulatory_authority' ? [regulatoryStatus.recordId] : [])], allowedWording: claimCategory === 'regulatory_authority' ? regulatoryStatus.allowedPublicWording : authorization.record.allowedWordingId, limitations: [], enforcement: 'allow' };
 }

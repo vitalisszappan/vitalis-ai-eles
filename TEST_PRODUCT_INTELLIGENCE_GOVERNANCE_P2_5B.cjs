@@ -32,6 +32,14 @@ assert.equal(evaluateClaimAuthorization({ claimCategory: 'cosmetic_descriptive',
 assert.equal(evaluateClaimAuthorization({ claimCategory: 'cosmetic_descriptive', policies: [policy], authorizations: [{ ...authorization, conflictStatus: 'conflicted' }] }).authorized, false);
 assert.equal(evaluateClaimAuthorization({ claimCategory: 'cosmetic_descriptive', policies: [policy], authorizations: [{ ...authorization, lifecycle: 'rejected' }] }).authorized, false);
 assert.equal(evaluateClaimAuthorization({ claimCategory: 'cosmetic_descriptive', policies: [policy], authorizations: [authorization] }).authorized, true);
+const prohibitedAuthorization = { ...authorization, recordId: 'authorization:prohibited', authorizationStatus: 'prohibited' };
+const unavailableAuthorization = { ...authorization, recordId: 'authorization:unavailable', authorizationStatus: 'unavailable' };
+assert.equal(evaluateClaimAuthorization({ claimCategory: 'cosmetic_descriptive', policies: [policy], authorizations: [authorization, prohibitedAuthorization] }).authorized, false);
+assert.equal(evaluateClaimAuthorization({ claimCategory: 'cosmetic_descriptive', policies: [policy], authorizations: [authorization, unavailableAuthorization] }).authorized, false);
+assert.equal(evaluateClaimAuthorization({ claimCategory: 'cosmetic_descriptive', policies: [policy], authorizations: [authorization, { ...authorization, recordId: 'authorization:contradictory-wording', allowedWordingId: 'synthetic-wording:other' }] }).authorized, false);
+assert.equal(evaluateClaimAuthorization({ claimCategory: 'cosmetic_descriptive', policies: [policy], authorizations: [prohibitedAuthorization] }).authorized, false);
+assert.equal(evaluateClaimAuthorization({ claimCategory: 'cosmetic_descriptive', policies: [policy], authorizations: [unavailableAuthorization] }).authorized, false);
+assert.equal(evaluateClaimAuthorization({ claimCategory: 'cosmetic_descriptive', policies: [policy], authorizations: [authorization, { ...prohibitedAuthorization, claimCategory: 'cosmetic_intended_use' }] }).authorized, true);
 assert.equal(evaluateClaimAuthorization({ claimCategory: 'regulatory_authority', policies: [regulatoryPolicy], authorizations: [regulatoryAuthorization] }).authorized, false);
 const regulatoryClaim = evaluateClaimAuthorization({ claimCategory: 'regulatory_authority', policies: [regulatoryPolicy], authorizations: [regulatoryAuthorization], regulatoryStatus: regulatory });
 assert.equal(regulatoryClaim.authorized, true); assert.equal(regulatoryClaim.allowedWording, 'synthetic-wording:authority');
