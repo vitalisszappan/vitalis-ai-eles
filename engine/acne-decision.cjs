@@ -1,6 +1,7 @@
 'use strict';
 
 const { normalize } = require('./normalizer.cjs');
+const { CONCERNS, APPLICATION_AREAS, RECOMMENDATION_ROLES } = require('./product-intelligence-schema.cjs');
 
 const UNKNOWN = 'unknown';
 
@@ -69,7 +70,21 @@ function resolveAcneDecision({ question, history = [], conversationState = null 
   } else if (extracted.blackheads && factors.skinOiliness === 'combination_or_mildly_oily' && /\b(kombinalt|enyhen zsiros)\b/.test(extracted.text)) {
     selectedProductId = 'aktiv_szenes_szappan'; reasonCode = 'blackheads_combination';
   }
-  return { kind: selectedProductId ? 'resolved' : 'clarification', selectedProductId, factors, reasonCode, source: direct ? 'current-turn' : 'conversation-context' };
+  const concernContext = CONCERNS.includes('acne') ? 'acne' : null;
+  const applicationArea = (['face', 'scalp', 'body'].includes(factors.affectedArea) && APPLICATION_AREAS.includes(factors.affectedArea))
+    ? factors.affectedArea
+    : null;
+  const recommendationRole = (selectedProductId && RECOMMENDATION_ROLES.includes('primary')) ? 'primary' : null;
+  return {
+    kind: selectedProductId ? 'resolved' : 'clarification',
+    selectedProductId,
+    factors,
+    reasonCode,
+    source: direct ? 'current-turn' : 'conversation-context',
+    ...(concernContext ? { concernContext } : {}),
+    ...(applicationArea ? { applicationArea } : {}),
+    ...(recommendationRole ? { recommendationRole } : {})
+  };
 }
 
 module.exports = { emptyFactors, extractFactors, hasLiteralAcneSignal, resolveAcneDecision };

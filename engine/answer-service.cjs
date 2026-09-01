@@ -53,6 +53,7 @@ const { structuredState } = require('./conversation-memory.cjs');
 const { resolveBusinessInfo } = require('./business-info.cjs');
 const { createCommerceAssistance } = require('./commerce-assistance.cjs');
 const { validateStructuredOutput } = require('./structured-output-safety.cjs');
+const { CONCERNS } = require('./product-intelligence-schema.cjs');
 
 const decisionCatalog = createCatalogSearch();
 const commerceAssistance = createCommerceAssistance({ catalog: decisionCatalog });
@@ -872,6 +873,8 @@ function attachProductLinks(
 function buildProblemAnswer(
   problem
 ) {
+  const concernContext = CONCERNS.includes(problem) ? problem : null;
+
   if (
     problem ===
     'psoriasis'
@@ -902,7 +905,9 @@ function buildProblemAnswer(
         'problem-recommendation',
 
       matchedKnowledgeIds:
-        []
+        [],
+
+      ...(concernContext ? { concernContext } : {})
     };
   }
 
@@ -937,7 +942,9 @@ function buildProblemAnswer(
         'problem-recommendation',
 
       matchedKnowledgeIds:
-        []
+        [],
+
+      ...(concernContext ? { concernContext } : {})
     };
   }
 
@@ -1034,7 +1041,9 @@ function buildProblemAnswer(
         'problem-recommendation',
 
       matchedKnowledgeIds:
-        []
+        [],
+
+      ...(concernContext ? { concernContext } : {})
     };
   }
 

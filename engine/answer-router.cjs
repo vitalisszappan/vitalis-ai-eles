@@ -18,6 +18,7 @@ const {detectProductQuestionIntent}=require('./product-question-intent.cjs');
 const { detectBusinessInfo } = require('./business-info.cjs');
 const { resolveGuidedDiscovery } = require('./guided-discovery.cjs');
 const { resolveAcneDecision } = require('./acne-decision.cjs');
+const { CONCERNS } = require('./product-intelligence-schema.cjs');
 
 const catalog = createCatalogSearch();
 
@@ -80,7 +81,10 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
       confidence: 1,
       threshold: 1,
       responseSource: 'acne-decision',
-      acneDecision
+      acneDecision,
+      ...(acneDecision.concernContext ? { concernContext: acneDecision.concernContext } : {}),
+      ...(acneDecision.applicationArea ? { applicationArea: acneDecision.applicationArea } : {}),
+      ...(acneDecision.recommendationRole ? { recommendationRole: acneDecision.recommendationRole } : {})
     });
   }
 
@@ -240,7 +244,16 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
   }
 
   if (problem) {
-    return decision({ ...base, route: 'problem_domain', intent: 'problem_recommendation', confidence: 1, threshold: 1, responseSource: 'problem-domain' });
+    const concernContext = CONCERNS.includes(problem.domain) ? problem.domain : null;
+    return decision({
+      ...base,
+      route: 'problem_domain',
+      intent: 'problem_recommendation',
+      confidence: 1,
+      threshold: 1,
+      responseSource: 'problem-domain',
+      ...(concernContext ? { concernContext } : {})
+    });
   }
 
   if (excludedProductTypes.length && !productTypeConstraint) {

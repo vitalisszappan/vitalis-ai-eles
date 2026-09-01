@@ -55,6 +55,14 @@ function factSummary(type, fact) {
 function planAnswer({ question, routing, conversationState, factsApi = productFacts }) {
   const answerIntent = detectAnswerIntent(question, routing);
   if (!answerIntent || !SUPPORTED_INTENTS.includes(answerIntent)) return null;
+  const concernContext = routing?.concernContext || null;
+  const applicationArea = routing?.applicationArea || null;
+  const recommendationRole = routing?.recommendationRole || null;
+  const metadata = {
+    ...(concernContext ? { concernContext } : {}),
+    ...(applicationArea ? { applicationArea } : {}),
+    ...(recommendationRole ? { recommendationRole } : {})
+  };
   if (answerIntent === 'comparison') {
     const productIds = [...new Set(routing?.matchedCanonicalIds || routing?.matchedProductIds || [])].slice(0, 2);
     const text = normalize(question);
@@ -111,7 +119,8 @@ function planAnswer({ question, routing, conversationState, factsApi = productFa
     responseStrategy: allGrounded ? 'grounded_facts' : hasExpertRecommendationEvidence ? 'expert_relationship' : anyGrounded ? 'grounded_partial_unknown' : 'unknown',
     cardStrategy: answerIntent === 'product_recommendation' && !allGrounded ? (hasExpertRecommendationEvidence ? 'expert_products' : 'none') : 'target_product',
     ctaStrategy: answerIntent === 'product_recommendation' ? (allGrounded ? 'view_product' : 'clarify_need') : answerIntent === 'product_benefits' && anyGrounded ? 'learn_more' : 'none',
-    requestedIngredientId: ingredientId
+    requestedIngredientId: ingredientId,
+    ...metadata
   };
 }
 
