@@ -54,6 +54,7 @@ const { resolveBusinessInfo } = require('./business-info.cjs');
 const { createCommerceAssistance } = require('./commerce-assistance.cjs');
 const { validateStructuredOutput } = require('./structured-output-safety.cjs');
 const { CONCERNS } = require('./product-intelligence-schema.cjs');
+const { buildRecommendationIntentContract } = require('./product-intelligence-recommendation-intent-contract.cjs');
 
 const decisionCatalog = createCatalogSearch();
 const commerceAssistance = createCommerceAssistance({ catalog: decisionCatalog });
@@ -288,12 +289,32 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
     const usedFacts = routing.acneDecision.reasonCode === 'scalp_acne'
       ? ['usageInstructions', 'recommendedFor'].map((type) => { const item = factsApi.getFact(selected, type); return { factType: type, status: item.status, value: item.status === 'grounded' ? item.value : null, provenance: item.provenance || [] }; })
       : [{ factType, status: fact?.status || 'unavailable', value: fact?.status === 'grounded' ? fact.value : null, provenance: evidence }];
-    return attachDecision({
+    const isGrounded = usedFacts.every((item) => item.status === 'grounded');
+    const draft = attachDecision({
       source: 'owner-approved-acne-decision', answer, confidence: 100, links: card ? [card] : [], suggestions: [], ruleId: routing.matchedRuleId, intent: routing.intent, matchedKnowledgeIds: [],
       answerIntent: routing.acneDecision.kind === 'usage' ? 'usage' : 'product_recommendation', targetProductId: selected,
       factsUsed: usedFacts,
-      groundingStatus: usedFacts.every((item) => item.status === 'grounded') ? 'grounded' : 'unavailable', responseStrategy: 'owner_approved_acne_decision', ctaStrategy: selected === 'aktiv_szenes_szappan' ? 'none' : 'view_product'
+      groundingStatus: isGrounded ? 'grounded' : 'unavailable', responseStrategy: 'owner_approved_acne_decision', ctaStrategy: selected === 'aktiv_szenes_szappan' ? 'none' : 'view_product'
     }, routing);
+    if (routing.acneDecision?.kind === 'resolved') {
+      const intentContract = buildRecommendationIntentContract({
+        route: routing.route,
+        intent: routing.intent,
+        plannerAnswerIntent: draft.answerIntent,
+        productId: selected,
+        concernContext: routing.acneDecision?.concernContext || routing.concernContext || null,
+        applicationArea: routing.acneDecision?.applicationArea || routing.applicationArea || null,
+        recommendationRole: routing.acneDecision?.recommendationRole || routing.recommendationRole || null,
+        groundingStatus: isGrounded ? 'grounded' : 'unavailable'
+      });
+      Object.defineProperty(draft, 'recommendationIntent', {
+        value: intentContract,
+        enumerable: false,
+        writable: true,
+        configurable: true
+      });
+    }
+    return draft;
   }
   const planned = materializePlannedAnswer(answerPlan, routing);
   if (planned) return attachDecision(planned, routing);
@@ -1753,7 +1774,16 @@ function createAnswerUnsafe({
   }
   const answerPlan = planAnswer({ question, routing, conversationState: effectiveState });
   const draft = materializeDecision({ routing, question, history: effectiveHistory, knowledge, ruleEngine, logGap, conversationState: effectiveState, technicalFailure, logDiagnostic, answerPlan });
-  return composeCommunication({ decision: routing, draft, question, history: effectiveHistory });
+  const result = composeCommunication({ decision: routing, draft, question, history: effectiveHistory });
+  if (draft && draft.recommendationIntent) {
+    Object.defineProperty(result, 'recommendationIntent', {
+      value: draft.recommendationIntent,
+      enumerable: false,
+      writable: true,
+      configurable: true
+    });
+  }
+  return result;
 
   /* Legacy pipeline retained temporarily as a rollback reference during the
      incremental Decision Engine migration. */
@@ -1989,7 +2019,17 @@ function createAnswerUnsafe({
 }
 
 function createAnswer(options) {
-  return validateStructuredOutput(createAnswerUnsafe(options));
+  const unsafe = createAnswerUnsafe(options);
+  const validated = validateStructuredOutput(unsafe);
+  if (unsafe && unsafe.recommendationIntent) {
+    Object.defineProperty(validated, 'recommendationIntent', {
+      value: unsafe.recommendationIntent,
+      enumerable: false,
+      writable: true,
+      configurable: true
+    });
+  }
+  return validated;
 }
 
 module.exports = {
