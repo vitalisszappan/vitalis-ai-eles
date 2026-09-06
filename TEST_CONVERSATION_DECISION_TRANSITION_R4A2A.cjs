@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const schema = require('./engine/conversation-decision-transition-schema.cjs');
 const policy = require('./engine/conversation-decision-field-policy.cjs');
-const { validateTransitionEvent, validateTransitionBatch } = require('./engine/conversation-decision-transition-validator.cjs');
+const { validateTransitionEvent, validateTransitionBatch, validateTransitionProvenance, validateTransitionDependencies, compareTransitionReplay, validateTransitionBase } = require('./engine/conversation-decision-transition-validator.cjs');
 
 function event(overrides = {}) {
   return { contractVersion: 1, eventId: 'event-1', conversationId: 'conversation-1', turnId: 'turn-2', fieldPath: 'resolved.applicationArea', operation: 'SET', eventType: 'FIELD_TRANSITION', eventVersion: 1, baseEnvelopeVersion: 1, provenance: { sourceType: 'USER_EXPLICIT', evidenceId: 'e-1' }, payload: 'neck', evidenceIds: ['e-1'], reasonCode: 'CURRENT_TURN_REPLACEMENT', ...overrides };
@@ -27,7 +27,7 @@ assert.equal(validateTransitionEvent(event({ fieldPath: 'resolved.applicationAre
 assert.equal(validateTransitionEvent(event({ fieldPath: 'resolved.requestedProductType', payload: 'cream' })).valid, true);
 assert.equal(validateTransitionEvent(event({ fieldPath: 'resolved.productFocus', payload: 'product_A', provenance: { sourceType: 'CANONICAL_RESOLUTION', evidenceId: 'e-canonical' } })).valid, true);
 assert.equal(validateTransitionEvent(event({ fieldPath: 'resolved.concernContext', payload: 'psoriasis', provenance: { sourceType: 'PROBLEM_DOMAIN_DECISION', evidenceId: 'e-domain' } })).valid, true);
-assert.equal(validateTransitionEvent(event({ fieldPath: 'explicit.qualifiers', payload: [{ key: 'dry', value: true }], provenance: { sourceType: 'USER_EXPLICIT', evidenceId: 'e-dry' } })).valid, true);
+assert.equal(validateTransitionEvent(event({ fieldPath: 'explicit.qualifiers', payload: [{ key: 'dry', value: true, evidenceIds: ['e-dry'] }], provenance: { sourceType: 'USER_EXPLICIT', evidenceId: 'e-dry' } })).valid, true);
 assert.equal(validateTransitionEvent(event({ fieldPath: 'derived.ownershipState', payload: 'SAFETY', provenance: { sourceType: 'PROBLEM_DOMAIN_DECISION', evidenceId: 'e-safety' } })).valid, true);
 assert.equal(validateTransitionEvent(event({ fieldPath: 'derived.ownershipState', payload: 'MEDICAL', provenance: { sourceType: 'PROBLEM_DOMAIN_DECISION', evidenceId: 'e-medical' } })).valid, true);
 assert.equal(validateTransitionEvent(event({ fieldPath: 'governance.authorizationStatus', operation: 'INVALIDATE', payload: { invalidatesFields: ['governance.authorizationStatus'] }, reasonCode: 'DEPENDENCY_INVALIDATED' })).valid, true);
@@ -45,6 +45,22 @@ assert.equal(validateTransitionEvent(event({ contractVersion: 2 })).valid, false
 assert.equal(validateTransitionEvent(event({ eventVersion: 0 })).valid, false);
 assert.equal(validateTransitionEvent(event({ operation: 'SET', payload: undefined })).valid, false);
 assert.equal(validateTransitionEvent(event({ operation: 'CONFLICT', payload: { candidates: ['one'] } })).valid, false);
+assert.equal(validateTransitionEvent(event({ fieldPath: 'resolved.applicationArea', payload: { value: 'neck' } })).valid, false);
+assert.equal(validateTransitionEvent(event({ fieldPath: 'resolved.requestedProductType', payload: ['cream'] })).valid, false);
+assert.equal(validateTransitionEvent(event({ operation: 'INVALIDATE', payload: { invalidatesFields: ['arbitrary.runtime.path'] }, reasonCode: 'DEPENDENCY_INVALIDATED' })).valid, false);
+assert.equal(validateTransitionEvent(event({ operation: 'INVALIDATE', payload: { invalidatesFields: ['governance.*'] }, reasonCode: 'DEPENDENCY_INVALIDATED' })).valid, false);
+assert.equal(validateTransitionEvent(event({ fieldPath: 'resolved.requestedProductType', payload: 'cream', provenance: { sourceType: 'APPROVED_PRODUCT_FACT', evidenceId: 'e-fact' } })).valid, false);
+assert.equal(validateTransitionEvent(event({ fieldPath: 'explicit.goal', payload: { value: 'selection', evidenceIds: ['e-goal'] }, provenance: { sourceType: 'APPROVED_PRODUCT_FACT', evidenceId: 'e-fact' } })).valid, false);
+assert.equal(validateTransitionEvent(event({ fieldPath: 'resolved.productFocus', payload: 'product_A', provenance: { sourceType: 'APPROVED_PRODUCT_FACT', evidenceId: 'e-fact' } })).valid, false);
+assert.equal(validateTransitionProvenance(event({ provenance: { sourceType: 'LEGACY_TEXT_RECOVERY', evidenceId: 'e-legacy' }, operation: 'SET' })).valid, false);
+assert.equal(validateTransitionDependencies(event({ operation: 'INVALIDATE', fieldPath: 'resolved.applicationArea', payload: { invalidatesFields: ['arbitrary.runtime.path'] } })).valid, false);
+assert.equal(compareTransitionReplay(event(), event()).result, 'EXACT_REPLAY');
+assert.equal(compareTransitionReplay(event(), event({ payload: 'scalp' })).result, 'EVENT_ID_COLLISION');
+assert.equal(compareTransitionReplay(event(), event({ provenance: { sourceType: 'CANONICAL_RESOLUTION', evidenceId: 'e-1' } })).result, 'EVENT_ID_COLLISION');
+assert.equal(compareTransitionReplay(event(), event({ eventId: 'event-2' })).result, 'DISTINCT_EVENT');
+assert.equal(validateTransitionBase(event({ baseEnvelopeVersion: 1 }), 1).result, 'BASE_MATCH');
+assert.equal(validateTransitionBase(event({ baseEnvelopeVersion: 1 }), 2).result, 'STALE_BASE');
+assert.equal(validateTransitionBase(event({ baseEnvelopeVersion: 2 }), 1).result, 'FUTURE_BASE');
 assert.equal(validateTransitionBatch([event(), event({ eventId: 'event-2' })]).valid, true);
 assert.equal(validateTransitionBatch([event(), event()]).valid, false);
 const previous = event(); const before = JSON.stringify(previous); validateTransitionEvent(previous); assert.equal(JSON.stringify(previous), before);
