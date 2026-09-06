@@ -35,12 +35,13 @@ const FIELD_REPLACEMENT_POLICY = Object.freeze({
 });
 const FIELD_CONFLICT_POLICY = Object.freeze({ default: 'CONFLICT', 'resolved.productFocus': 'AMBIGUOUS', 'resolved.applicationArea': 'CONFLICT' });
 const FIELD_INVALIDATION_POLICY = Object.freeze({
-  'resolved.productFocus': Object.freeze(['governance']),
-  'resolved.concernContext': Object.freeze(['governance']),
-  'resolved.applicationArea': Object.freeze(['governance']),
-  'resolved.requestedProductType': Object.freeze(['governance']),
-  'explicit.qualifiers': Object.freeze(['governance']),
-  'derived.ownershipState': Object.freeze(['governance'])
+  'resolved.productFocus': Object.freeze(['governance.scopeId', 'governance.scopeVersion', 'governance.bindingId', 'governance.bindingVersion', 'governance.reviewRecordId', 'governance.wordingArtifactId', 'governance.wordingArtifactVersion', 'governance.wordingLocale', 'governance.authorizationStatus', 'governance.authorizationReason', 'governance.authorizedProductIds', 'governance.authorizationEvidenceIds']),
+  'resolved.concernContext': Object.freeze(['governance.scopeId', 'governance.scopeVersion', 'governance.criterionSetId', 'governance.criterionSetVersion', 'governance.bindingId', 'governance.bindingVersion', 'governance.reviewRecordId', 'governance.wordingArtifactId', 'governance.wordingArtifactVersion', 'governance.wordingLocale', 'governance.authorizationStatus', 'governance.authorizationReason', 'governance.authorizedProductIds', 'governance.authorizationEvidenceIds']),
+  'resolved.applicationArea': Object.freeze(['governance.scopeId', 'governance.scopeVersion', 'governance.criterionSetId', 'governance.criterionSetVersion', 'governance.bindingId', 'governance.bindingVersion', 'governance.reviewRecordId', 'governance.wordingArtifactId', 'governance.wordingArtifactVersion', 'governance.wordingLocale', 'governance.authorizationStatus', 'governance.authorizationReason', 'governance.authorizedProductIds', 'governance.authorizationEvidenceIds']),
+  'resolved.requestedProductType': Object.freeze(['governance.criterionSetId', 'governance.criterionSetVersion', 'governance.bindingId', 'governance.bindingVersion', 'governance.reviewRecordId', 'governance.wordingArtifactId', 'governance.wordingArtifactVersion', 'governance.wordingLocale', 'governance.authorizationStatus', 'governance.authorizationReason', 'governance.authorizedProductIds', 'governance.authorizationEvidenceIds']),
+  'explicit.qualifiers': Object.freeze(['governance.criterionSetId', 'governance.criterionSetVersion', 'governance.bindingId', 'governance.bindingVersion', 'governance.reviewRecordId', 'governance.wordingArtifactId', 'governance.wordingArtifactVersion', 'governance.wordingLocale', 'governance.authorizationStatus', 'governance.authorizationReason', 'governance.authorizedProductIds', 'governance.authorizationEvidenceIds']),
+  'derived.ownershipState': Object.freeze(['governance.authorizationStatus', 'governance.authorizationReason', 'governance.authorizedProductIds', 'governance.authorizationEvidenceIds']),
+  governance: Object.freeze(['governance.scopeId', 'governance.scopeVersion', 'governance.criterionSetId', 'governance.criterionSetVersion', 'governance.bindingId', 'governance.bindingVersion', 'governance.reviewRecordId', 'governance.wordingArtifactId', 'governance.wordingArtifactVersion', 'governance.wordingLocale', 'governance.authorizationStatus', 'governance.authorizationReason', 'governance.authorizedProductIds', 'governance.authorizationEvidenceIds'])
 });
 const FIELD_PAYLOAD_POLICY = Object.freeze(Object.fromEntries([
   ...['explicit.concerns', 'explicit.applicationAreas', 'explicit.products', 'explicit.goal', 'explicit.complaintState', 'explicit.safetySignals', 'resolved.referencedProducts'].map((field) => [field, 'VALUE_EVIDENCE']),
@@ -53,7 +54,8 @@ const FIELD_PAYLOAD_POLICY = Object.freeze(Object.fromEntries([
 function policyFor(fieldPath, sourceType) { return FIELD_PROVENANCE_POLICY[fieldPath]?.[sourceType] || 'FORBIDDEN'; }
 function isRecoveryOnly(sourceType) { return RECOVERY.includes(sourceType); }
 function isAuthorizationCapableSource(sourceType) { return PROVENANCE_SOURCE_TYPES.includes(sourceType) && !isRecoveryOnly(sourceType) && sourceType !== 'UNKNOWN'; }
-function getFieldDependents(fieldPath) { return FIELD_DEPENDENCY_POLICY[fieldPath] || (fieldPath.startsWith('governance.') ? ['governance'] : []); }
-function getFieldInvalidationBoundary(fieldPath) { return FIELD_INVALIDATION_POLICY[fieldPath] || ['governance']; }
+function getFieldDependents(fieldPath) { return FIELD_DEPENDENCY_POLICY[fieldPath] || []; }
+function getFieldInvalidationBoundary(fieldPath) { return FIELD_INVALIDATION_POLICY[fieldPath] || []; }
+function getInvalidationTargets(fieldPath) { return FIELD_INVALIDATION_POLICY[fieldPath] || []; }
 
-module.exports = { CLASSIFICATIONS, FIELD_PROVENANCE_POLICY, FIELD_DEPENDENCY_POLICY, FIELD_REPLACEMENT_POLICY, FIELD_CONFLICT_POLICY, FIELD_INVALIDATION_POLICY, FIELD_PAYLOAD_POLICY, policyFor, isRecoveryOnly, isAuthorizationCapableSource, getFieldDependents, getFieldInvalidationBoundary, OWNERSHIP_STATES };
+module.exports = { CLASSIFICATIONS, FIELD_PROVENANCE_POLICY, FIELD_DEPENDENCY_POLICY, FIELD_REPLACEMENT_POLICY, FIELD_CONFLICT_POLICY, FIELD_INVALIDATION_POLICY, FIELD_PAYLOAD_POLICY, policyFor, isRecoveryOnly, isAuthorizationCapableSource, getFieldDependents, getFieldInvalidationBoundary, getInvalidationTargets, OWNERSHIP_STATES };

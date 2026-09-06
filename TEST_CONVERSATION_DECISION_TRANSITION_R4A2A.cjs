@@ -18,6 +18,9 @@ assert.equal(validateTransitionEvent(event({ operation: 'INVALIDATE', payload: {
 assert.equal(validateTransitionEvent(event({ operation: 'SET', provenance: { sourceType: 'ASSISTANT_OUTPUT_RECOVERY', evidenceId: 'e-1' } })).valid, false);
 assert.equal(validateTransitionEvent(event({ operation: 'SET', fieldPath: 'resolved.productFocus', payload: 'product_A', provenance: { sourceType: 'ASSISTANT_OUTPUT_RECOVERY', evidenceId: 'e-1' } })).valid, false);
 assert.equal(validateTransitionEvent(event({ operation: 'SET', fieldPath: 'governance.authorizationStatus', payload: 'AUTHORIZED', provenance: { sourceType: 'USER_EXPLICIT', evidenceId: 'e-1' } })).valid, false);
+assert.equal(validateTransitionEvent(event({ operation: 'CLEAR', fieldPath: 'governance.scopeId', payload: null, provenance: { sourceType: 'USER_EXPLICIT', evidenceId: 'e-1' } })).valid, false);
+assert.equal(validateTransitionEvent(event({ operation: 'CONFLICT', fieldPath: 'governance.authorizationStatus', payload: { candidates: ['AUTHORIZED', 'DENIED'] }, provenance: { sourceType: 'USER_EXPLICIT', evidenceId: 'e-1' } })).valid, false);
+assert.equal(validateTransitionEvent(event({ operation: 'SET', fieldPath: 'governance.scopeId', payload: null, provenance: { sourceType: 'CANONICAL_RESOLUTION', evidenceId: 'e-1' } })).valid, false);
 assert.equal(validateTransitionEvent(event({ fieldPath: 'resolved.requestedProductType', payload: 'cream' })).valid, true);
 assert.equal(validateTransitionEvent(event({ fieldPath: 'resolved.productFocus', payload: 'product_A', provenance: { sourceType: 'USER_EXPLICIT', evidenceId: 'e-1' } })).valid, true);
 assert.equal(validateTransitionEvent(event({ fieldPath: 'resolved.productFocus', payload: 'product_A', provenance: { sourceType: 'UNKNOWN', evidenceId: 'e-1' } })).valid, false);
@@ -30,7 +33,10 @@ assert.equal(validateTransitionEvent(event({ fieldPath: 'resolved.concernContext
 assert.equal(validateTransitionEvent(event({ fieldPath: 'explicit.qualifiers', payload: [{ key: 'dry', value: true, evidenceIds: ['e-dry'] }], provenance: { sourceType: 'USER_EXPLICIT', evidenceId: 'e-dry' } })).valid, true);
 assert.equal(validateTransitionEvent(event({ fieldPath: 'derived.ownershipState', payload: 'SAFETY', provenance: { sourceType: 'PROBLEM_DOMAIN_DECISION', evidenceId: 'e-safety' } })).valid, true);
 assert.equal(validateTransitionEvent(event({ fieldPath: 'derived.ownershipState', payload: 'MEDICAL', provenance: { sourceType: 'PROBLEM_DOMAIN_DECISION', evidenceId: 'e-medical' } })).valid, true);
-assert.equal(validateTransitionEvent(event({ fieldPath: 'governance.authorizationStatus', operation: 'INVALIDATE', payload: { invalidatesFields: ['governance.authorizationStatus'] }, reasonCode: 'DEPENDENCY_INVALIDATED' })).valid, true);
+assert.equal(validateTransitionEvent(event({ fieldPath: 'governance.authorizationStatus', operation: 'INVALIDATE', payload: { invalidatesFields: ['governance.authorizationStatus'] }, reasonCode: 'DEPENDENCY_INVALIDATED' })).valid, false);
+assert.equal(validateTransitionEvent(event({ fieldPath: 'resolved.applicationArea', operation: 'INVALIDATE', payload: { invalidatesFields: ['explicit.products'] }, reasonCode: 'DEPENDENCY_INVALIDATED' })).valid, false);
+assert.equal(validateTransitionEvent(event({ fieldPath: 'resolved.applicationArea', operation: 'INVALIDATE', payload: { invalidatesFields: ['resolved.applicationArea'] }, reasonCode: 'DEPENDENCY_INVALIDATED' })).valid, false);
+assert.equal(validateTransitionEvent(event({ fieldPath: 'resolved.applicationArea', operation: 'INVALIDATE', payload: { invalidatesFields: ['governance.authorizationStatus', 'governance.authorizationStatus'] }, reasonCode: 'DEPENDENCY_INVALIDATED' })).valid, false);
 assert.equal(policy.FIELD_PROVENANCE_POLICY['resolved.requestedProductType'].USER_EXPLICIT, 'ADMISSIBLE_CANDIDATE');
 assert.equal(policy.FIELD_PROVENANCE_POLICY['governance.authorizationStatus'].USER_EXPLICIT, 'FORBIDDEN');
 assert.equal(policy.isRecoveryOnly('LEGACY_TEXT_RECOVERY'), true);
@@ -55,9 +61,15 @@ assert.equal(validateTransitionEvent(event({ fieldPath: 'resolved.productFocus',
 assert.equal(validateTransitionProvenance(event({ provenance: { sourceType: 'LEGACY_TEXT_RECOVERY', evidenceId: 'e-legacy' }, operation: 'SET' })).valid, false);
 assert.equal(validateTransitionDependencies(event({ operation: 'INVALIDATE', fieldPath: 'resolved.applicationArea', payload: { invalidatesFields: ['arbitrary.runtime.path'] } })).valid, false);
 assert.equal(compareTransitionReplay(event(), event()).result, 'EXACT_REPLAY');
+const nestedA = event({ fieldPath: 'explicit.qualifiers', provenance: { sourceType: 'USER_EXPLICIT', evidenceId: 'e-1', fieldPath: 'explicit.qualifiers', sourceTurnId: 'turn-2' }, payload: [{ key: 'dry', value: true, evidenceIds: ['e-2', 'e-1'] }] });
+const nestedB = event({ fieldPath: 'explicit.qualifiers', provenance: { sourceTurnId: 'turn-2', fieldPath: 'explicit.qualifiers', evidenceId: 'e-1', sourceType: 'USER_EXPLICIT' }, payload: [{ evidenceIds: ['e-1', 'e-2'], value: true, key: 'dry' }] });
+assert.equal(compareTransitionReplay(nestedA, nestedB).result, 'EXACT_REPLAY');
 assert.equal(compareTransitionReplay(event(), event({ payload: 'scalp' })).result, 'EVENT_ID_COLLISION');
 assert.equal(compareTransitionReplay(event(), event({ provenance: { sourceType: 'CANONICAL_RESOLUTION', evidenceId: 'e-1' } })).result, 'EVENT_ID_COLLISION');
 assert.equal(compareTransitionReplay(event(), event({ eventId: 'event-2' })).result, 'DISTINCT_EVENT');
+assert.equal(validateTransitionEvent(event({ operation: 'SET', fieldPath: 'resolved.applicationArea', payload: null })).valid, false);
+assert.equal(validateTransitionEvent(event({ operation: 'SET', fieldPath: 'resolved.requestedProductType', payload: null })).valid, false);
+assert.equal(validateTransitionEvent(event({ operation: 'SET', fieldPath: 'resolved.productFocus', payload: null })).valid, false);
 assert.equal(validateTransitionBase(event({ baseEnvelopeVersion: 1 }), 1).result, 'BASE_MATCH');
 assert.equal(validateTransitionBase(event({ baseEnvelopeVersion: 1 }), 2).result, 'STALE_BASE');
 assert.equal(validateTransitionBase(event({ baseEnvelopeVersion: 2 }), 1).result, 'FUTURE_BASE');

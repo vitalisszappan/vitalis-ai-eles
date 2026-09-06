@@ -5,18 +5,19 @@ const {
   TRANSITION_BOUNDARY_TYPES, TRANSITION_REASON_CODES, PROVENANCE_SOURCE_TYPES,
   TRANSITION_BASE_RESULTS, TRANSITION_REPLAY_RESULTS, OWNERSHIP_STATES, AUTHORIZATION_STATUSES
 } = require('./conversation-decision-transition-schema.cjs');
-const { policyFor, isRecoveryOnly, getFieldDependents, FIELD_PAYLOAD_POLICY } = require('./conversation-decision-field-policy.cjs');
+const { policyFor, isRecoveryOnly, getFieldDependents, getInvalidationTargets, FIELD_PAYLOAD_POLICY } = require('./conversation-decision-field-policy.cjs');
 
 function text(value) { return typeof value === 'string' && value.trim().length > 0; }
 function version(value) { return Number.isInteger(value) && value > 0; }
 function uniqueStrings(value) { return Array.isArray(value) && new Set(value).size === value.length && value.every(text); }
+function exactKeys(value, keys) { return value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).every((key) => keys.includes(key)); }
 function validPayloadKind(kind, payload) {
-  if (kind === 'SCALAR_STRING' || kind === 'NULLABLE_STRING' || kind === 'GOVERNANCE_REFERENCE') return payload === null || text(payload);
+  if (kind === 'SCALAR_STRING' || kind === 'NULLABLE_STRING' || kind === 'GOVERNANCE_REFERENCE') return text(payload);
   if (kind === 'STRING_ARRAY') return uniqueStrings(payload);
   if (kind === 'OWNERSHIP_ENUM') return OWNERSHIP_STATES.includes(payload);
-  if (kind === 'AUTHORIZATION_STATE') return AUTHORIZATION_STATUSES.includes(payload);
-  if (kind === 'VALUE_EVIDENCE') return Array.isArray(payload) && payload.every((item) => item && text(item.value) && uniqueStrings(item.evidenceIds));
-  if (kind === 'QUALIFIER_OBJECT') return Array.isArray(payload) && payload.every((item) => item && text(item.key) && item.value !== undefined && uniqueStrings(item.evidenceIds));
+  if (kind === 'AUTHORIZATION_STATE') return payload !== null && AUTHORIZATION_STATUSES.includes(payload);
+  if (kind === 'VALUE_EVIDENCE') return Array.isArray(payload) && payload.every((item) => exactKeys(item, ['value', 'evidenceIds']) && text(item.value) && uniqueStrings(item.evidenceIds));
+  if (kind === 'QUALIFIER_OBJECT') return Array.isArray(payload) && payload.every((item) => exactKeys(item, ['key', 'value', 'evidenceIds']) && text(item.key) && item.value !== undefined && uniqueStrings(item.evidenceIds));
   if (kind === 'CONFLICT_CANDIDATES') return uniqueStrings(payload);
   if (kind === 'INVALIDATION_FIELDS') return uniqueStrings(payload) && payload.every((field) => TRANSITION_FIELD_PATHS.includes(field));
   return false;
@@ -43,9 +44,8 @@ function validateTransitionOperation(event, errors) {
   if (event.evidenceIds !== undefined && !uniqueStrings(event.evidenceIds)) errors.push('evidenceIds are invalid');
   if (event.operation === 'SET' && !validPayloadKind(FIELD_PAYLOAD_POLICY[event.fieldPath], event.payload)) errors.push('SET payload is incompatible with field');
   if (event.operation === 'CONFLICT' && !validPayloadKind('CONFLICT_CANDIDATES', event.payload?.candidates)) errors.push('CONFLICT candidates are invalid');
-  if (event.operation === 'INVALIDATE' && !validPayloadKind('INVALIDATION_FIELDS', event.payload?.invalidatesFields)) errors.push('INVALIDATE targets are invalid');
-  if (event.operation === 'SET' && isRecoveryOnly(event.provenance.sourceType)) errors.push('recovery cannot SET active state');
-  if (event.operation === 'SET' && policyFor(event.fieldPath, event.provenance.sourceType) === 'FORBIDDEN') errors.push('provenance is forbidden for field');
+  if (event.operation === 'INVALIDATE' && (!validPayloadKind('INVALIDATION_FIELDS', event.payload?.invalidatesFields) || event.payload.invalidatesFields.some((target) => !getInvalidationTargets(event.fieldPath).includes(target)))) errors.push('INVALIDATE targets are invalid');
+  if (['SET', 'CLEAR', 'CONFLICT', 'INVALIDATE'].includes(event.operation) && (isRecoveryOnly(event.provenance.sourceType) || policyFor(event.fieldPath, event.provenance.sourceType) === 'FORBIDDEN')) errors.push('provenance is forbidden for operation/field');
   if (event.operation === 'INVALIDATE' && getFieldDependents(event.fieldPath).length === 0) errors.push('invalidation field has no declared dependency policy');
 }
 
@@ -55,6 +55,9 @@ function validateTransitionEvent(event) {
   if (event.contractVersion !== R4A2A_VERSION) errors.push('contractVersion is invalid');
   validateTransitionIdentity(event, errors);
   validateTransitionOperation(event, errors);
+  const provenanceResult = validateTransitionProvenance(event);
+  const dependencyResult = validateTransitionDependencies(event);
+  errors.push(...provenanceResult.errors, ...dependencyResult.errors);
   return { valid: errors.length === 0, errors };
 }
 
@@ -62,23 +65,28 @@ function validateTransitionProvenance(input) {
   const provenance = input?.provenance;
   const errors = [];
   if (!provenance || !PROVENANCE_SOURCE_TYPES.includes(provenance.sourceType) || !text(provenance.evidenceId)) errors.push('provenance is invalid');
-  if (isRecoveryOnly(provenance?.sourceType) && input?.operation === 'SET') errors.push('recovery cannot SET active state');
+  if (['SET', 'CLEAR', 'CONFLICT', 'INVALIDATE'].includes(input?.operation) && (isRecoveryOnly(provenance?.sourceType) || policyFor(input?.fieldPath, provenance?.sourceType) === 'FORBIDDEN')) errors.push('provenance is forbidden for operation/field');
   return { valid: errors.length === 0, errors };
 }
 
 function validateTransitionDependencies(input) {
   const errors = [];
   if (!TRANSITION_FIELD_PATHS.includes(input?.fieldPath)) errors.push('fieldPath is invalid');
-  if (input?.operation === 'INVALIDATE' && !validPayloadKind('INVALIDATION_FIELDS', input.payload?.invalidatesFields)) errors.push('INVALIDATE targets are invalid');
+  if (input?.operation === 'INVALIDATE' && (!validPayloadKind('INVALIDATION_FIELDS', input.payload?.invalidatesFields) || input.payload.invalidatesFields.some((target) => !getInvalidationTargets(input.fieldPath).includes(target)))) errors.push('INVALIDATE targets are invalid');
   return { valid: errors.length === 0, errors };
 }
 
+function canonicalizeValue(value, key = null) {
+  if (Array.isArray(value)) {
+    const mapped = value.map((item) => canonicalizeValue(item));
+    const sortable = ['evidenceIds', 'candidates', 'invalidatesFields'].includes(key) || (mapped.every((item) => item && typeof item === 'object' && !Array.isArray(item) && Object.prototype.hasOwnProperty.call(item, 'key')));
+    return sortable ? mapped.sort((a, b) => { const left = JSON.stringify(a), right = JSON.stringify(b); return left < right ? -1 : left > right ? 1 : 0; }) : mapped;
+  }
+  if (value && typeof value === 'object') return Object.fromEntries(Object.keys(value).sort().map((keyName) => [keyName, canonicalizeValue(value[keyName], keyName)]));
+  return value;
+}
 function canonicalizeTransitionEvent(event) {
-  const result = { ...event, provenance: event?.provenance ? { ...event.provenance } : event?.provenance };
-  if (Array.isArray(result.evidenceIds)) result.evidenceIds = [...result.evidenceIds].sort();
-  if (result.operation === 'CONFLICT' && Array.isArray(result.payload?.candidates)) result.payload = { ...result.payload, candidates: [...result.payload.candidates].sort() };
-  if (result.operation === 'INVALIDATE' && Array.isArray(result.payload?.invalidatesFields)) result.payload = { ...result.payload, invalidatesFields: [...result.payload.invalidatesFields].sort() };
-  return result;
+  return canonicalizeValue(event);
 }
 
 function compareTransitionReplay(existing, incoming) {
