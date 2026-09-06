@@ -18,7 +18,7 @@ const {detectProductQuestionIntent}=require('./product-question-intent.cjs');
 const { detectBusinessInfo } = require('./business-info.cjs');
 const { resolveGuidedDiscovery } = require('./guided-discovery.cjs');
 const { resolveAcneDecision } = require('./acne-decision.cjs');
-const { CONCERNS } = require('./product-intelligence-schema.cjs');
+const { buildProblemDomainDecision } = require('./problem-domain-decision.cjs');
 
 const catalog = createCatalogSearch();
 
@@ -244,7 +244,7 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
   }
 
   if (problem) {
-    const concernContext = CONCERNS.includes(problem.domain) ? problem.domain : null;
+    const problemDomainDecision = buildProblemDomainDecision(problem);
     return decision({
       ...base,
       route: 'problem_domain',
@@ -252,7 +252,7 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
       confidence: 1,
       threshold: 1,
       responseSource: 'problem-domain',
-      ...(concernContext ? { concernContext } : {})
+      ...(problemDomainDecision.concernContext ? { concernContext: problemDomainDecision.concernContext } : {})
     });
   }
 
