@@ -95,6 +95,45 @@ assert.equal(APPLICATION_AREA_VALUES.includes('neck'), true);
 assert.equal(APPLICATION_AREA_VALUES.includes('scalp'), true);
 assert.notEqual('neck', 'scalp');
 assert.equal(validateEnvelope(minimal({ resolved: { ...minimal().resolved, requestedProductType: 'sampon', productFocus: null } })).valid, false);
+const psoriasisScalpShampoo = minimal({
+  explicit: { concerns: [{ value: 'psoriasis', evidenceIds: ['p1'] }], applicationAreas: [{ value: 'scalp', evidenceIds: ['p2'] }], products: [], goal: { value: 'selection', evidenceIds: ['p3'] }, qualifiers: [], complaintState: null, safetySignals: [] },
+  resolved: { ...minimal().resolved, problemDomain: 'psoriasis', concernContext: 'psoriasis', applicationArea: 'scalp', requestedProductType: 'shampoo', productFocus: null },
+  derived: { ...minimal().derived, ownershipState: 'SELECTION', evidenceIds: ['p1', 'p2', 'p3'] },
+  provenance: [{ evidenceId: 'p1', sourceType: 'USER_EXPLICIT', sourceTurnId: 'turn-1', fieldPath: 'explicit.concerns' }, { evidenceId: 'p2', sourceType: 'USER_EXPLICIT', sourceTurnId: 'turn-1', fieldPath: 'explicit.applicationAreas' }]
+});
+assert.equal(validateEnvelopeContract(psoriasisScalpShampoo).valid, true);
+assert.equal(psoriasisScalpShampoo.resolved.concernContext, 'psoriasis');
+assert.equal(psoriasisScalpShampoo.resolved.applicationArea, 'scalp');
+assert.equal(psoriasisScalpShampoo.resolved.requestedProductType, 'shampoo');
+assert.equal(psoriasisScalpShampoo.resolved.productFocus, null);
+assert.equal(psoriasisScalpShampoo.governance.authorizationStatus, null);
+const safetyEnvelope = minimal({
+  explicit: { concerns: [], applicationAreas: [], products: [], goal: { value: 'safety_escalation', evidenceIds: ['s1'] }, qualifiers: [], complaintState: null, safetySignals: [{ value: 'medical_escalation', evidenceIds: ['s1'] }] },
+  derived: { ...minimal().derived, ownershipState: 'SAFETY', route: 'safety', evidenceIds: ['s1'] },
+  resolved: { ...minimal().resolved, safetyClass: 'medical_escalation' },
+  provenance: [{ evidenceId: 's1', sourceType: 'USER_EXPLICIT', sourceTurnId: 'turn-1', fieldPath: 'explicit.safetySignals' }]
+});
+const medicalEnvelope = minimal({
+  explicit: { concerns: [], applicationAreas: [], products: [], goal: { value: 'safety_escalation', evidenceIds: ['m1'] }, qualifiers: [], complaintState: null, safetySignals: [{ value: 'medical_condition', evidenceIds: ['m1'] }] },
+  derived: { ...minimal().derived, ownershipState: 'MEDICAL', route: 'safety', evidenceIds: ['m1'] },
+  resolved: { ...minimal().resolved, safetyClass: 'medical_escalation' },
+  provenance: [{ evidenceId: 'm1', sourceType: 'USER_EXPLICIT', sourceTurnId: 'turn-1', fieldPath: 'explicit.safetySignals' }]
+});
+assert.equal(validateEnvelopeContract(safetyEnvelope).valid, true);
+assert.equal(validateEnvelopeContract(medicalEnvelope).valid, true);
+for (const envelope of [safetyEnvelope, medicalEnvelope]) {
+  assert.equal(envelope.governance.authorizationStatus, null);
+  assert.deepEqual(envelope.governance.authorizedProductIds, []);
+}
+const neutralProductFact = minimal({
+  explicit: { concerns: [], applicationAreas: [], products: [{ value: 'synthetic_neutral_product', evidenceIds: ['n1'] }], goal: { value: 'usage_question', evidenceIds: ['n1'] }, qualifiers: [], complaintState: null, safetySignals: [] },
+  resolved: { ...minimal().resolved, productFocus: { productId: 'synthetic_neutral_product', resolutionType: 'explicit', sourceTurnId: 'turn-1', evidenceIds: ['n1'], confidence: 1 }, requestedProductType: 'szappan' },
+  derived: { ...minimal().derived, ownershipState: 'NEUTRAL_PRODUCT_FACT', answerIntent: 'usage', route: 'exact_product', answerTarget: 'synthetic_neutral_product', evidenceIds: ['n1'] },
+  provenance: [{ evidenceId: 'n1', sourceType: 'USER_EXPLICIT', sourceTurnId: 'turn-1', fieldPath: 'explicit.products' }]
+});
+assert.equal(validateEnvelopeContract(neutralProductFact).valid, true);
+assert.equal(neutralProductFact.governance.authorizationStatus, null);
+assert.deepEqual(neutralProductFact.governance.authorizationEvidenceIds, []);
 assert.equal(validateEnvelope(minimal({ explicit: { ...minimal().explicit, concerns: [{ value: 'acne', evidenceIds: ['e1'] }], applicationAreas: [{ value: 'face', evidenceIds: ['e2'] }], products: [{ value: 'synthetic_acne_soap', evidenceIds: ['e3'] }], goal: { value: 'selection', evidenceIds: ['e4'] }, qualifiers: [{ key: 'dry', value: true, evidenceIds: ['e5'] }], complaintState: null, safetySignals: [] }, resolved: { ...minimal().resolved, concernContext: null } })).valid, true);
 const recovery = { evidenceId: 'e-recovery', sourceType: 'ASSISTANT_OUTPUT_RECOVERY', fieldPath: 'resolved.productFocus', sourceTurnId: 'turn-0', sourceReference: 'assistant-answer' };
 const approved = { ...recovery, evidenceId: 'e-approved', sourceType: 'APPROVED_PRODUCT_FACT', sourceReference: 'fact-1' };
