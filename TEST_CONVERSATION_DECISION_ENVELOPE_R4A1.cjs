@@ -39,30 +39,15 @@ function validEvidence(value) {
     && (value.sourceReference === undefined || value.sourceReference === null || validId(value.sourceReference));
 }
 function validValueEvidenceList(value) { return Array.isArray(value) && value.length > 0 && value.every((item) => item && validId(item.value) && Array.isArray(item.evidenceIds) && item.evidenceIds.length > 0 && item.evidenceIds.every(validId)); }
-function validFieldDiagnosticClear(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) && validId(value.fieldPath) && CLOSED_FIELD_PATHS.includes(value.fieldPath)
-    && FIELD_CLEAR_STATUSES.includes(value.status) && validId(value.reasonCode)
-    && (value.sourceEventId === undefined || value.sourceEventId === null || validId(value.sourceEventId))
-    && (value.sourceFieldPath === undefined || value.sourceFieldPath === null || (validId(value.sourceFieldPath) && CLOSED_FIELD_PATHS.includes(value.sourceFieldPath)));
-}
-function validFieldDiagnosticConflict(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) && validId(value.fieldPath) && CLOSED_FIELD_PATHS.includes(value.fieldPath)
-    && FIELD_CONFLICT_STATUSES.includes(value.status) && Array.isArray(value.candidateValues) && value.candidateValues.length > 0
-    && value.candidateValues.every((candidate) => candidate !== undefined && candidate !== null && (typeof candidate === 'string' || typeof candidate === 'number' || typeof candidate === 'boolean'))
-    && validId(value.reasonCode) && (value.sourceEventId === undefined || value.sourceEventId === null || validId(value.sourceEventId));
-}
-function validFieldDiagnosticInvalidation(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) && validId(value.targetFieldPath) && CLOSED_FIELD_PATHS.includes(value.targetFieldPath)
-    && (value.sourceFieldPath === undefined || value.sourceFieldPath === null || (validId(value.sourceFieldPath) && CLOSED_FIELD_PATHS.includes(value.sourceFieldPath)))
-    && (value.sourceEventId === undefined || value.sourceEventId === null || validId(value.sourceEventId)) && validId(value.reasonCode)
-    && FIELD_INVALIDATION_STATUSES.includes(value.invalidationStatus);
-}
 
+// Fixture convenience wrapper: validates base envelope shape only. All contract-critical
+// R4A-1C assertions (stateVersion, fieldClears, fieldConflicts, fieldInvalidations,
+// provenance-shape negatives) MUST call the exported production validator directly.
 function validateEnvelope(envelope) {
   const errors = [];
   if (!envelope || typeof envelope !== 'object' || Array.isArray(envelope)) return { valid: false, errors: ['envelope must be an object'] };
   if (envelope.envelopeVersion !== ENVELOPE_VERSION) errors.push('envelopeVersion is invalid');
-  if (!Number.isInteger(envelope.stateVersion) || envelope.stateVersion < 0 || Object.is(envelope.stateVersion, -0)) errors.push('stateVersion is invalid');
+  if (envelope.stateVersion !== undefined && (!Number.isInteger(envelope.stateVersion) || envelope.stateVersion < 0 || Object.is(envelope.stateVersion, -0))) errors.push('stateVersion is invalid');
   for (const field of ['conversationId', 'turnId']) if (!validId(envelope[field])) errors.push(`${field} is required`);
   if (envelope.parentTurnId !== null && envelope.parentTurnId !== undefined && !validId(envelope.parentTurnId)) errors.push('parentTurnId is invalid');
   if (!validDate(envelope.createdAt)) errors.push('createdAt is invalid');
@@ -74,9 +59,6 @@ function validateEnvelope(envelope) {
   if (envelope.governance && (!hasAll(envelope.governance, requiredGovernance) || !AUTHORIZATION_STATUSES.includes(envelope.governance.authorizationStatus))) errors.push('governance shape is invalid');
   if (!Array.isArray(envelope.provenance) || envelope.provenance.some((item) => !validEvidence(item))) errors.push('provenance is invalid');
   if (envelope.invalidation && (!Array.isArray(envelope.invalidation.invalidatesTurnIds) || !Array.isArray(envelope.invalidation.invalidatesFields) || (envelope.invalidation.reason !== null && !validId(envelope.invalidation.reason)) || (envelope.invalidation.boundaryType !== null && !validId(envelope.invalidation.boundaryType)))) errors.push('invalidation is invalid');
-  if (!Array.isArray(envelope.fieldClears) || envelope.fieldClears.some((item) => !validFieldDiagnosticClear(item))) errors.push('fieldClears is invalid');
-  if (!Array.isArray(envelope.fieldConflicts) || envelope.fieldConflicts.some((item) => !validFieldDiagnosticConflict(item))) errors.push('fieldConflicts is invalid');
-  if (!Array.isArray(envelope.fieldInvalidations) || envelope.fieldInvalidations.some((item) => !validFieldDiagnosticInvalidation(item))) errors.push('fieldInvalidations is invalid');
   if (envelope.explicit) {
     if (!Array.isArray(envelope.explicit.concerns) || (!validValueEvidenceList(envelope.explicit.concerns) && envelope.explicit.concerns.length > 0)) errors.push('explicit concerns are invalid');
     if (!Array.isArray(envelope.explicit.applicationAreas) || (!validValueEvidenceList(envelope.explicit.applicationAreas) && envelope.explicit.applicationAreas.length > 0)) errors.push('explicit applicationAreas are invalid');
@@ -171,18 +153,46 @@ assert.notEqual(recovery.sourceType, approved.sourceType);
 assert.equal(SOURCE_KINDS.ASSISTANT_OUTPUT_RECOVERY.authorizationCapable, false);
 assert.equal(SOURCE_KINDS.LEGACY_TEXT_RECOVERY.authorizationCapable, false);
 assert.equal(SOURCE_KINDS.USER_EXPLICIT.authorizationCapable, true);
-assert.equal(validateEnvelope(minimal({ provenance: [{ evidenceId: 'bad', sourceType: 'NOT_A_SOURCE' }] })).valid, false);
-assert.equal(validateEnvelope(minimal({ stateVersion: 0 })).valid, true);
+// --- PROVENANCE (production) ---
+assert.equal(validateEnvelopeContract(minimal({ provenance: [{ evidenceId: 'bad', sourceType: 'NOT_A_SOURCE' }] })).valid, false);
+assert.equal(validateEnvelopeContract(minimal({ provenance: [{ evidenceId: 'e-no-turn', sourceType: 'USER_EXPLICIT', sourceTurnId: 42 }] })).valid, false);
+assert.equal(validateEnvelopeContract(minimal({ provenance: [{ evidenceId: 'e-no-path', sourceType: 'USER_EXPLICIT', fieldPath: 42 }] })).valid, false);
+// --- STATE VERSION (production) ---
 assert.equal(validateEnvelopeContract(minimal({ stateVersion: 0 })).valid, true);
-assert.equal(validateEnvelope(minimal({ stateVersion: -1 })).valid, false);
+assert.equal(validateEnvelopeContract(minimal({ stateVersion: 7 })).valid, true);
 assert.equal(validateEnvelopeContract(minimal({ stateVersion: -1 })).valid, false);
-assert.equal(validateEnvelope(minimal({ stateVersion: 1.5 })).valid, false);
-assert.equal(validateEnvelope(minimal({ fieldClears: [{ fieldPath: 'resolved.applicationArea', status: 'EXPLICIT_CLEAR', reasonCode: 'EXPLICIT_CLEAR', sourceEventId: 'evt-1', sourceFieldPath: 'resolved.applicationArea' }] })).valid, true);
-assert.equal(validateEnvelope(minimal({ fieldClears: [{ fieldPath: 'resolved.applicationArea', status: 'NEVER_SET', reasonCode: 'NOT_SET', sourceEventId: 'evt-1', sourceFieldPath: 'resolved.applicationArea' }] })).valid, true);
-assert.equal(validateEnvelope(minimal({ fieldClears: [{ fieldPath: 'resolved.applicationArea', status: 'INVALIDATED', reasonCode: 'DEPENDENCY_INVALIDATED', sourceEventId: 'evt-1', sourceFieldPath: 'resolved.applicationArea' }] })).valid, true);
-assert.equal(validateEnvelope(minimal({ fieldClears: [{ fieldPath: 'not.a.field', status: 'EXPLICIT_CLEAR', reasonCode: 'EXPLICIT_CLEAR', sourceEventId: 'evt-1', sourceFieldPath: 'resolved.applicationArea' }] })).valid, false);
-assert.equal(validateEnvelope(minimal({ fieldConflicts: [{ fieldPath: 'resolved.applicationArea', status: 'UNRESOLVED', candidateValues: ['scalp', 'neck'], candidateProvenance: ['USER_EXPLICIT'], reasonCode: 'EVIDENCE_CONFLICT', sourceEventId: 'evt-2' }] })).valid, true);
-assert.equal(validateEnvelope(minimal({ fieldInvalidations: [{ targetFieldPath: 'governance.authorizationStatus', sourceFieldPath: 'resolved.applicationArea', sourceEventId: 'evt-3', reasonCode: 'DEPENDENCY_INVALIDATED', invalidationStatus: 'NON_EXECUTABLE' }] })).valid, true);
+assert.equal(validateEnvelopeContract(minimal({ stateVersion: 1.5 })).valid, false);
+assert.equal(validateEnvelopeContract(minimal({ stateVersion: '0' })).valid, false);
+assert.equal(validateEnvelopeContract(minimal({ stateVersion: -0 })).valid, false);
+{
+  const missingStateVersion = minimal();
+  delete missingStateVersion.stateVersion;
+  assert.equal(validateEnvelopeContract(missingStateVersion).valid, false);
+}
+// --- FIELD CLEARS (production) ---
+assert.equal(validateEnvelopeContract(minimal({ fieldClears: [{ fieldPath: 'resolved.applicationArea', status: 'EXPLICIT_CLEAR', reasonCode: 'EXPLICIT_CLEAR', sourceEventId: 'evt-1', sourceFieldPath: 'resolved.applicationArea' }] })).valid, true);
+assert.equal(validateEnvelopeContract(minimal({ fieldClears: [{ fieldPath: 'resolved.applicationArea', status: 'NEVER_SET', reasonCode: 'NOT_SET' }] })).valid, true);
+assert.equal(validateEnvelopeContract(minimal({ fieldClears: [{ fieldPath: 'resolved.applicationArea', status: 'INVALIDATED', reasonCode: 'DEPENDENCY_INVALIDATED', sourceEventId: 'evt-1', sourceFieldPath: 'resolved.applicationArea' }] })).valid, true);
+assert.equal(validateEnvelopeContract(minimal({ fieldClears: [{ fieldPath: 'not.a.field', status: 'EXPLICIT_CLEAR', reasonCode: 'EXPLICIT_CLEAR', sourceEventId: 'evt-1', sourceFieldPath: 'resolved.applicationArea' }] })).valid, false);
+assert.equal(validateEnvelopeContract(minimal({ fieldClears: [{ fieldPath: 'resolved.applicationArea', status: 'NOT_A_STATUS', reasonCode: 'EXPLICIT_CLEAR' }] })).valid, false);
+assert.equal(validateEnvelopeContract(minimal({ fieldClears: [{ fieldPath: 'resolved.applicationArea', status: 'EXPLICIT_CLEAR', reasonCode: 42 }] })).valid, false);
+assert.equal(validateEnvelopeContract(minimal({ fieldClears: [{ fieldPath: 'resolved.applicationArea', status: 'EXPLICIT_CLEAR', reasonCode: 'EXPLICIT_CLEAR', sourceFieldPath: 'arbitrary.path' }] })).valid, false);
+// --- FIELD CONFLICTS (production) ---
+assert.equal(validateEnvelopeContract(minimal({ fieldConflicts: [{ fieldPath: 'resolved.applicationArea', status: 'UNRESOLVED', candidateValues: ['scalp', 'neck'], candidateProvenance: ['USER_EXPLICIT'], reasonCode: 'EVIDENCE_CONFLICT', sourceEventId: 'evt-2' }] })).valid, true);
+assert.equal(validateEnvelopeContract(minimal({ fieldConflicts: [{ fieldPath: 'not.a.field', status: 'UNRESOLVED', candidateValues: ['scalp', 'neck'], reasonCode: 'EVIDENCE_CONFLICT' }] })).valid, false);
+assert.equal(validateEnvelopeContract(minimal({ fieldConflicts: [{ fieldPath: 'resolved.applicationArea', status: 'RESOLVED', candidateValues: ['scalp', 'neck'], reasonCode: 'EVIDENCE_CONFLICT' }] })).valid, false);
+assert.equal(validateEnvelopeContract(minimal({ fieldConflicts: [{ fieldPath: 'resolved.applicationArea', status: 'UNRESOLVED', candidateValues: [], reasonCode: 'EVIDENCE_CONFLICT' }] })).valid, false);
+assert.equal(validateEnvelopeContract(minimal({ fieldConflicts: [{ fieldPath: 'resolved.applicationArea', status: 'UNRESOLVED', candidateValues: ['scalp', { executable: 'neck' }], reasonCode: 'EVIDENCE_CONFLICT' }] })).valid, false);
+assert.equal(validateEnvelopeContract(minimal({ fieldConflicts: [{ fieldPath: 'resolved.applicationArea', status: 'UNRESOLVED', candidateValues: ['scalp', 'neck'], reasonCode: '' }] })).valid, false);
+assert.equal(validateEnvelopeContract(minimal({ fieldConflicts: [{ fieldPath: 'resolved.applicationArea', status: 'UNRESOLVED', candidateValues: ['scalp', 'neck'], reasonCode: 'EVIDENCE_CONFLICT', sourceEventId: 42 }] })).valid, false);
+// --- FIELD INVALIDATIONS (production) ---
+assert.equal(validateEnvelopeContract(minimal({ fieldInvalidations: [{ targetFieldPath: 'governance.authorizationStatus', sourceFieldPath: 'resolved.applicationArea', sourceEventId: 'evt-3', reasonCode: 'DEPENDENCY_INVALIDATED', invalidationStatus: 'NON_EXECUTABLE' }] })).valid, true);
+assert.equal(validateEnvelopeContract(minimal({ fieldInvalidations: [{ targetFieldPath: 'governance.authorizationStatus', sourceFieldPath: 'resolved.applicationArea', sourceEventId: 'evt-3', reasonCode: 'DEPENDENCY_INVALIDATED', invalidationStatus: 'INVALIDATED' }] })).valid, true);
+assert.equal(validateEnvelopeContract(minimal({ fieldInvalidations: [{ targetFieldPath: 'not.a.field', sourceFieldPath: 'resolved.applicationArea', reasonCode: 'DEPENDENCY_INVALIDATED', invalidationStatus: 'NON_EXECUTABLE' }] })).valid, false);
+assert.equal(validateEnvelopeContract(minimal({ fieldInvalidations: [{ targetFieldPath: 'governance.authorizationStatus', sourceFieldPath: 'arbitrary.path', reasonCode: 'DEPENDENCY_INVALIDATED', invalidationStatus: 'NON_EXECUTABLE' }] })).valid, false);
+assert.equal(validateEnvelopeContract(minimal({ fieldInvalidations: [{ targetFieldPath: 'governance.authorizationStatus', sourceFieldPath: 'resolved.applicationArea', reasonCode: 'DEPENDENCY_INVALIDATED', invalidationStatus: 'EXECUTABLE' }] })).valid, false);
+assert.equal(validateEnvelopeContract(minimal({ fieldInvalidations: [{ targetFieldPath: 'governance.authorizationStatus', sourceFieldPath: 'resolved.applicationArea', reasonCode: 42, invalidationStatus: 'NON_EXECUTABLE' }] })).valid, false);
+// --- ENVELOPE VERSION (both paths) ---
 assert.equal(validateEnvelope(minimal({ envelopeVersion: 2 })).valid, false);
 assert.equal(validateEnvelopeContract(minimal({ envelopeVersion: 2 })).valid, false);
 assert.equal(validateEnvelope(minimal({ explicit: { concerns: {} } })).valid, false);
