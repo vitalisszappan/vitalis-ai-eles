@@ -107,6 +107,18 @@ function isNonExecutable(envelope, targetFieldPath) {
   return value === null || value === undefined;
 }
 
+// A field that has a non-empty invalidation policy produces executable/dependent state on write.
+// Whole-semantic-state equivalence for an identical-value write requires every required
+// dependent target to already be non-executable (neutral). A stale/missing diagnostic must not
+// hide an executable target; a neutral target with no required teardown is trivially satisfied.
+function hasRequiredTeardownTargets(fieldPath) {
+  return (FIELD_INVALIDATION_POLICY[fieldPath] || []).filter((t) => CLOSED_FIELD_PATHS.includes(t));
+}
+
+function requiredDependentsAlreadyNeutral(envelope, fieldPath) {
+  return hasRequiredTeardownTargets(fieldPath).every((target) => isNonExecutable(envelope, target));
+}
+
 function hasEquivalentInvalidation(envelope, targetFieldPath, event) {
   return envelope.fieldInvalidations.some((entry) => entry.targetFieldPath === targetFieldPath
     && entry.sourceFieldPath === event.fieldPath && entry.sourceEventId === event.eventId);
@@ -158,7 +170,9 @@ function reduceDecisionEnvelope(currentEnvelope, transitionEvent) {
   }
 
   if (event.operation === 'SET') {
-    if (deepEqual(currentValue, event.payload)) {
+    // NO_OP only if the complete required post-SET semantic state is already equivalent:
+    // identical target value AND every policy-required dependent already non-executable.
+    if (deepEqual(currentValue, event.payload) && requiredDependentsAlreadyNeutral(currentEnvelope, event.fieldPath)) {
       return { result: NO_OP, reasonCode: event.reasonCode || null, nextEnvelope: clone(currentEnvelope) };
     }
     const next = clone(currentEnvelope);

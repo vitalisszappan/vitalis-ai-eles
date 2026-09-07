@@ -263,6 +263,57 @@ assert.notEqual('requestedProductType', 'productFocus');
   assert.equal(validateEnvelopeContract(r.nextEnvelope).valid, true);
 }
 
+// ---------- MAJOR REGRESSION: identical SET with live dependents must NOT NO_OP ----------
+{
+  // Target already = neck, but authorization is still executable -> identical value alone is NOT NO_OP.
+  const env = minimal({ stateVersion: 1, governance: authorizedGovernance(), resolved: { ...minimal().resolved, applicationArea: 'neck' } });
+  assert.equal(authExecutable(env), true);
+  const r = reduceDecisionEnvelope(env, event({ baseStateVersion: 1 })); // SET applicationArea=neck (identical)
+  assert.equal(r.result, 'APPLIED'); // case C: dependents still executable -> APPLIED, not NO_OP
+  assert.equal(r.nextEnvelope.resolved.applicationArea, 'neck'); // target not rewritten/reinterpreted
+  assert.equal(r.nextEnvelope.stateVersion, 2); // +1 exactly once
+  // full-14 policy for applicationArea: all 14 torn down
+  assert.equal(r.nextEnvelope.fieldInvalidations.length, 14);
+  for (const f of AUTH_GROUP) {
+    const v = govField(r.nextEnvelope, f);
+    assert.equal(Array.isArray(v) ? v.length === 0 : v === null, true, f);
+  }
+  assert.equal(authExecutable(r.nextEnvelope), false);
+  // independent fields untouched
+  assert.equal(r.nextEnvelope.resolved.concernContext, null);
+  assert.equal(r.nextEnvelope.resolved.requestedProductType, null);
+
+  // Second equivalent SET against the now-correct state -> whole-state equivalence -> NO_OP
+  const r2 = reduceDecisionEnvelope(r.nextEnvelope, event({ baseStateVersion: 2 }));
+  assert.equal(r2.result, 'NO_OP');
+  assert.equal(r2.nextEnvelope.stateVersion, 2); // unchanged
+}
+
+// ---------- ALIAS HARDENING: Direction B (mutate event payload after reduction) ----------
+{
+  // SET mutable (nested) payload
+  const payload = [{ key: 'dry', value: true, evidenceIds: ['e-d'] }];
+  const env = minimal();
+  const ev = event({ fieldPath: 'explicit.qualifiers', payload });
+  const r = reduceDecisionEnvelope(env, ev);
+  payload[0].key = 'HACKED';
+  payload[0].evidenceIds.push('HACKED');
+  payload.push({ key: 'x' });
+  assert.equal(r.nextEnvelope.explicit.qualifiers.length, 1);
+  assert.equal(r.nextEnvelope.explicit.qualifiers[0].key, 'dry');
+  assert.deepEqual(r.nextEnvelope.explicit.qualifiers[0].evidenceIds, ['e-d']);
+}
+{
+  // CONFLICT candidates array
+  const cand = ['scalp', 'neck'];
+  const env = minimal();
+  const ev = event({ operation: 'CONFLICT', payload: { candidates: cand }, reasonCode: 'EVIDENCE_CONFLICT' });
+  const r = reduceDecisionEnvelope(env, ev);
+  cand[0] = 'HACKED';
+  cand.push('EXTRA');
+  assert.deepEqual(r.nextEnvelope.fieldConflicts[0].candidateValues, ['scalp', 'neck']);
+}
+
 // ---------- DORMANCY ----------
 {
   const reducerSource = fs.readFileSync(path.join(__dirname, 'engine', 'conversation-decision-reducer.cjs'), 'utf8');
