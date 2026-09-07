@@ -9,6 +9,7 @@ const { policyFor, isRecoveryOnly, getFieldDependents, getInvalidationTargets, F
 
 function text(value) { return typeof value === 'string' && value.trim().length > 0; }
 function version(value) { return Number.isInteger(value) && value > 0; }
+function nonNegativeVersion(value) { return Number.isInteger(value) && value >= 0; }
 function uniqueStrings(value) { return Array.isArray(value) && new Set(value).size === value.length && value.every(text); }
 function exactKeys(value, keys) { return value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).every((key) => keys.includes(key)); }
 function validPayloadKind(kind, payload) {
@@ -27,6 +28,8 @@ function validateTransitionIdentity(event, errors) {
   for (const field of ['eventId', 'conversationId', 'turnId', 'fieldPath']) if (!text(event[field])) errors.push(`${field} is required`);
   if (!version(event.eventVersion)) errors.push('eventVersion is invalid');
   if (!version(event.baseEnvelopeVersion)) errors.push('baseEnvelopeVersion is invalid');
+  if (event.baseStateVersion !== undefined && event.baseStateVersion !== null && !nonNegativeVersion(event.baseStateVersion)) errors.push('baseStateVersion is invalid');
+  if (event.stateVersion !== undefined && event.stateVersion !== null && !nonNegativeVersion(event.stateVersion)) errors.push('stateVersion is invalid');
   if (!TRANSITION_FIELD_PATHS.includes(event.fieldPath)) errors.push('fieldPath is invalid');
 }
 
@@ -98,10 +101,16 @@ function compareTransitionReplay(existing, incoming) {
   return { result: JSON.stringify(a) === JSON.stringify(b) ? 'EXACT_REPLAY' : 'EVENT_ID_COLLISION' };
 }
 
-function validateTransitionBase(event, currentEnvelopeVersion) {
+function validateTransitionBase(event, currentStateVersionOrEnvelopeVersion, maybeEnvelopeVersion) {
+  const currentStateVersion = arguments.length >= 3 ? currentStateVersionOrEnvelopeVersion : 0;
+  const currentEnvelopeVersion = arguments.length >= 3 ? maybeEnvelopeVersion : currentStateVersionOrEnvelopeVersion;
+  if (!Number.isInteger(currentStateVersion) || currentStateVersion < 0) return { result: 'INVALID_BASE' };
   if (!Number.isInteger(currentEnvelopeVersion) || currentEnvelopeVersion < 1) return { result: 'INVALID_BASE' };
+  if (!Number.isInteger(event?.baseStateVersion) || event.baseStateVersion < 0) return { result: 'INVALID_BASE' };
   if (!Number.isInteger(event?.baseEnvelopeVersion) || event.baseEnvelopeVersion < 1) return { result: 'INVALID_BASE' };
-  return { result: event.baseEnvelopeVersion === currentEnvelopeVersion ? 'BASE_MATCH' : event.baseEnvelopeVersion < currentEnvelopeVersion ? 'STALE_BASE' : 'FUTURE_BASE' };
+  if (event.baseStateVersion === currentStateVersion && event.baseEnvelopeVersion === currentEnvelopeVersion) return { result: 'ELIGIBLE' };
+  if (event.baseStateVersion < currentStateVersion || event.baseEnvelopeVersion < currentEnvelopeVersion) return { result: 'STALE_BASE' };
+  return { result: 'FUTURE_BASE' };
 }
 
 function validateTransitionBatch(events) {

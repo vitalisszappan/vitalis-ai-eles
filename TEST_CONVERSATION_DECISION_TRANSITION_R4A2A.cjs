@@ -8,7 +8,7 @@ const policy = require('./engine/conversation-decision-field-policy.cjs');
 const { validateTransitionEvent, validateTransitionBatch, validateTransitionProvenance, validateTransitionDependencies, compareTransitionReplay, validateTransitionBase } = require('./engine/conversation-decision-transition-validator.cjs');
 
 function event(overrides = {}) {
-  return { contractVersion: 1, eventId: 'event-1', conversationId: 'conversation-1', turnId: 'turn-2', fieldPath: 'resolved.applicationArea', operation: 'SET', eventType: 'FIELD_TRANSITION', eventVersion: 1, baseEnvelopeVersion: 1, provenance: { sourceType: 'USER_EXPLICIT', evidenceId: 'e-1' }, payload: 'neck', evidenceIds: ['e-1'], reasonCode: 'CURRENT_TURN_REPLACEMENT', ...overrides };
+  return { contractVersion: 1, eventId: 'event-1', conversationId: 'conversation-1', turnId: 'turn-2', fieldPath: 'resolved.applicationArea', operation: 'SET', eventType: 'FIELD_TRANSITION', eventVersion: 1, stateVersion: 0, baseEnvelopeVersion: 1, baseStateVersion: 0, provenance: { sourceType: 'USER_EXPLICIT', evidenceId: 'e-1' }, payload: 'neck', evidenceIds: ['e-1'], reasonCode: 'CURRENT_TURN_REPLACEMENT', ...overrides };
 }
 assert.equal(validateTransitionEvent(event()).valid, true);
 assert.equal(validateTransitionEvent(event({ operation: 'UNSET', payload: null })).valid, true);
@@ -70,9 +70,10 @@ assert.equal(compareTransitionReplay(event(), event({ eventId: 'event-2' })).res
 assert.equal(validateTransitionEvent(event({ operation: 'SET', fieldPath: 'resolved.applicationArea', payload: null })).valid, false);
 assert.equal(validateTransitionEvent(event({ operation: 'SET', fieldPath: 'resolved.requestedProductType', payload: null })).valid, false);
 assert.equal(validateTransitionEvent(event({ operation: 'SET', fieldPath: 'resolved.productFocus', payload: null })).valid, false);
-assert.equal(validateTransitionBase(event({ baseEnvelopeVersion: 1 }), 1).result, 'BASE_MATCH');
-assert.equal(validateTransitionBase(event({ baseEnvelopeVersion: 1 }), 2).result, 'STALE_BASE');
-assert.equal(validateTransitionBase(event({ baseEnvelopeVersion: 2 }), 1).result, 'FUTURE_BASE');
+assert.equal(validateTransitionBase(event({ baseStateVersion: 0, baseEnvelopeVersion: 1 }), 0, 1).result, 'ELIGIBLE');
+assert.equal(validateTransitionBase(event({ baseStateVersion: 0, baseEnvelopeVersion: 1 }), 1, 1).result, 'STALE_BASE');
+assert.equal(validateTransitionBase(event({ baseStateVersion: 1, baseEnvelopeVersion: 1 }), 0, 1).result, 'FUTURE_BASE');
+assert.equal(validateTransitionBase(event({ baseStateVersion: -1, baseEnvelopeVersion: 1 }), 0, 1).result, 'INVALID_BASE');
 assert.equal(validateTransitionBatch([event(), event({ eventId: 'event-2' })]).valid, true);
 assert.equal(validateTransitionBatch([event(), event()]).valid, false);
 const previous = event(); const before = JSON.stringify(previous); validateTransitionEvent(previous); assert.equal(JSON.stringify(previous), before);

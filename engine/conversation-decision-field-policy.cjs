@@ -4,6 +4,11 @@ const { PROVENANCE_SOURCE_TYPES, OWNERSHIP_STATES, TRANSITION_FIELD_PATHS, TRANS
 
 const CLASSIFICATIONS = Object.freeze(['AUTHORITATIVE_WRITE', 'ADMISSIBLE_CANDIDATE', 'RECOVERY_ONLY', 'DIAGNOSTIC_ONLY', 'FORBIDDEN']);
 const RECOVERY = Object.freeze(['ASSISTANT_OUTPUT_RECOVERY', 'LEGACY_TEXT_RECOVERY', 'UNKNOWN']);
+const AUTHORIZATION_EXECUTION_GROUP = Object.freeze([
+  'scopeId', 'scopeVersion', 'criterionSetId', 'criterionSetVersion', 'bindingId', 'bindingVersion',
+  'reviewRecordId', 'wordingArtifactId', 'wordingArtifactVersion', 'wordingLocale', 'authorizationStatus',
+  'authorizationReason', 'authorizedProductIds', 'authorizationEvidenceIds'
+]);
 const USER_FIELDS = Object.freeze(['explicit.concerns', 'explicit.applicationAreas', 'explicit.products', 'explicit.goal', 'explicit.qualifiers', 'explicit.complaintState', 'explicit.safetySignals']);
 const CANONICAL_FIELDS = Object.freeze(['resolved.productFocus', 'resolved.referencedProducts', 'resolved.problemDomain', 'resolved.concernContext', 'resolved.applicationArea', 'resolved.requestedProductType', 'resolved.commerceIntent', 'resolved.complaintIntent', 'resolved.safetyClass']);
 const GOVERNANCE_FIELDS = Object.freeze(['governance.scopeId', 'governance.scopeVersion', 'governance.criterionSetId', 'governance.criterionSetVersion', 'governance.bindingId', 'governance.bindingVersion', 'governance.reviewRecordId', 'governance.wordingArtifactId', 'governance.wordingArtifactVersion', 'governance.wordingLocale', 'governance.authorizationStatus', 'governance.authorizationReason', 'governance.authorizedProductIds', 'governance.authorizationEvidenceIds']);
@@ -58,4 +63,4 @@ function getFieldDependents(fieldPath) { return FIELD_DEPENDENCY_POLICY[fieldPat
 function getFieldInvalidationBoundary(fieldPath) { return FIELD_INVALIDATION_POLICY[fieldPath] || []; }
 function getInvalidationTargets(fieldPath) { return FIELD_INVALIDATION_POLICY[fieldPath] || []; }
 
-module.exports = { CLASSIFICATIONS, FIELD_PROVENANCE_POLICY, FIELD_DEPENDENCY_POLICY, FIELD_REPLACEMENT_POLICY, FIELD_CONFLICT_POLICY, FIELD_INVALIDATION_POLICY, FIELD_PAYLOAD_POLICY, policyFor, isRecoveryOnly, isAuthorizationCapableSource, getFieldDependents, getFieldInvalidationBoundary, getInvalidationTargets, OWNERSHIP_STATES };
+module.exports = { AUTHORIZATION_EXECUTION_GROUP, CLASSIFICATIONS, FIELD_PROVENANCE_POLICY, FIELD_DEPENDENCY_POLICY, FIELD_REPLACEMENT_POLICY, FIELD_CONFLICT_POLICY, FIELD_INVALIDATION_POLICY, FIELD_PAYLOAD_POLICY, policyFor, isRecoveryOnly, isAuthorizationCapableSource, getFieldDependents, getFieldInvalidationBoundary, getInvalidationTargets, OWNERSHIP_STATES };
