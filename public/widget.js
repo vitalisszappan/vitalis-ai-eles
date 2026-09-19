@@ -17,6 +17,11 @@ let sessionId = createSessionId();
 let storedMessages = [];
 let stateReady = false;
 let pending = false;
+let sessionLocked = false;
+let finishRestoration = null;
+let restorationDeadline = null;
+let pendingCapture = null;
+const PAGE_CAPTURE_MS = 750;
 let attributionId = '';
 const commerceClient = window.VitalisCommerceEventClient.createClient({
   crypto: window.crypto, fetch: (...args) => window.fetch(...args), getChatSessionId: () => sessionId,
@@ -25,6 +30,55 @@ const commerceClient = window.VitalisCommerceEventClient.createClient({
 
 function createSessionId() {
   return crypto.randomUUID ? crypto.randomUUID() : `session-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function createTurnId() {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 15) | 64;
+  bytes[8] = (bytes[8] & 63) | 128;
+  const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+function waitForRestoration() {
+  if (stateReady) return Promise.resolve();
+  return new Promise(resolve => {
+    restorationDeadline = performance.now() + PAGE_CAPTURE_MS;
+    const timer = setTimeout(done, PAGE_CAPTURE_MS);
+    function done() {
+      clearTimeout(timer);
+      sessionLocked = true;
+      stateReady = true;
+      finishRestoration = null;
+      resolve();
+    }
+    finishRestoration = done;
+  });
+}
+
+function capturePageForTurn(turn) {
+  if (window.parent === window || !['https://vitalis-szappan.hu', 'https://www.vitalis-szappan.hu'].includes(parentOrigin)) return Promise.resolve(null);
+  return new Promise(resolve => {
+    const started = performance.now();
+    const timer = setTimeout(() => finish(null), PAGE_CAPTURE_MS);
+    function finish(observation) {
+      clearTimeout(timer);
+      pendingCapture = null;
+      resolve(observation);
+    }
+    pendingCapture = { sessionId: turn.sessionId, turnId: turn.turnId, started, finish };
+    try {
+      window.parent.postMessage({ type: 'vitalis-page-observation-request', sessionId: turn.sessionId, turnId: turn.turnId }, parentOrigin);
+    } catch { finish(null); }
+  });
+}
+
+function freezeTurnData(value) {
+  if (value && typeof value === 'object') {
+    Object.values(value).forEach(freezeTurnData);
+    Object.freeze(value);
+  }
+  return value;
 }
 
 function normalizeState(value) {
@@ -72,6 +126,11 @@ function persistState() {
 }
 
 function restoreState(value) {
+  if (sessionLocked) return false;
+  if (restorationDeadline !== null && performance.now() >= restorationDeadline) {
+    finishRestoration?.();
+    return false;
+  }
   const state = normalizeState(value);
   if (!state) return false;
   sessionId = state.sessionId;
@@ -87,6 +146,7 @@ function restoreState(value) {
     persist: false
   });
   stateReady = true;
+  finishRestoration?.();
   return true;
 }
 
@@ -406,21 +466,26 @@ function autoResize() {
 async function ask(question) {
   const q = String(question || '').trim();
   if (!q || pending) return;
-
-  const priorHistory = history.slice(-10);
+  setPending(true);
+  await waitForRestoration();
+  sessionLocked = true;
+  stateReady = true;
+  const turn = freezeTurnData({ message: q, sessionId, turnId: createTurnId(),
+    history: JSON.parse(JSON.stringify(history.slice(-10))) });
   const isFirstQuestion = !history.some((item) => item.role === 'user');
   add(q, 'user');
   if (isFirstQuestion) sendCommerceEvent('chat_started');
   input.value = '';
   autoResize();
-  setPending(true);
 
   try {
+    const observation = await capturePageForTurn(turn);
+    const payload = freezeTurnData({ ...turn, pageObservation: observation });
     const started = Date.now();
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: q, history: priorHistory, sessionId, pageUrl: document.referrer || window.location.href })
+      body: JSON.stringify(payload)
     });
     const data = await response.json();
     const minimumWait = 550;
@@ -472,17 +537,33 @@ document.getElementById('minimize').addEventListener('click', () => {
 });
 
 window.addEventListener('message', (event) => {
-  if (event.source !== window.parent || (parentOrigin && event.origin !== parentOrigin) || !event.data) return;
+  if (event.data?.type === 'vitalis-page-observation-result') {
+    if (event.source !== window.parent || !parentOrigin || event.origin !== parentOrigin || !pendingCapture) return;
+    const data = event.data;
+    if (Object.keys(data).sort().join(',') !== 'observation,sessionId,turnId,type'
+      || data.sessionId !== pendingCapture.sessionId || data.turnId !== pendingCapture.turnId) return;
+    if (performance.now() - pendingCapture.started >= PAGE_CAPTURE_MS) { pendingCapture.finish(null); return; }
+    const observation = data.observation;
+    if (observation !== null && (!observation || typeof observation !== 'object' || Array.isArray(observation)
+      || Object.keys(observation).sort().join(',') !== 'observationId,observationVersion,observedAt,pageOrigin,pageUrl,sessionId,sourceFrame,sourceType,turnId'
+      || observation.sessionId !== data.sessionId || observation.turnId !== data.turnId
+      || observation.pageOrigin !== parentOrigin || observation.sourceType !== 'UNTRUSTED_PAGE_OBSERVATION'
+      || observation.sourceFrame !== 'PARENT_STOREFRONT')) return;
+    pendingCapture.finish(observation === null ? null : freezeTurnData(JSON.parse(JSON.stringify(observation))));
+    return;
+  }
+  if (event.source !== window.parent || !parentOrigin || event.origin !== parentOrigin || !event.data) return;
   if (event.data.type === 'vitalis-chat-focus') {
     sendCommerceEvent('chat_open');
     setTimeout(() => input.focus(), 80);
   }
-  if (event.data.type === 'vitalis-chat-state') {
+  if (event.data.type === 'vitalis-chat-state' && !sessionLocked) {
     if (!restoreState(event.data.state) && !stateReady) {
       const fallback = readFallbackState();
       if (fallback) restoreState(fallback);
       else stateReady = true;
     }
+    finishRestoration?.();
     if (event.data.restoreFailed) restoreNotice.hidden = false;
   }
   if (event.data.type === 'vitalis-chat-attribution' &&
@@ -493,6 +574,7 @@ window.addEventListener('message', (event) => {
 });
 
 document.getElementById('new-conversation').addEventListener('click', () => {
+  if (pending) return;
   if (!window.confirm('Biztosan új beszélgetést indítasz? A jelenlegi helyi előzmény törlődik.')) return;
   sessionId = createSessionId();
   storedMessages = [];

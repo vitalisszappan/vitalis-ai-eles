@@ -234,6 +234,30 @@
 
   const frame = wrap.querySelector('#vitalis-chat-frame');
 
+  // Read location for this turn only; never cache page observations.
+  function capturePageObservation(request) {
+    try {
+      const raw = window.location.href;
+      const observedAt = Date.now();
+      if (!raw || raw.length > 2048 || raw.trim() !== raw || /[\u0000-\u001f\u007f-\u009f]/.test(raw)) return null;
+      const url = new URL(raw);
+      if (url.protocol !== 'https:' || url.username || url.password
+        || !['https://vitalis-szappan.hu', 'https://www.vitalis-szappan.hu'].includes(url.origin)) return null;
+      url.search = '';
+      url.hash = '';
+      if (url.href.length > 2048) return null;
+      const bytes = window.crypto.getRandomValues(new Uint8Array(16));
+      bytes[6] = (bytes[6] & 15) | 64;
+      bytes[8] = (bytes[8] & 63) | 128;
+      const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+      const observationId = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+      return Object.freeze({ observationVersion: 1, observationId,
+        sessionId: request.sessionId, turnId: request.turnId, observedAt,
+        pageUrl: url.href, pageOrigin: url.origin,
+        sourceType: 'UNTRUSTED_PAGE_OBSERVATION', sourceFrame: 'PARENT_STOREFRONT' });
+    } catch { return null; }
+  }
+
   function toggle(force) {
     const open = typeof force === 'boolean' ? force : !wrap.classList.contains('open');
     chatOpen = open;
@@ -252,6 +276,16 @@
   launcher.addEventListener('click', () => toggle(true));
   window.addEventListener('message', (event) => {
     if (event.source !== frame.contentWindow || event.origin !== base || !event.data) return;
+    if (event.data.type === 'vitalis-page-observation-request') {
+      const request = event.data;
+      if (Object.keys(request).sort().join(',') !== 'sessionId,turnId,type'
+        || typeof request.sessionId !== 'string' || !/^[a-zA-Z0-9-]{16,100}$/.test(request.sessionId)
+        || typeof request.turnId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(request.turnId)) return;
+      frame.contentWindow.postMessage({ type: 'vitalis-page-observation-result',
+        sessionId: request.sessionId, turnId: request.turnId,
+        observation: capturePageObservation(request) }, base);
+      return;
+    }
     if (event.data.type === 'vitalis-chat-close') toggle(false);
     if (event.data.type === 'vitalis-chat-state-ready') {
       const restored = startupStateResult || readState();

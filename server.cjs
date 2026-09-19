@@ -75,6 +75,7 @@ const { validatePreflightOrderKey, preflightUnasOrder, toPreflightDiagnostic } =
 const { createRevenuePhase4Service } = require('./engine/revenue-phase4.cjs');
 const { createRevenueAdminReader } = require('./engine/revenue-admin-read.cjs');
 const {rehydrateSessionHistory,validSessionId}=require('./engine/conversation-memory.cjs');
+const { validatePageObservation, assessPageObservationFreshness, sanitizePageUrl } = require('./engine/page-context-observation.cjs');
 
 function readCanonicalProductStatuses() {
   try {
@@ -1203,10 +1204,7 @@ async function persistConversation(
       ),
 
     page_url:
-      cleanText(
-        record.page_url,
-        1000
-      ),
+      sanitizePageUrl(record.page_url)?.pageUrl || '',
 
     routing_trace:
       record.routing_trace && typeof record.routing_trace === 'object'
@@ -2244,6 +2242,14 @@ async function handleChat(
     return;
   }
 
+  // Context validation is deliberately separate from answer-engine inputs.
+  const receivedAt = Date.now();
+  const validatedPage = validatePageObservation(parsed.pageObservation, { sessionId: parsed.sessionId, turnId: parsed.turnId });
+  const pageContext = validatedPage.status === 'VALID'
+    ? assessPageObservationFreshness(validatedPage.observation, receivedAt)
+    : validatedPage;
+  const responseTurnId = typeof parsed.turnId === 'string'
+    && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(parsed.turnId) ? parsed.turnId : null;
   const memory=await rehydrateSessionHistory({sessionId:parsed.sessionId,clientHistory:Array.isArray(parsed.history)?parsed.history:[],loadRows:readSessionConversationRows});
   const history=memory.history;
   if(memory.technicalFailure)console.info('CHAT_DIAGNOSTIC type=technical_diagnostic rootCause=technical_failure');
@@ -2340,7 +2346,9 @@ async function handleChat(
 
       confidence,
 
-      matchedKnowledgeIds
+      matchedKnowledgeIds,
+      turnId: responseTurnId,
+      pageContextStatus: pageContext.status
     }
   );
 }
