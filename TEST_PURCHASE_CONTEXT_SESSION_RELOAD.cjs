@@ -18,8 +18,21 @@ const SESSION_A = 'session-reload-proof-a';
 const SESSION_B = 'session-reload-proof-b';
 const card = (id, name) => ({ id, name });
 const answer = (question, memory) => createAnswer({ question, history: memory.history, conversationState: memory.state, knowledge, ruleEngine, logGap() {} });
-const assistant = (result) => ({ role: 'assistant', content: result.answer, route: result.route, intent: result.intent, links: result.links });
-const reload = (sessionId, clientHistory, rowsBySession = {}) => rehydrateSessionHistory({ sessionId, clientHistory, loadRows: async (id) => rowsBySession[id] || [] });
+const assistant = (result) => ({ role: 'assistant', content: result.answer, route: result.route, intent: result.intent, links: result.links, targetProductId: result.targetProductId || result.contextTarget || (result.links?.length === 1 ? result.links[0].id : null) });
+const trustedRows = (history) => {
+  const rows = [];
+  for (let index = 0; index < history.length; index += 1) {
+    if (history[index]?.role !== 'assistant') continue;
+    const user = [...history.slice(0, index)].reverse().find((item) => item?.role === 'user');
+    const links = Array.isArray(history[index].links) ? history[index].links : [];
+    rows.push({ created_at: new Date(Date.UTC(2026, 0, 1, 0, 0, rows.length)).toISOString(), question: user?.content || 'Előző kérdés', answer: history[index].content, source: 'trusted-test', history_event_status: 'valid',
+      history_event: { version: 1, turnId: `33333333-3333-4333-8333-${String(rows.length + 1).padStart(12, '0')}`, kind: links.length ? 'selection' : 'none',
+        route: history[index].route || 'context_followup', intent: history[index].intent || 'conversation', products: links } });
+  }
+  return rows;
+};
+const reload = (sessionId, clientHistory, rowsBySession) => rehydrateSessionHistory({ sessionId, clientHistory,
+  loadRows: async (id) => rowsBySession ? rowsBySession[id] || [] : trustedRows(clientHistory) });
 const twoProducts = () => [
   { role: 'user', content: 'Melyiket ajánlod?' },
   { role: 'assistant', content: '1. Dermavital krém. 2. Kecsketejes testápoló.', route: 'comparison', intent: 'compare_products', links: [card('dermavital_krem', 'Dermavital krém'), card('kecsketejes_testapolo', 'Kecsketejes testápoló')] }

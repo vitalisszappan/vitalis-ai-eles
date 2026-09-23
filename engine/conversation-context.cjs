@@ -330,19 +330,37 @@ function resolveProductReference(text, context) {
 
   const result = (overrides = {}) => ({
     type: 'existing', productId: null, authoritative: false, ambiguous: false,
-    resolvedFrom: null, ...overrides
+    resolvedFrom: null, ordinalStatus: 'NO_EXPLICIT_ORDINAL', ...overrides
   });
 
   if (/\b(az )?elsot?\b/.test(value)) index = 0;
   if (/\b(a )?masodik(?:at)?\b/.test(value)) index = 1;
-  if (/\b(a )?harmadikat?\b/.test(value)) index = 2;
-  if (/\b(az )?elobbit?\b/.test(value)) index = products.length === 2 ? 0 : -1;
-  if (/\b(az )?utobbit?\b/.test(value)) index = products.length === 2 ? 1 : -1;
+  if (/\b(a )?harmadik(?:at)?\b/.test(value)) index = 2;
+  const laterOrdinal = /\b(negyedik(?:et)?|otodik(?:et)?|hatodik(?:at)?)\b/.exec(value);
+  if (laterOrdinal) index = /^(?:negyedik)/.test(laterOrdinal[1]) ? 3 : /^otodik/.test(laterOrdinal[1]) ? 4 : 5;
+  // A period or explicit Hungarian case suffix marks a numeric reference.
+  // Closing quotes/brackets end the token just like whitespace; decimals and
+  // ordinary unsuffixed quantities do not enter the ordinal grammar.
+  const ordinalSuffix = '(?:at|et|ot|bol|ben|ban|rol|ra|re|hoz|hez|nak|nek|nal|nel|ert|kel|kal|kent|ig|e)';
+  const numericText = String(text).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const numericOrdinals = [...numericText.matchAll(new RegExp(`\\b(\\d+)(?:\\.(?=$|[\\s"'‘’„“”«»()\\[\\]!?;,:])|\\.?(?=[-–]${ordinalSuffix}\\b))`, 'g'))];
+  if (numericOrdinals.length) index = numericOrdinals.every(match => Number(match[1]) >= 1 && Number(match[1]) <= 6) ? Number(numericOrdinals[0][1]) - 1 : -1;
+  // An explicit unsupported ordinal is a failed reference, never absent intent.
+  if (/\b(?:het|nyolc|kilenc|tiz|husz|harminc|negyven|otven|hatvan|hetven|nyolcvan|kilencven|szaz|ezer)[a-z]*(?:adik|edik|odik)(?:at|et)?\b/.test(value)) index = -1;
+  // Hungarian case suffixes are still an explicit reference, not absent intent.
+  const inflectedOrdinals = [...value.matchAll(new RegExp(`\\b((?:masodik|harmadik|negyedik|otodik|hatodik|(?:het|nyolc|kilenc|tiz|husz|harminc|negyven|otven|hatvan|hetven|nyolcvan|kilencven|szaz|ezer)[a-z]*(?:adik|edik|odik)))${ordinalSuffix}\\b`, 'g'))];
+  const inflectedOrdinal = inflectedOrdinals.find(match => !['masodik','harmadik','negyedik','otodik','hatodik'].includes(match[1])) || inflectedOrdinals[0];
+  if (inflectedOrdinal) {
+    const supported = ['masodik','harmadik','negyedik','otodik','hatodik'].indexOf(inflectedOrdinal[1]);
+    index = index === -1 || supported < 0 ? -1 : supported + 1;
+  }
+  if (index === null && /\b(az )?elobbit?\b/.test(value)) index = products.length === 2 ? 0 : -1;
+  if (index === null && /\b(az )?utobbit?\b/.test(value)) index = products.length === 2 ? 1 : -1;
 
   if (index !== null) {
     return index >= 0 && products[index]
-      ? result({ type: 'ordinal', productId: products[index], authoritative: true, resolvedFrom: 'ordered_list' })
-      : result({ type: 'ordinal', ambiguous: true, resolvedFrom: 'ordered_list' });
+      ? result({ type: 'ordinal', productId: products[index], authoritative: true, resolvedFrom: 'ordered_list', ordinalStatus: 'VALID_DISPLAYED_ORDINAL' })
+      : result({ type: 'ordinal', ambiguous: true, resolvedFrom: 'ordered_list', ordinalStatus: 'EXPLICIT_INVALID_OR_OUT_OF_RANGE_ORDINAL' });
   }
 
   if (/\bmasik\s+valtozat\b/.test(value)) {
@@ -492,7 +510,7 @@ function buildConversationContext(
 
     if (
       !message ||
-      !message.content
+      !message.content || message.historyEventInvalid === true || message.historyEventUncorrelated === true
     ) {
       continue;
     }
@@ -550,6 +568,23 @@ function buildConversationContext(
 
       context.lastResponseType = message.responseType || message.route || message.source || 'answer';
 
+      if (message.route === 'subtype_catalog' && message.catalogStatus === 'CATALOG_AVAILABLE_NO_MATCH') {
+        if (message.historySelectionSuperseded) {
+          const superseded = context.lastRecommendedProducts;
+          for (const key of ['lastSelectedProduct','lastUserProduct','lastAssistantProduct','primaryRecommendedProduct','lastProduct']) {
+            if (superseded.includes(context[key])) context[key] = null;
+          }
+          context.productContextStatus = 'unresolved';
+        }
+        context.lastRecommendedProducts = [];
+        // Retain unrelated focus; only the displayed ordinal selection is empty.
+        continue;
+      }
+
+      if (message.historySelectionAuthority) {
+        context.lastSelectedProduct = null;
+        context.lastUserProduct = null;
+      }
       if (message.targetProductId) {
         context.lastAssistantProduct = String(message.targetProductId);
         context.primaryRecommendedProduct = String(message.targetProductId);
@@ -624,7 +659,7 @@ function buildConversationContext(
         context.lastRecommendedProducts =
           products;
 
-        context.primaryRecommendedProduct = products[0] || null;
+        context.primaryRecommendedProduct = message.targetProductId || products[0] || null;
       }
 
       context.lastProduct =

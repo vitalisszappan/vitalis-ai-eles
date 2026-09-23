@@ -91,8 +91,13 @@ function normalizeState(value) {
   ).map((item) => ({
     role: item.role,
     content: item.content,
-    links: Array.isArray(item.links) ? item.links.slice(0, 3).map(normalizeProduct).filter(Boolean) : [],
+    turnId: safeText(item.turnId),
+    links: Array.isArray(item.links) ? item.links.slice(0, productCardLimit(item)).map(normalizeProduct).filter(Boolean) : [],
     route: safeText(item.route),
+    productTypeConstraint: safeText(item.productTypeConstraint),
+    catalogStatus: safeText(item.catalogStatus),
+    ...(productCardLimit(item) === 6 && Array.isArray(item.links) && item.links.some(link => link?.id === item.targetProductId)
+      ? { targetProductId: safeText(item.targetProductId) } : {}),
     intent: safeText(item.intent),
     domain: safeText(item.domain),
     responseType: safeText(item.responseType)
@@ -140,6 +145,10 @@ function restoreState(value) {
   for (const item of state.messages) add(item.content, item.role, {
     links: item.links,
     route: item.route,
+    productTypeConstraint: item.productTypeConstraint,
+    catalogStatus: item.catalogStatus,
+    targetProductId: item.targetProductId,
+    turnId: item.turnId,
     intent: item.intent,
     domain: item.domain,
     responseType: item.responseType,
@@ -209,12 +218,19 @@ function formatProductPrice(price) {
   return `${amount} Ft`;
 }
 
+// The subtype service selects up to six products before generating prose and
+// routing IDs. Preserve that set in rendering, persistence and restoration.
+function productCardLimit(context = {}) {
+  const constrainedExpert = context.route === 'expert_rule' && ['body_lotion', 'facial_cream'].includes(context.productTypeConstraint);
+  return context.route === 'subtype_catalog' || constrainedExpert ? 6 : 3;
+}
+
 function normalizeProduct(item, index) {
   if (!item || typeof item !== 'object') return null;
   const name = safeText(item.name) || safeText(item.title) || safeText(item.label) || 'Vitalis termék';
   return {
     id: safeText(item.id, `product-${index + 1}`),
-    canonicalProductId: safeText(item.canonicalProductId, safeText(item.id)),
+    canonicalProductId: safeText(item.canonicalProductId, safeText(item.id).startsWith('catalog:') ? '' : safeText(item.id)),
     unasProductId: safeText(item.unasProductId, safeText(item.commerce?.unasId)),
     sku: safeText(item.sku, safeText(item.commerce?.sku)),
     name,
@@ -223,11 +239,9 @@ function normalizeProduct(item, index) {
     image: safeText(item.image),
     price: safeProductPrice(item.price),
     currency: safeText(item.currency),
-    recommendationType: item.recommendationType === 'related'
-      ? 'related'
-      : item.recommendationType === 'secondary' ? 'secondary' : (index === 0 ? 'primary' : 'secondary'),
-    recommendationLabel: safeText(item.recommendationLabel),
-    reason: safeText(item.reason)
+    recommendationType: ['primary', 'secondary', 'related', 'context'].includes(item.recommendationType) ? item.recommendationType : 'available',
+    recommendationLabel: ['primary', 'secondary', 'related', 'context'].includes(item.recommendationType) ? safeText(item.recommendationLabel) : '',
+    reason: ['primary', 'secondary', 'related'].includes(item.recommendationType) ? safeText(item.reason) : ''
   };
 }
 
@@ -246,20 +260,20 @@ function addProductCards(article, links = [], context = {}) {
 
   const heading = document.createElement('div');
   heading.className = 'product-section-title';
-  const neutral = context.answerMode === 'DIRECT';
-  const contextual = context.answerMode === 'EXPLANATORY';
-  heading.textContent = neutral
+  const neutral = !validItems.some(item => ['primary', 'secondary', 'related'].includes(item.recommendationType));
+  const contextual = context.answerMode === 'EXPLANATORY' || validItems.every(item => item.recommendationType === 'context');
+  heading.textContent = contextual ? 'Az érintett termék' : neutral
     ? (validItems.length > 1 ? 'Elérhető termékek' : 'Elérhető termék')
-    : contextual ? 'Az érintett termék' : (validItems.length > 1 ? 'Ajánlott termékek' : 'Ajánlott termék');
+    : (validItems.length > 1 ? 'Ajánlott termékek' : 'Ajánlott termék');
   section.append(heading);
 
   const cards = document.createElement('div');
   cards.className = 'product-cards';
 
-  for (const [index, item] of validItems.slice(0, 3).entries()) {
+  for (const [index, item] of validItems.slice(0, productCardLimit(context)).entries()) {
     const hasUrl = Boolean(item.url);
     const card = document.createElement(hasUrl ? 'a' : 'div');
-    card.className = `product-card ${item.recommendationType === 'primary' ? 'is-primary' : item.recommendationType === 'related' ? 'is-related' : 'is-secondary'}`;
+    card.className = `product-card is-${item.recommendationType}`;
 
     if (hasUrl) {
       card.href = item.url;
@@ -314,9 +328,12 @@ function add(text, role, options = {}) {
   history.push({
     role: role === 'user' ? 'user' : 'assistant',
     content: text,
+    turnId: safeText(options.turnId),
     ...(role === 'bot' ? {
-      links: Array.isArray(options.links) ? options.links.map(normalizeProduct).filter(Boolean).slice(0, 3) : [],
+      links: Array.isArray(options.links) ? options.links.map(normalizeProduct).filter(Boolean).slice(0, productCardLimit(options)) : [],
       route: safeText(options.route),
+      productTypeConstraint: safeText(options.productTypeConstraint),
+      catalogStatus: safeText(options.catalogStatus),
       intent: safeText(options.intent),
       domain: safeText(options.domain),
       responseType: safeText(options.responseType, options.route),
@@ -326,8 +343,11 @@ function add(text, role, options = {}) {
   storedMessages.push({
     role: role === 'user' ? 'user' : 'bot',
     content: String(text),
-    links: Array.isArray(options.links) ? options.links.map(normalizeProduct).filter(Boolean).slice(0, 3) : [],
+    turnId: safeText(options.turnId),
+    links: Array.isArray(options.links) ? options.links.map(normalizeProduct).filter(Boolean).slice(0, productCardLimit(options)) : [],
     route: safeText(options.route),
+    productTypeConstraint: safeText(options.productTypeConstraint),
+    catalogStatus: safeText(options.catalogStatus),
     intent: safeText(options.intent),
     domain: safeText(options.domain),
     responseType: safeText(options.responseType, options.route),
@@ -473,7 +493,7 @@ async function ask(question) {
   const turn = freezeTurnData({ message: q, sessionId, turnId: createTurnId(),
     history: JSON.parse(JSON.stringify(history.slice(-10))) });
   const isFirstQuestion = !history.some((item) => item.role === 'user');
-  add(q, 'user');
+  add(q, 'user', { turnId: turn.turnId });
   if (isFirstQuestion) sendCommerceEvent('chat_started');
   input.value = '';
   autoResize();
@@ -493,7 +513,10 @@ async function ask(question) {
     if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, remaining));
     add(data.answer || 'Nem érkezett válasz.', 'bot', {
       links: data.links,
+      turnId: data.turnId,
       route: data.route,
+      productTypeConstraint: data.productTypeConstraint,
+      catalogStatus: data.catalogStatus,
       intent: data.intent,
       domain: data.domain,
       responseType: data.responseSource || data.route,

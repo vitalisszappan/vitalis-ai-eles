@@ -1,4 +1,5 @@
 'use strict';
+const { detectCustomerGoal } = require('./customer-goal.cjs');
 
 const {
   searchKnowledge
@@ -39,9 +40,10 @@ const {
 const { routeAnswer } = require('./answer-router.cjs');
 const { createCatalogSearch } = require('./catalog-search.cjs');
 const { childAnswer } = require('./product-faq.cjs');
-const { composeCommunication } = require('./communication-engine.cjs');
+const { composeCommunication, wordCount } = require('./communication-engine.cjs');
 const {classifyFallback,gapDisposition}=require('./fallback-classifier.cjs');
 const {matchesProductType}=require('./product-type-constraint.cjs');
+const { compatibleSubtypeExpert, subtypeCardIdentity, resolveSubtypeProduct } = require('./product-type-constraint.cjs');
 const {comparisonAnswer,recommendation:hairRecommendation,availability:hairAvailability}=require('./hair-wash-products.cjs');
 const { planAnswer } = require('./answer-planner.cjs');
 const { buildSemanticEvidence } = require('./semantic-evidence.cjs');
@@ -70,6 +72,7 @@ function attachDecision(answer, routing) {
     contextTarget: routing.contextTarget,
     responseSource: routing.responseSource,
     answerMode: routing.answerMode,
+    ...(routing.route === 'subtype_catalog' ? { catalogStatus: routing.catalogStatus } : {}),
     routing
   };
 }
@@ -263,7 +266,98 @@ function materializePlannedAnswer(plan, routing) {
   return { ...base, answer: 'Ehhez nincs elég bizonyított termékadatunk.' };
 }
 
+function finalizeSubtypeOutput({ routing, draft, question, history }) {
+  // Catalog reference materialization proves identity/availability only. A
+  // recommendation-shaped question does not authorize the composer to endorse
+  // it. Active expert/grounded recommendation paths retain their own modes.
+  const catalogReference = draft.source === 'unas-catalog'
+    && typeof routing.contextTarget === 'string' && routing.contextTarget.startsWith('catalog:');
+  let compositionRouting = routing.subtypeRequest ? draft.routing : routing;
+  if (catalogReference) compositionRouting = { ...compositionRouting, answerMode: 'DIRECT' };
+  const result = composeCommunication({ decision: compositionRouting, draft, question, history });
+  if (catalogReference) result.routing = { ...draft.routing, answerMode: compositionRouting.answerMode };
+  if (routing.subtypeRequest) {
+    // Every subtype composition path preserves the same proven result set.
+    result.answer = draft.answer;
+    result.communication.wordCount = wordCount(draft.answer);
+    result.links = draft.links.map(link => {
+      const { recommendationType, recommendationLabel, reason, ...informational } = link;
+      return informational;
+    });
+    result.routing = draft.routing;
+    result.productTypeConstraint = routing.productTypeConstraint;
+  }
+  return result;
+}
+function subtypeUnavailable(routing) {
+  const label = routing.productTypeConstraint === 'facial_cream' ? 'arckrémet' : 'testápolót';
+  routing = { ...routing, route: 'clarification', intent: 'subtype_suitability_unavailable', responseSource: 'requested-product-type',
+    primaryProductId: null, matchedProductIds: [], matchedRuleId: null, confidence: 0 };
+  return attachDecision({ source: 'requested-product-type', answer: `${label[0].toUpperCase()}${label.slice(1)} keresel. Ehhez jelenleg nem tudok megalapozott termékajánlást adni.`,
+    confidence: 0, links: [], suggestions: [], ruleId: null, intent: 'subtype_suitability_unavailable', matchedKnowledgeIds: [] }, routing);
+}
 function materializeDecision({ routing, question, history, knowledge, ruleEngine, logGap, conversationState, technicalFailure, logDiagnostic, answerPlan = null }) {
+  if (routing.subtypeRequest && routing.route !== 'safety') {
+    if (routing.subtypeRequest.status !== 'RESOLVED') return attachDecision({ source: 'requested-product-type', answer: 'Pontosítsd kérlek a kért terméktípust és a szükséges tulajdonságot; ezeket nem szeretném figyelmen kívül hagyni.', confidence: 0, links: [], suggestions: [], ruleId: null, intent: 'requested_type_clarification', matchedKnowledgeIds: [] }, routing);
+    if (routing.route === 'expert_rule') {
+      const expert = ruleEngine.resolve(question, history);
+      const products = decisionCatalog.all();
+      if (!compatibleSubtypeExpert(expert, routing.subtypeRequest, products)) return subtypeUnavailable(routing);
+      const links = expert.links.map((link, index) => {
+        const item = resolveSubtypeProduct(link, products);
+        // Rebuild card and nested commerce fields solely from validated inventory.
+        return { ...catalogCard(item, index), ...subtypeCardIdentity(item), ...(item.productType ? { productType: item.productType } : {}) };
+      });
+      const primaryProductId = links[expert.links.findIndex(link => link.id === expert.primaryProductId)].id;
+      // Expert intent is descriptive input, not a history-isolation capability.
+      const intent = detectCustomerGoal(question).intent;
+      // These fields describe the emitted selection. Preserve earlier evidence,
+      // thresholds and semantic-guard diagnostics from the routing decision.
+      const finalRouting = { ...routing, primaryProductId, matchedProductIds: links.map(link => link.id),
+        matchedRuleId: expert.ruleId, intent, responseSource: expert.source };
+      const acceptedExpert = {
+        source: expert.source, ruleId: expert.ruleId, intent,
+        answer: expert.answer, confidence: 100, suggestions: [], matchedKnowledgeIds: [],
+        targetProductId: primaryProductId
+      };
+      return attachDecision({ ...acceptedExpert, links, primaryProductId }, finalRouting);
+    }
+    if (routing.route !== 'subtype_catalog') return subtypeUnavailable(routing);
+    const found = decisionCatalog.searchSubtype(routing.productTypeConstraint, routing.subtypeRequest.qualifiers);
+    const label = routing.productTypeConstraint === 'facial_cream' ? 'arckrém' : 'testápoló';
+    const qualified = [...routing.subtypeRequest.qualifiers, label].join(' ');
+    const answer = found.status === 'CATALOG_UNAVAILABLE'
+      ? `A kért ${qualified} elérhetőségét jelenleg nem tudom ellenőrizni.`
+      : found.status === 'CATALOG_AVAILABLE_NO_MATCH'
+        ? `Nem találok igazoltan ${qualified} terméket az elérhető katalógusban.`
+        : `Az elérhető katalógusban ezek felelnek meg a kért ${qualified} típusnak: ${found.products.map(item => item.commerceName).join(', ')}.`;
+    return attachDecision({ source: 'constrained-catalog', answer, confidence: found.status === 'CATALOG_UNAVAILABLE' ? 0 : 100,
+      links: found.products.map((item, index) => ({ ...catalogCard(item, index), ...subtypeCardIdentity(item) })), suggestions: [], ruleId: null, intent: 'product_availability', matchedKnowledgeIds: [] }, { ...routing, catalogStatus: found.status, matchedProductIds: found.products.map(item => subtypeCardIdentity(item).id) });
+  }
+  // Requested-type selections use namespaced references, including after history
+  // rehydration. Resolve current inventory without treating raw IDs as canonical.
+  const reference = routing.contextTarget;
+  if (typeof reference === 'string' && reference.startsWith('catalog:')
+    && ((routing.route === 'commerce' && ['price_query', 'availability_query'].includes(routing.intent))
+      || (routing.route === 'context_followup' && routing.intent === 'select_recommendation'))) {
+    const matches = decisionCatalog.all().filter(item => {
+      const { unasId, sku } = item.commerceIdentity;
+      return reference === `catalog:${unasId ? 'unas' : 'sku'}:${encodeURIComponent(unasId || sku)}`;
+    });
+    const item = matches.length === 1 ? matches[0] : null;
+    const links = item ? [{ ...catalogCard({ ...item, name: item.commerceName }),
+      ...subtypeCardIdentity({ ...item, canonicalProductId: null }) }] : [];
+    const answer = !item ? 'A kiválasztott termék aktuális adatait most nem tudom ellenőrizni.'
+      : routing.intent === 'price_query' ? item.price !== null
+        ? `A ${item.commerceName} jelenlegi ára ${formatWholeForint(item.price)} Ft.`
+        : 'Ehhez a termékhez nincs elérhető, bizonyított aktuális árunk.'
+      : routing.intent === 'availability_query' ? `A ${item.commerceName} az elérhető katalógusban rendelhető.`
+      : `A megjelenített lista kiválasztott eleme: ${item.commerceName}.`;
+    const selected = item ? reference : null;
+    return attachDecision({ source: 'unas-catalog', answer, links, suggestions: [], confidence: item ? 100 : 0,
+      targetProductId: selected, primaryProductId: selected, ruleId: null, intent: routing.intent, matchedKnowledgeIds: [] },
+    { ...routing, contextTarget: selected, primaryProductId: selected, matchedProductIds: selected ? [selected] : [] });
+  }
   if (routing.route === 'business_info') return attachDecision(resolveBusinessInfo(routing.intent, decisionCatalog), routing);
   if (routing.responseSource === 'acne-decision') {
     const selected = routing.acneDecision?.selectedProductId || null;
@@ -1758,7 +1852,7 @@ function createAnswerUnsafe({
     const goalRouting = resolvedComplaintRouting(enforcedGoalRouting, resolvedTransition, { preserveRoute: true });
     const goalPlan = planAnswer({ question: goalQuestion, routing: goalRouting, conversationState: goalState });
     const goalDraft = materializeDecision({ routing: goalRouting, question: goalQuestion, history: effectiveHistory, knowledge, ruleEngine, logGap, conversationState: goalState, technicalFailure, logDiagnostic, answerPlan: goalPlan });
-    const composed = composeCommunication({ decision: goalRouting, draft: goalDraft, question, history: effectiveHistory });
+    const composed = finalizeSubtypeOutput({ routing: goalRouting, draft: goalDraft, question, history: effectiveHistory });
     return {
       ...composed,
       answer: `Örülök, hogy elmúlt. ${composed.answer}`,
@@ -1774,7 +1868,7 @@ function createAnswerUnsafe({
   }
   const answerPlan = planAnswer({ question, routing, conversationState: effectiveState });
   const draft = materializeDecision({ routing, question, history: effectiveHistory, knowledge, ruleEngine, logGap, conversationState: effectiveState, technicalFailure, logDiagnostic, answerPlan });
-  const result = composeCommunication({ decision: routing, draft, question, history: effectiveHistory });
+  const result = finalizeSubtypeOutput({ routing, draft, question, history: effectiveHistory });
   if (draft && draft.recommendationIntent) {
     Object.defineProperty(result, 'recommendationIntent', {
       value: draft.recommendationIntent,

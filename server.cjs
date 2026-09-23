@@ -1115,10 +1115,63 @@ function conversationTablePath(query = '') {
 }
 
 async function readSessionConversationRows(sessionId,limit=10){
-  if(!supabaseConfigured()||!validSessionId(sessionId))return[];
+  if(!validSessionId(sessionId))return[];
   const safeLimit=Math.max(1,Math.min(Number(limit)||10,10));
-  const result=await supabaseRequest({method:'GET',pathname:conversationTablePath(`?select=created_at,question,answer,source&session_id=eq.${encodeURIComponent(sessionId)}&order=created_at.desc&limit=${safeLimit}`),operation:'conversation_session_history_read',table:CONVERSATION_TABLE});
-  const rows=JSON.parse(result.body||'[]');if(!Array.isArray(rows))throw new Error('invalid_conversation_history');return rows;
+  if(!supabaseConfigured())return validateConversationHistoryRows(readLocalConversations(1000).filter(row=>row.session_id===sessionId).slice(0,safeLimit).reverse());
+  let result;
+  try {
+    result=await supabaseRequest({method:'GET',pathname:conversationTablePath(`?select=id,created_at,question,answer,source,history_event&session_id=eq.${encodeURIComponent(sessionId)}&order=created_at.desc,id.desc&limit=${safeLimit}`),operation:'conversation_session_history_read',table:CONVERSATION_TABLE});
+  } catch(error) {
+    // Read pre-migration deployments as legacy, never as verified empty events.
+    if(!['42703','PGRST204'].includes(error.supabaseCode)||!String(error.supabaseMessage||'').includes('history_event'))throw error;
+    result=await supabaseRequest({method:'GET',pathname:conversationTablePath(`?select=created_at,question,answer,source&session_id=eq.${encodeURIComponent(sessionId)}&order=created_at.desc&limit=${safeLimit}`),operation:'conversation_session_history_legacy_read',table:CONVERSATION_TABLE});
+  }
+  const rows=JSON.parse(result.body||'[]');if(!Array.isArray(rows))throw new Error('invalid_conversation_history');
+  return recoverConversationHistoryRows(rows, sessionId, safeLimit);
+}
+
+function recoverConversationHistoryRows(rows, sessionId, limit) {
+  const database = validateConversationHistoryRows(rows);
+  let local;
+  try {
+    // persistConversation appends this server-owned event BEFORE attempting the
+    // database POST. A failed POST does not make that newer validated turn vanish.
+    local = validateConversationHistoryRows(readLocalConversations(1000)
+      .filter(row => row.session_id === sessionId).reverse())
+      .filter(row => row.history_event_status === 'valid' && Number.isFinite(Date.parse(row.created_at)));
+  } catch { return database; }
+  if (!local.length) return database;
+  // JSON timestamptz readback can use an offset and different fractional-second
+  // spelling. Correlation/order are about the instant, not its serialization.
+  const time = row => Date.parse(row.created_at);
+  const compareTime = (a,b) => Number.isFinite(time(a)-time(b)) ? time(a)-time(b)
+    : String(a.created_at||'').localeCompare(String(b.created_at||''));
+  // Correlate actual server records, never client timestamps, event flags or
+  // product metadata. The database owns an already persisted logical turn.
+  const sameTurn = (a,b) => time(a) === time(b) && a.question === b.question && a.answer === b.answer
+    && (!a.history_event?.turnId || !b.history_event?.turnId || a.history_event.turnId === b.history_event.turnId);
+  database.sort((a,b) => compareTime(a,b)
+    || String(a.id||'').length - String(b.id||'').length || String(a.id||'').localeCompare(String(b.id||'')));
+  const anchors = local.map(row => database.findIndex(item => sameTurn(item,row)));
+  const entries = database.map((row,index) => ({row,order:index*2,localIndex:-1}));
+  local.forEach((row,localIndex) => {
+    if (anchors[localIndex] >= 0) return;
+    // At equal timestamps, local append order proves a gap's position relative
+    // to correlated database turns. Keep database-to-database order intact;
+    // without an anchor, a local tie cannot supersede a database turn.
+    const sameTimeAnchor = (index) => anchors[index] >= 0 && time(local[index]) === time(row);
+    let previous = -1, next = -1;
+    for (let i=localIndex-1;i>=0;i--) if (sameTimeAnchor(i)) {previous=anchors[i];break;}
+    for (let i=localIndex+1;i<local.length;i++) if (sameTimeAnchor(i)) {next=anchors[i];break;}
+    if (previous >= 0 && next >= 0 && previous >= next) return; // Conflicting order is not freshness proof.
+    const order = previous >= 0 ? previous*2+1 : -1;
+    entries.push({row,order,localIndex});
+  });
+  entries.sort((a,b) => compareTime(a.row,b.row)
+    || a.order-b.order || a.localIndex-b.localIndex);
+  // Server-computed order survives the memory reader's secondary sort; no
+  // browser field can enter this loadRows-only path.
+  return entries.slice(-limit).map(({row},index) => ({...row,history_order:index}));
 }
 
 /* =========================================================
@@ -1130,6 +1183,8 @@ async function persistConversation(
 ) {
 
   const safe = {
+
+    history_event: buildConversationHistoryEvent(record.historyResult, record.turnId),
 
     created_at:
       record.created_at ||
@@ -1331,6 +1386,59 @@ async function persistConversation(
   }
 
   if (!isDiagnosticOnlyConversation(safe)) await upsertKnowledgeTask(taskFromConversation(safe, { productStatuses: readCanonicalProductStatuses() }));
+}
+
+
+// history_event v1: one nullable JSONB column, <= 6 ordered identities, no claims.
+function validateConversationHistoryRows(rows) {
+  return rows.map(row=>{
+    const event=validateConversationHistoryEvent(row.history_event);
+    return {...row,history_event:event,history_event_status:row.history_event==null?'legacy':event?'valid':'invalid'};
+  });
+}
+function validateConversationHistoryEvent(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const keys=['version','turnId','kind','route','productTypeConstraint','products','targetProductId'];
+  if (Object.keys(value).length!==keys.length || keys.some(key=>!Object.hasOwn(value,key)) || value.version!==1) return null;
+  if (value.turnId!==null && !(typeof value.turnId==='string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(value.turnId))) return null;
+  if (!['selection','empty','none'].includes(value.kind) || ![null,'body_lotion','facial_cream'].includes(value.productTypeConstraint)) return null;
+  if (!Array.isArray(value.products) || value.products.length>6) return null;
+  const validId=id=>{
+    if(typeof id!=='string'||!id||id.length>1024)return false;
+    if(/^[a-z0-9_]{1,80}$/.test(id))return !['null','undefined'].includes(id);
+    if(!/^catalog:(unas|sku):/.test(id))return false;
+    try{const raw=decodeURIComponent(id.split(':').slice(2).join(':'));return Boolean(raw.trim())&&raw===raw.trim()&&!/^(null|undefined)$/i.test(raw)&&id.endsWith(encodeURIComponent(raw));}catch{return false;}
+  };
+  if(value.products.some(p=>!p||typeof p!=='object'||Array.isArray(p)||Object.keys(p).sort().join(',')!=='id,name'||!validId(p.id)||typeof p.name!=='string'||!p.name.trim()||p.name.length>300))return null;
+  if(new Set(value.products.map(p=>p.id)).size!==value.products.length)return null;
+  if(value.targetProductId!==null && (!validId(value.targetProductId)||!value.products.some(p=>p.id===value.targetProductId)))return null;
+  if(value.kind==='selection'){
+    if(!value.products.length||!['subtype_catalog','expert_rule','context_followup','commerce'].includes(value.route))return null;
+    if(['subtype_catalog','expert_rule'].includes(value.route)&&!value.productTypeConstraint)return null;
+  }else{
+    if(value.products.length||value.targetProductId!==null)return null;
+    if(value.kind==='empty' && (value.route!=='subtype_catalog'||!value.productTypeConstraint))return null;
+    if(value.kind==='none' && (![null,'safety','complaint'].includes(value.route)||value.productTypeConstraint!==null))return null;
+  }
+  return {version:1,turnId:value.turnId,kind:value.kind,route:value.route,productTypeConstraint:value.productTypeConstraint,products:value.products.map(p=>({id:p.id,name:p.name})),targetProductId:value.targetProductId};
+}
+function buildConversationHistoryEvent(result, turnId) {
+  if (!result || typeof result!=='object') return null;
+  const type=['body_lotion','facial_cream'].includes(result.productTypeConstraint)?result.productTypeConstraint:null;
+  const route=result.route,links=Array.isArray(result.links)?result.links:[];
+  const scoped=type && ['subtype_catalog','expert_rule'].includes(route);
+  const focused=['context_followup','commerce'].includes(route) && links.some(p=>typeof p.id==='string'&&p.id.startsWith('catalog:'));
+  if (!scoped && !focused && links.length) return null; // Legacy, non-constrained selection contract.
+  const empty=route==='subtype_catalog' && type && result.catalogStatus==='CATALOG_AVAILABLE_NO_MATCH'
+    && result.routing?.catalogStatus==='CATALOG_AVAILABLE_NO_MATCH' && links.length===0;
+  const selection=(scoped||focused) && links.length>0;
+  const event={version:1,turnId:typeof turnId==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(turnId)?turnId:null,
+    kind:empty?'empty':selection?'selection':'none',route:empty||selection?route:['safety','complaint'].includes(route)?route:null,
+    productTypeConstraint:empty||selection?type:null,products:selection?links.map(p=>({id:p.id,name:p.name||p.title})):[],targetProductId:selection?(result.targetProductId||result.primaryProductId||null):null};
+  // Only service-validated emitted identities may enter the persistence event.
+  if(selection && (links.length>6 || !Array.isArray(result.routing?.matchedProductIds)
+    || links.some(p=>!result.routing.matchedProductIds.includes(p.id))))return null;
+  return validateConversationHistoryEvent(event);
 }
 
 /* =========================================================
@@ -2283,7 +2391,9 @@ async function handleChat(
       result
     );
 
-  persistConversation({
+  await persistConversation({
+    historyResult: result,
+    turnId: responseTurnId,
 
     created_at:
       new Date()

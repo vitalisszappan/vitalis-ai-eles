@@ -19,6 +19,7 @@ const { detectBusinessInfo } = require('./business-info.cjs');
 const { resolveGuidedDiscovery } = require('./guided-discovery.cjs');
 const { resolveAcneDecision } = require('./acne-decision.cjs');
 const { buildProblemDomainDecision } = require('./problem-domain-decision.cjs');
+const { extractSubtypeRequest, compatibleSubtypeExpert, subtypeCardIdentity } = require('./product-type-constraint.cjs');
 
 const catalog = createCatalogSearch();
 
@@ -62,6 +63,28 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
   }
   if (safety.safetyClass === 'caution_with_boundary') {
     return decision({ ...base, route: 'safety', goal: 'medical_boundary', intent: 'cosmetic_boundary', confidence: 1, threshold: 1, responseSource: 'safety-gate' });
+  }
+
+  const subtypeRequest = extractSubtypeRequest(question);
+  if (subtypeRequest.status !== 'NONE') {
+    const scoped = { ...base, productTypeConstraint: subtypeRequest.type, subtypeRequest, contextUsed: false, contextTarget: null };
+    if (subtypeRequest.status !== 'RESOLVED') return decision({ ...scoped, route: 'clarification', intent: 'requested_type_clarification', responseSource: 'requested-product-type', rejectionReasons: [subtypeRequest.status.toLowerCase()] });
+    if (subtypeRequest.mode === 'availability') {
+      const found = catalog.searchSubtype(subtypeRequest.type, subtypeRequest.qualifiers);
+      return decision({ ...scoped, route: 'subtype_catalog', intent: 'product_availability', goal: 'find_product', productQuestionIntent: 'availability',
+        domain: subtypeRequest.type, catalogStatus: found.status, matchedProductIds: found.products.map(item => subtypeCardIdentity(item).id),
+        confidence: 1, threshold: 1, responseSource: 'constrained-catalog' });
+    }
+    const expert = ruleEngine?.resolve(question, history) || null;
+    if (!compatibleSubtypeExpert(expert, subtypeRequest, catalog.all())) return decision({ ...scoped, route: 'clarification', intent: 'subtype_suitability_unavailable', responseSource: 'requested-product-type', rejectionReasons: ['no_compatible_authorized_candidate'] });
+    return decision({ ...scoped, route: 'expert_rule', intent: goal.intent, matchedRuleId: expert.ruleId, primaryProductId: expert.primaryProductId,
+      matchedProductIds: expert.links.map(item => item.id), confidence: 1, threshold: 1, responseSource: expert.source });
+  }
+
+  const explicitOrdinal = resolveProductReference(question, context);
+  if (explicitOrdinal?.ordinalStatus === 'EXPLICIT_INVALID_OR_OUT_OF_RANGE_ORDINAL') {
+    return decision({ ...base, route: 'clarification', contextUsed: true, contextTarget: 'product',
+      rejectionReasons: ['ambiguous_product_reference'], responseSource: 'conversation-context' });
   }
 
   const acneDecision = resolveAcneDecision({ question, history, conversationState });
@@ -177,9 +200,10 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
 
   const reference = resolveProductReference(question, context);
   if (reference?.productId) {
-    const referenceGoal = reference.type === 'alternative' ? 'select_recommendation' : base.goal;
-    const referenceIntent = reference.type === 'alternative' ? 'alternative_reference' : base.intent;
-    return decision({ ...base, goal: referenceGoal, intent: referenceIntent, route: 'context_followup', contextUsed: true, contextTarget: reference.productId, matchedCanonicalIds: [reference.productId], matchedProductIds: [reference.productId], referenceType: reference.type || null, referenceAuthoritative: Boolean(reference.authoritative), confidence: 1, threshold: 1, responseSource: 'conversation-context' });
+    const catalogOrdinal = reference.type === 'ordinal' && reference.productId.startsWith('catalog:');
+    const referenceGoal = catalogOrdinal || reference.type === 'alternative' ? 'select_recommendation' : base.goal;
+    const referenceIntent = catalogOrdinal ? 'select_recommendation' : reference.type === 'alternative' ? 'alternative_reference' : base.intent;
+    return decision({ ...base, goal: referenceGoal, intent: referenceIntent, route: 'context_followup', contextUsed: true, contextTarget: reference.productId, matchedCanonicalIds: reference.productId.startsWith('catalog:') ? [] : [reference.productId], matchedProductIds: [reference.productId], referenceType: reference.type || null, referenceAuthoritative: Boolean(reference.authoritative), confidence: 1, threshold: 1, responseSource: 'conversation-context' });
   }
   if (reference?.ambiguous) {
     if (goal.goal === 'ask_variant' && reference.type !== 'alternative' && context.lastFocusProduct) {

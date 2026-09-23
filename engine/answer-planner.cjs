@@ -16,7 +16,7 @@ function detectAnswerIntent(question, routing) {
   if (['ingredients', 'ingredient_existence'].includes(routing?.productQuestionIntent)) return 'ingredients';
   if (routing?.productQuestionIntent === 'benefits') return 'product_benefits';
   if (/\b(mi van benne|mi van\b.*\b\w+(?:ban|ben)|mik az?\b.*\bosszetevoi|mi az inci|milyen az incije|milyen osszetevoket tartalmaz|mit tartalmaz|van benne|van\b.*\b\w+(?:ban|ben)|tartalmaz)\b/.test(text)) return 'ingredients';
-  if (/\b(hogyan hasznaljam|hogy kell hasznalni|milyen gyakran hasznaljam)\b/.test(text)) return 'usage';
+  if (routing?.productQuestionIntent === 'usage' || /\b(hogyan hasznaljam|hogy kell hasznalni|milyen gyakran hasznaljam)\b/.test(text)) return 'usage';
   if (/\b(mennyibe kerul|mi az ara)\b/.test(text)) return 'price_query';
   return null;
 }

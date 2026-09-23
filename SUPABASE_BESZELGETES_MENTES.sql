@@ -13,3 +13,9 @@ create table if not exists public.chat_conversations (
 );
 create index if not exists chat_conversations_created_at_idx on public.chat_conversations(created_at desc);
 create index if not exists chat_conversations_session_id_idx on public.chat_conversations(session_id);
+
+-- history_event v1: nullable bounded semantic event, validated by server.cjs.
+-- Keys: version, turnId, kind, route, productTypeConstraint, products, targetProductId.
+-- kind: selection | empty | none; maximum 6 products; IDs <= 1024, names <= 300.
+-- Missing legacy value is unknown history metadata, never verified no-match.
+alter table public.chat_conversations add column if not exists history_event jsonb;

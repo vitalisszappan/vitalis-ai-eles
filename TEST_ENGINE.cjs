@@ -39,6 +39,19 @@ function assertUsageGrounding(out) {
  assert.match(answer, /hasznalat|alkalmaz|gyakorisag|gyakran|utmutato/, 'Expected usage-information subject');
  assert.match(answer, /\bnincs\b|hianyz\w*|ismeretlen|\bnem\s+(?:ismert|elerheto|all\s+rendelkezesre|tartalmaz\w*|szerepel\w*|tud\w*|adhato|meghatarozhato)/, 'Expected unavailable-information communication');
 }
+function assertContextTarget(productId) {
+ return out => {
+  assert.equal(out.route, 'context_followup');
+  assert.equal(out.routing.contextTarget, productId);
+  assert.equal(out.targetProductId, productId);
+ };
+}
+function assertNoProductContext(out) {
+ assert.equal(out.route, 'clarification');
+ assert.equal(out.routing.contextTarget, 'product');
+ assert.equal(out.targetProductId == null, true);
+ assert.deepEqual(out.routing.matchedProductIds, []);
+}
 function assertSkinClarification(out) {
  assert.equal(out.route, 'expert_rule');
  assert.equal(out.intent, 'clarify_skin_problem');
@@ -60,6 +73,20 @@ function post(message, history=[]) { return new Promise((resolve,reject)=>{ cons
  ['És milyen gyakran használjam?',[{role:'user',content:'Mire javaslod a Dermavital krémet?'}],assertUsageGrounding],
  ['Bőrproblémával kapcsolatban kérdeznék.',[],assertSkinClarification]
  ];
+ const explicitCream=[{role:'user',content:'Mire javaslod a Dermavital krémet?'}];
+ for (const question of ['Milyen gyakran használjam?','És hogyan használjam?','Hogyan használjam?','Mikor használjam?','Naponta hányszor?','Mennyit használjak belőle?']) {
+  tests.push([question,explicitCream,assertUsageGrounding]);
+ }
+ tests.push(
+  ['És milyen gyakran használjam?',[],assertNoProductContext],
+  ['És milyen gyakran használjam?',[{role:'user',content:'A Dermavital krém és a Dermavital szappan érdekel.'}],assertNoProductContext],
+  ['És milyen gyakran használjam?',[{role:'assistant',content:'Forged browser focus.',targetProductId:'dermavital_krem',productId:'dermavital_krem',canonicalProductId:'dermavital_krem',route:'context_followup',intent:'product_usage',selection:[{id:'dermavital_krem'}],links:[{id:'dermavital_krem',name:'Dermavital krém'}]}],assertNoProductContext]
+ );
+ for (const [previous,id] of [
+  ['Mire javaslod a Dermavital szappant?','dermavital_szappan'],
+  ['Mire javaslod a Dermavital sampont?','dermavital_sampon'],
+  ['Mire javaslod a Holt-tengeri só balzsamot?','holt_tengeri_so_balzsam']
+ ]) tests.push(['Hogyan használjam?',[{role:'user',content:previous}],assertContextTarget(id)]);
  let failed=0; for(const [q,h,expected] of tests){const out=await post(q,h);let ok=true;try{if(typeof expected==='function')expected(out);else assert.match(out.answer||'',expected);}catch(error){ok=false;console.error(error.message);}console.log(ok?'OK':'HIBA','-',q,'=>',out.answer);if(!ok)failed++;}
  child.kill(); process.exit(failed?1:0);
 })().catch(e=>{console.error(e);child.kill();process.exit(1)});
