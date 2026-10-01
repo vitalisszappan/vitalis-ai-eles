@@ -305,7 +305,10 @@ test('production source is dormant and uses only permitted contracts', () => {
 });
 test('only explicitly approved dormant downstream contracts may import lifecycle', () => {
   const target = 'conversation-decision-state-lifecycle.cjs';
-  const approvedDormantConsumers = new Set(['engine/conversation-decision-state-snapshot.cjs']);
+  const approvedDormantConsumers = new Set([
+    'engine/conversation-decision-state-snapshot.cjs',
+    'engine/conversation-decision-turn-orchestrator.cjs'
+  ]);
   const unauthorizedImporters = (files, readSource) => files.filter((name) => !name.startsWith('TEST_')
     && name !== 'engine/conversation-decision-state-lifecycle.cjs'
     && readSource(name).includes(target)
@@ -313,7 +316,10 @@ test('only explicitly approved dormant downstream contracts may import lifecycle
   const files = fs.readdirSync(__dirname).filter((name) => name.endsWith('.cjs')).concat(fs.readdirSync(path.join(__dirname, 'engine')).filter((name) => name.endsWith('.cjs')).map((name) => `engine/${name}`));
   const importers = files.filter((name) => !name.startsWith('TEST_') && name !== 'engine/conversation-decision-state-lifecycle.cjs'
     && fs.readFileSync(path.join(__dirname, name), 'utf8').includes(target));
-  assert.deepEqual(importers, ['engine/conversation-decision-state-snapshot.cjs']);
+  assert.deepEqual(importers, [
+    'engine/conversation-decision-state-snapshot.cjs',
+    'engine/conversation-decision-turn-orchestrator.cjs'
+  ]);
   assert.deepEqual(unauthorizedImporters(files, (name) => fs.readFileSync(path.join(__dirname, name), 'utf8')), []);
 
   const importingSource = `require('./${target}')`;
@@ -324,7 +330,7 @@ test('only explicitly approved dormant downstream contracts may import lifecycle
   assert.deepEqual(unauthorizedImporters(simulated, () => importingSource), [
     'server.cjs', 'engine/answer-planner.cjs', 'engine/arbitrary-new-module.cjs'
   ]);
-  assert.equal(approvedDormantConsumers.size, 1);
+  assert.equal(approvedDormantConsumers.size, 2);
   assert.equal(approvedDormantConsumers.has('engine/answer-planner.cjs'), false);
 });
 

@@ -260,10 +260,14 @@ test('source has no I/O clock randomness environment or runtime coupling', () =>
   assert.doesNotMatch(source, /\b(?:fs|http|https|net|fetch|XMLHttpRequest|process\.env|Date\.now|new Date|Math\.random|crypto|supabase|sql|jsonl)\b/i);
   assert.doesNotMatch(source, /server|widget|router|planner|answer-service|conversation-memory|product-catalog|page-context/i);
 });
-test('no existing production module imports snapshot module', () => {
+test('only explicitly approved dormant downstream contract imports snapshot module', () => {
   const target = 'conversation-decision-state-snapshot.cjs';
   const files = fs.readdirSync(path.join(__dirname, 'engine')).filter((name) => name.endsWith('.cjs') && name !== target);
-  assert.deepEqual(files.filter((name) => fs.readFileSync(path.join(__dirname, 'engine', name), 'utf8').includes(target)), []);
+  const importers = files.filter((name) => fs.readFileSync(path.join(__dirname, 'engine', name), 'utf8').includes(target));
+  assert.deepEqual(importers, ['conversation-decision-turn-orchestrator.cjs']);
+  const approved = new Set(['conversation-decision-turn-orchestrator.cjs']);
+  assert.deepEqual(importers.filter((name) => !approved.has(name)), []);
+  assert.equal(approved.has('answer-planner.cjs'), false);
 });
 
 console.log(`PASS TEST_CONVERSATION_DECISION_STATE_SNAPSHOT_R4A2E (${count} cases)`);
