@@ -303,12 +303,29 @@ test('production source is dormant and uses only permitted contracts', () => {
   assert.doesNotMatch(source, /\b(?:fs|http|https|net|fetch|XMLHttpRequest|process\.env|Date\.now|new Date|Math\.random|crypto)\b/);
   assert.doesNotMatch(source, /server|router|planner|answer-service|conversation-context|conversation-memory|widget|catalog|page-context|supabase/i);
 });
-test('no existing runtime module imports lifecycle', () => {
+test('only explicitly approved dormant downstream contracts may import lifecycle', () => {
   const target = 'conversation-decision-state-lifecycle.cjs';
+  const approvedDormantConsumers = new Set(['engine/conversation-decision-state-snapshot.cjs']);
+  const unauthorizedImporters = (files, readSource) => files.filter((name) => !name.startsWith('TEST_')
+    && name !== 'engine/conversation-decision-state-lifecycle.cjs'
+    && readSource(name).includes(target)
+    && !approvedDormantConsumers.has(name));
   const files = fs.readdirSync(__dirname).filter((name) => name.endsWith('.cjs')).concat(fs.readdirSync(path.join(__dirname, 'engine')).filter((name) => name.endsWith('.cjs')).map((name) => `engine/${name}`));
   const importers = files.filter((name) => !name.startsWith('TEST_') && name !== 'engine/conversation-decision-state-lifecycle.cjs'
     && fs.readFileSync(path.join(__dirname, name), 'utf8').includes(target));
-  assert.deepEqual(importers, []);
+  assert.deepEqual(importers, ['engine/conversation-decision-state-snapshot.cjs']);
+  assert.deepEqual(unauthorizedImporters(files, (name) => fs.readFileSync(path.join(__dirname, name), 'utf8')), []);
+
+  const importingSource = `require('./${target}')`;
+  const simulated = [
+    'engine/conversation-decision-state-snapshot.cjs', 'server.cjs',
+    'engine/answer-planner.cjs', 'engine/arbitrary-new-module.cjs'
+  ];
+  assert.deepEqual(unauthorizedImporters(simulated, () => importingSource), [
+    'server.cjs', 'engine/answer-planner.cjs', 'engine/arbitrary-new-module.cjs'
+  ]);
+  assert.equal(approvedDormantConsumers.size, 1);
+  assert.equal(approvedDormantConsumers.has('engine/answer-planner.cjs'), false);
 });
 
 console.log(`PASS TEST_CONVERSATION_DECISION_STATE_LIFECYCLE_R4A2D (${count} cases)`);
