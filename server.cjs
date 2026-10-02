@@ -76,6 +76,11 @@ const { createRevenuePhase4Service } = require('./engine/revenue-phase4.cjs');
 const { createRevenueAdminReader } = require('./engine/revenue-admin-read.cjs');
 const {rehydrateSessionHistory,validSessionId}=require('./engine/conversation-memory.cjs');
 const { validatePageObservation, assessPageObservationFreshness, sanitizePageUrl } = require('./engine/page-context-observation.cjs');
+const {
+  buildShadowPayload,
+  createShadowRunner,
+  scheduleShadowExecution
+} = require('./engine/conversation-decision-shadow-runner.cjs');
 
 function readCanonicalProductStatuses() {
   try {
@@ -223,6 +228,12 @@ const ruleEngine =
   new ExpertRuleEngine(
     RULE_PATH
   );
+
+const R4_SHADOW_ENABLED = process.env.VITALIS_R4_SHADOW_ENABLED === '1';
+const r4ShadowRunner = createShadowRunner();
+function logR4ShadowDiagnostic(diagnostic) {
+  console.info('[r4-shadow]', JSON.stringify(diagnostic));
+}
 
 /* =========================================================
    TUDÁSBÁZIS
@@ -2444,6 +2455,25 @@ async function handleChat(
     }
   );
 
+  const shadowEnabledForRequest = typeof R4_SHADOW_ENABLED !== 'undefined' && R4_SHADOW_ENABLED;
+  let shadowCapture = null;
+  if (shadowEnabledForRequest) {
+    try {
+      shadowCapture = buildShadowPayload({
+        clientConversationId: validSessionId(parsed.sessionId) ? parsed.sessionId : null,
+        clientTurnId: responseTurnId,
+        rawText: question,
+        routing: {
+          intent: result.routing?.intent ?? null,
+          domain: result.routing?.domain ?? null,
+          evidence: Array.isArray(result.routing?.evidence) ? [...result.routing.evidence] : []
+        }
+      });
+    } catch {
+      shadowCapture = null;
+    }
+  }
+
   sendJson(
     res,
     200,
@@ -2461,6 +2491,15 @@ async function handleChat(
       pageContextStatus: pageContext.status
     }
   );
+
+  if (shadowEnabledForRequest) {
+    scheduleShadowExecution({
+      enabled: true,
+      payload: shadowCapture?.payload || null,
+      runner: r4ShadowRunner,
+      logger: logR4ShadowDiagnostic
+    });
+  }
 }
 
 /* =========================================================

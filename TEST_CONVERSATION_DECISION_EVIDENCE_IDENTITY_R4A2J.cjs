@@ -235,12 +235,12 @@ test('production module is dormant and capability-free', () => {
   assert.doesNotMatch(source,/process\.env|Date\.now|new Date|Math\.random|randomUUID|crypto|node:fs|node:https|fetch|supabase|sql|jsonl/i);
   for(const forbidden of ['fieldPath','CANONICAL_RESOLUTION','APPROVED_PRODUCT_FACT','SET','CLEAR']) assert.doesNotMatch(source,new RegExp(`['\"]${forbidden}['\"]`));
 });
-test('no live production module imports R4A2J', () => {
+test('only the fail-isolated first-shadow runner imports R4A2J', () => {
   const target='conversation-decision-evidence-identity.cjs';
   const root=fs.readdirSync(__dirname).filter((name)=>/\.(?:cjs|js)$/.test(name)&&!name.startsWith('TEST_')).map((name)=>name);
   const engine=fs.readdirSync(path.join(__dirname,'engine')).filter((name)=>/\.(?:cjs|js)$/.test(name)&&name!==target).map((name)=>`engine/${name}`);
   const importers=[...root,...engine].filter((name)=>fs.readFileSync(path.join(__dirname,name),'utf8').includes(target));
-  assert.deepEqual(importers,[]);
+  assert.deepEqual(importers,['engine/conversation-decision-shadow-runner.cjs']);
 });
 
 console.log(`PASS TEST_CONVERSATION_DECISION_EVIDENCE_IDENTITY_R4A2J (${count} cases)`);

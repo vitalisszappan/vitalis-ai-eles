@@ -187,12 +187,12 @@ test('module imports only dormant H and I contracts and has no forbidden capabil
   assert.deepEqual(imports,['./conversation-decision-correlation-contract.cjs','./conversation-decision-semantic-evidence-observation.cjs']);
   assert.doesNotMatch(source,/process\.env|Date\.now|new Date|Math\.random|randomUUID|crypto|node:fs|node:https|fetch|supabase|sql|jsonl/i);
 });
-test('no live production module imports the dormant adapter', () => {
+test('only the fail-isolated first-shadow runner imports the adapter', () => {
   const target='conversation-decision-shadow-observation-adapter.cjs';
   const root=fs.readdirSync(__dirname).filter((name)=>/\.(?:cjs|js)$/.test(name)&&!name.startsWith('TEST_')).map((name)=>name);
   const engine=fs.readdirSync(path.join(__dirname,'engine')).filter((name)=>/\.(?:cjs|js)$/.test(name)&&name!==target).map((name)=>`engine/${name}`);
   const importers=[...root,...engine].filter((name)=>fs.readFileSync(path.join(__dirname,name),'utf8').includes(target));
-  assert.deepEqual(importers,[]);
+  assert.deepEqual(importers,['engine/conversation-decision-shadow-runner.cjs']);
 });
 
 console.log(`PASS TEST_CONVERSATION_DECISION_SHADOW_OBSERVATION_ADAPTER (${count} cases)`);
