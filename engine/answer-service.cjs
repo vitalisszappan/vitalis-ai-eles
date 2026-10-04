@@ -57,6 +57,7 @@ const { createCommerceAssistance } = require('./commerce-assistance.cjs');
 const { validateStructuredOutput } = require('./structured-output-safety.cjs');
 const { CONCERNS } = require('./product-intelligence-schema.cjs');
 const { buildRecommendationIntentContract } = require('./product-intelligence-recommendation-intent-contract.cjs');
+const { defaultCouponPolicyResolver } = require('./coupon-policy.cjs');
 
 const decisionCatalog = createCatalogSearch();
 const commerceAssistance = createCommerceAssistance({ catalog: decisionCatalog });
@@ -297,6 +298,19 @@ function subtypeUnavailable(routing) {
     confidence: 0, links: [], suggestions: [], ruleId: null, intent: 'subtype_suitability_unavailable', matchedKnowledgeIds: [] }, routing);
 }
 function materializeDecision({ routing, question, history, knowledge, ruleEngine, logGap, conversationState, technicalFailure, logDiagnostic, answerPlan = null }) {
+  if (routing.route === 'coupon_policy') {
+    const projected = defaultCouponPolicyResolver.materialize(routing.intent);
+    return attachDecision({
+      source: 'approved-coupon-policy',
+      answer: projected.answer,
+      confidence: projected.groundingStatus === 'grounded' ? 100 : 0,
+      links: [], suggestions: [], ruleId: null, intent: routing.intent, matchedKnowledgeIds: [],
+      answerIntent: 'coupon_information', targetProductId: null,
+      factsUsed: projected.factsUsed, groundingStatus: projected.groundingStatus,
+      responseStrategy: projected.groundingStatus === 'grounded' ? 'grounded_coupon_policy' : 'safe_uncertainty',
+      ctaStrategy: 'none'
+    }, routing);
+  }
   if (routing.subtypeRequest && routing.route !== 'safety') {
     if (routing.subtypeRequest.status !== 'RESOLVED') return attachDecision({ source: 'requested-product-type', answer: 'Pontosítsd kérlek a kért terméktípust és a szükséges tulajdonságot; ezeket nem szeretném figyelmen kívül hagyni.', confidence: 0, links: [], suggestions: [], ruleId: null, intent: 'requested_type_clarification', matchedKnowledgeIds: [] }, routing);
     if (routing.route === 'expert_rule') {

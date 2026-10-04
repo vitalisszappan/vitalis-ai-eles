@@ -1,0 +1,245 @@
+{
+  "schema": "vitalis-approved-coupon-policy/v1",
+  "policyVersion": 1,
+  "status": "PARTIALLY_OWNER_APPROVED",
+  "updatedAt": "2026-10-04",
+  "approvedBy": "VITALIS_OWNER",
+  "currentFacts": [
+    "checkout.couponEntryLocation",
+    "newsletterCoupon.exists",
+    "newsletterCoupon.code",
+    "newsletterCoupon.couponType",
+    "newsletterCoupon.discountType",
+    "newsletterCoupon.discountValue",
+    "newsletterCoupon.intendedBenefit",
+    "newsletterCoupon.deliveryChannel",
+    "newsletterCoupon.deliveryAutomation",
+    "newsletterCoupon.deliveryFlowStage",
+    "newsletterCoupon.singleUse",
+    "eligibility.validFrom",
+    "eligibility.validUntil",
+    "eligibility.minimumOrderValue",
+    "eligibility.orderTotalCouponRedeemableWhenCartContainsSaleProduct",
+    "technicalConfiguration.unasConfiguredRedeemerScope"
+  ],
+  "checkout": {
+    "couponEntryLocation": {
+      "status": "CURRENT_VERIFIED",
+      "value": {
+        "page": "CART",
+        "sectionLabel": "KUPON",
+        "fieldLabel": "Kuponkód",
+        "actionLabel": "Ellenőrzés",
+        "sequence": "Enter the code and use Ellenőrzés before continuing with the order."
+      },
+      "provenance": ["CURRENT_WEBSHOP_UI"],
+      "disclosure": { "customerFacing": true }
+    },
+    "accountLoginRequired": { "status": "UNKNOWN", "value": null }
+  },
+  "newsletterCoupon": {
+    "exists": {
+      "status": "OWNER_APPROVED",
+      "value": true,
+      "provenance": ["OWNER_APPROVED", "CURRENT_KLAVIYO_FLOW"],
+      "disclosure": { "customerFacing": true }
+    },
+    "code": {
+      "status": "CURRENT_VERIFIED",
+      "value": "VITAL10",
+      "provenance": ["OWNER_APPROVED", "CURRENT_UNAS_CONFIGURATION", "CURRENT_KLAVIYO_FLOW"],
+      "disclosure": {
+        "customerFacing": false,
+        "reason": "DELIVERED_AFTER_NEWSLETTER_SIGNUP"
+      }
+    },
+    "couponType": {
+      "status": "CURRENT_VERIFIED",
+      "value": "ORDER_TOTAL_DISCOUNT",
+      "displayValueHu": "Végösszeg kedvezmény",
+      "provenance": ["CURRENT_UNAS_CONFIGURATION"],
+      "disclosure": { "customerFacing": true }
+    },
+    "discountType": {
+      "status": "CURRENT_VERIFIED",
+      "value": "PERCENTAGE",
+      "displayValueHu": "Százalékos",
+      "provenance": ["OWNER_APPROVED", "CURRENT_UNAS_CONFIGURATION"],
+      "disclosure": { "customerFacing": true }
+    },
+    "discountValue": {
+      "status": "CURRENT_VERIFIED",
+      "value": 10,
+      "unit": "PERCENT",
+      "provenance": ["OWNER_APPROVED", "CURRENT_UNAS_CONFIGURATION"],
+      "disclosure": { "customerFacing": true }
+    },
+    "intendedBenefit": {
+      "status": "OWNER_APPROVED",
+      "value": "INTRODUCTORY_NEWSLETTER_SIGNUP_DISCOUNT",
+      "provenance": ["OWNER_APPROVED"],
+      "disclosure": { "customerFacing": true }
+    },
+    "registrationRequired": { "status": "UNKNOWN", "value": null },
+    "subscriptionConfirmationRequired": { "status": "UNKNOWN", "value": null },
+    "subscriberEligibilityDetails": { "status": "UNKNOWN", "value": null },
+    "deliveryChannel": {
+      "status": "CURRENT_VERIFIED",
+      "value": "EMAIL",
+      "provenance": ["CURRENT_KLAVIYO_FLOW"],
+      "disclosure": { "customerFacing": true }
+    },
+    "deliveryAutomation": {
+      "status": "CURRENT_VERIFIED",
+      "value": "LIVE_KLAVIYO_WELCOME_FLOW",
+      "observedFlowName": "[GR] Welcome - Kupon feliratkozás után",
+      "provenance": ["CURRENT_KLAVIYO_FLOW"],
+      "disclosure": { "customerFacing": true }
+    },
+    "deliveryFlowStage": {
+      "status": "CURRENT_VERIFIED",
+      "value": "DAY_0_WELCOME_EMAIL_1",
+      "timingPrecision": "DAY_0_FLOW_PLACEMENT_ONLY",
+      "provenance": ["CURRENT_KLAVIYO_FLOW"],
+      "disclosure": { "customerFacing": true }
+    },
+    "singleUse": {
+      "status": "OWNER_APPROVED",
+      "value": true,
+      "scope": "PER_CUSTOMER",
+      "technicalPerCustomerOrderUseLimit": 1,
+      "provenance": ["OWNER_APPROVED", "CURRENT_UNAS_CONFIGURATION"],
+      "disclosure": { "customerFacing": true }
+    }
+  },
+  "eligibility": {
+    "validFrom": {
+      "status": "CURRENT_VERIFIED",
+      "value": "2024-11-19 00:00:00",
+      "timezone": null,
+      "provenance": ["CURRENT_UNAS_CONFIGURATION"],
+      "disclosure": { "customerFacing": true }
+    },
+    "validUntil": {
+      "status": "CURRENT_VERIFIED",
+      "value": null,
+      "configurationMeaning": "NO_END_DATE_CONFIGURED",
+      "provenance": ["CURRENT_UNAS_CONFIGURATION"],
+      "disclosure": { "customerFacing": true }
+    },
+    "minimumOrderValue": {
+      "status": "CURRENT_VERIFIED",
+      "value": { "amount": 0, "currency": "HUF" },
+      "provenance": ["CURRENT_UNAS_CONFIGURATION"],
+      "disclosure": { "customerFacing": true }
+    },
+    "orderTotalCouponRedeemableWhenCartContainsSaleProduct": {
+      "status": "CURRENT_VERIFIED",
+      "value": false,
+      "scope": "VITAL10_ORDER_TOTAL_COUPON",
+      "provenance": ["CURRENT_UNAS_CONFIGURATION"],
+      "disclosure": { "customerFacing": true }
+    },
+    "stackingAllowed": { "status": "UNKNOWN", "value": null },
+    "productExclusions": { "status": "UNKNOWN", "value": null },
+    "categoryExclusions": { "status": "UNKNOWN", "value": null },
+    "businessCustomerEligibility": {
+      "status": "PENDING_OWNER_CONFIRMATION",
+      "value": null,
+      "note": "The observed UNAS technical scope is ANYONE, but this is not approved as the business entitlement policy."
+    },
+    "customerSegmentExclusions": { "status": "UNKNOWN", "value": null }
+  },
+  "technicalConfiguration": {
+    "unasConfiguredRedeemerScope": {
+      "status": "CURRENT_VERIFIED",
+      "value": "ANYONE",
+      "displayValueHu": "Bárki",
+      "policyEffect": "NONE_UNTIL_OWNER_CONFIRMED",
+      "provenance": ["CURRENT_UNAS_CONFIGURATION"],
+      "disclosure": {
+        "customerFacing": false,
+        "reason": "TECHNICAL_SCOPE_NOT_BUSINESS_POLICY"
+      }
+    }
+  },
+  "troubleshooting": {
+    "invalidCode": { "status": "UNKNOWN", "value": null },
+    "expiredCode": { "status": "UNKNOWN", "value": null },
+    "alreadyUsed": { "status": "UNKNOWN", "value": null },
+    "codeNotReceived": { "status": "UNKNOWN", "value": null },
+    "supportChannel": { "status": "UNKNOWN", "value": null }
+  },
+  "promotions": {
+    "activePromotionExists": { "status": "UNKNOWN", "value": null },
+    "rules": { "status": "UNKNOWN", "value": null }
+  },
+  "historicalClaims": [
+    {
+      "id": "newsletter-coupon-issuance",
+      "status": "HISTORICAL_PARTIALLY_CORROBORATED",
+      "claim": "A hírlevél-feliratkozás és annak megerősítése után a rendszer e-mailben kuponkódot küld.",
+      "customerFacing": true,
+      "provenance": ["engine/admin-intents.cjs:74", "data/rules/expert-rules.json:423", "data/knowledge.json:4", "data/knowledge.json:2107", "data/knowledge.json:2171"],
+      "currentAuthority": ["newsletterCoupon.exists", "newsletterCoupon.deliveryChannel", "newsletterCoupon.deliveryAutomation", "newsletterCoupon.deliveryFlowStage"],
+      "unverifiedPart": "Whether newsletter confirmation is required before delivery remains unknown."
+    },
+    {
+      "id": "newsletter-discount-ten-percent-once",
+      "status": "HISTORICAL_CORROBORATED_BY_CURRENT_FACT",
+      "claim": "Az új feliratkozóknak egyszeri 10% kedvezmény jár.",
+      "customerFacing": true,
+      "provenance": ["data/knowledge.json:1671", "data/knowledge.json:1701", "data/knowledge.json:2024", "data/knowledge.json:2107"],
+      "currentAuthority": ["newsletterCoupon.exists", "newsletterCoupon.discountValue", "newsletterCoupon.singleUse"]
+    },
+    {
+      "id": "vital10-code",
+      "status": "HISTORICAL_CORROBORATED_BY_CURRENT_FACT",
+      "claim": "A hírlevélhez kapcsolódó kuponkód VITAL10.",
+      "customerFacing": true,
+      "provenance": ["data/knowledge.json:1848", "data/knowledge.json:1908", "data/rules/expert-rules.json:431"],
+      "currentAuthority": ["newsletterCoupon.code"]
+    },
+    {
+      "id": "registration-confirmation-and-login",
+      "status": "HISTORICAL_UNVERIFIED",
+      "claim": "A kuponhoz regisztráció, hírlevél-feliratkozás, visszaigazolás, majd a fiókba belépés szükséges.",
+      "customerFacing": true,
+      "provenance": ["data/knowledge.json:1848", "data/knowledge.json:1878", "data/knowledge.json:1957", "data/knowledge.json:2171"],
+      "authority": "Registration, confirmation, and login requirements remain unknown."
+    },
+    {
+      "id": "newsletter-ui-location",
+      "status": "HISTORICAL_UNVERIFIED",
+      "claim": "A hírlevél-feliratkozás a fiók/regisztráció felületén egy jelölőnégyzettel érhető el.",
+      "customerFacing": true,
+      "provenance": ["data/knowledge.json:1254"],
+      "authority": "The current newsletter signup UI location has not been verified."
+    },
+    {
+      "id": "missing-code-email-behavior",
+      "status": "HISTORICAL_PARTIALLY_CORROBORATED",
+      "claim": "Sikeres feliratkozás után a kuponnak a megadott e-mail-címre kell megérkeznie.",
+      "customerFacing": true,
+      "provenance": ["data/knowledge.json:2024", "data/knowledge.json:2171"],
+      "currentAuthority": ["newsletterCoupon.deliveryChannel", "newsletterCoupon.deliveryAutomation"],
+      "unverifiedPart": "The current missing-email troubleshooting procedure remains unknown."
+    },
+    {
+      "id": "promotion-problem-support-escalation",
+      "status": "HISTORICAL_UNVERIFIED",
+      "claim": "Ha a kedvezmény nem érvényesül, az ügyfélszolgálathoz kell fordulni.",
+      "customerFacing": true,
+      "provenance": ["data/knowledge.json:1072"],
+      "authority": "No current troubleshooting or escalation procedure is approved."
+    },
+    {
+      "id": "free-shipping-coupon",
+      "status": "HISTORICAL_UNVERIFIED",
+      "claim": "Korábban ügyfél e-mailben kapott ingyenes szállítási kuponról számolt be.",
+      "customerFacing": false,
+      "provenance": ["data/knowledge.json:2470"],
+      "authority": "Customer-reported historical event only; no current promotion is established."
+    }
+  ]
+}

@@ -20,6 +20,7 @@ const { resolveGuidedDiscovery } = require('./guided-discovery.cjs');
 const { resolveAcneDecision } = require('./acne-decision.cjs');
 const { buildProblemDomainDecision } = require('./problem-domain-decision.cjs');
 const { extractSubtypeRequest, compatibleSubtypeExpert, subtypeCardIdentity } = require('./product-type-constraint.cjs');
+const { detectCouponIntent } = require('./coupon-policy.cjs');
 
 const catalog = createCatalogSearch();
 
@@ -63,6 +64,14 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
   }
   if (safety.safetyClass === 'caution_with_boundary') {
     return decision({ ...base, route: 'safety', goal: 'medical_boundary', intent: 'cosmetic_boundary', confidence: 1, threshold: 1, responseSource: 'safety-gate' });
+  }
+
+  const couponIntent = detectCouponIntent(question, history);
+  if (couponIntent) {
+    return decision({ ...base, route: 'coupon_policy', intent: couponIntent, goal: 'coupon_information',
+      domain: 'coupon', contextUsed: !/\b(kupon\w*|kedvezmeny\w*)\b/.test(normalizedCurrent),
+      contextTarget: 'approved_coupon_policy', confidence: 1, threshold: 1,
+      responseSource: 'approved-coupon-policy' });
   }
 
   const subtypeRequest = extractSubtypeRequest(question);
