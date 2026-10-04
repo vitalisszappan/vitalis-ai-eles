@@ -2,6 +2,10 @@
 
 const assert = require('node:assert/strict');
 const fs = require('fs');
+const path = require('node:path');
+const { installCatalogFixture } = require('./test/helpers/install-catalog-fixture.cjs');
+const restoreCatalogFixture = installCatalogFixture(path.join(__dirname, 'test', 'fixtures', 'knowledge-builder-catalog.json'));
+process.once('exit', restoreCatalogFixture);
 const { createAnswer } = require('./engine/answer-service.cjs');
 const { structuredState, rehydrateSessionHistory } = require('./engine/conversation-memory.cjs');
 const { ExpertRuleEngine } = require('./engine/rule-engine.cjs');
@@ -37,7 +41,20 @@ const missingUsage = [{ role: 'assistant', content: 'Holt-tengeri só balzsam.',
 result = ask('Hogyan használjam?', missingUsage); assert.equal(result.answerIntent, 'usage'); assert.equal(result.groundingStatus, 'unavailable'); assert.match(result.answer, /nincs elérhető, bizonyított használati/);
 
 (async () => {
-  const memory = await rehydrateSessionHistory({ sessionId: 'phase1b-reload-proof', clientHistory: history.slice(0, 2), loadRows: async () => [] });
+  const firstTurn = history.slice(0, 2);
+  const memory = await rehydrateSessionHistory({
+    sessionId: 'phase1b-reload-proof', clientHistory: firstTurn,
+    loadRows: async () => [{
+      id: 1, created_at: '2026-01-01T00:00:00.000Z', question: firstTurn[0].content,
+      answer: firstTurn[1].content, source: firstTurn[1].responseType,
+      history_event_status: 'valid', history_event: {
+        version: 1, turnId: '11111111-1111-4111-8111-111111111111', kind: 'selection',
+        route: firstTurn[1].route, productTypeConstraint: null,
+        products: firstTurn[1].links.map(({ id, name }) => ({ id, name })),
+        targetProductId: firstTurn[1].targetProductId
+      }
+    }]
+  });
   const reloadResult = createAnswer({ question: 'Mi van benne?', history: memory.history, conversationState: memory.state, knowledge, ruleEngine, logGap() {}, logDiagnostic() {} });
   assert.equal(reloadResult.targetProductId, 'dermavital_krem');
   console.log('Answer Planner Phase 1B: PASS (six-turn + negative + structured reload)');

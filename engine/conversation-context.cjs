@@ -392,11 +392,11 @@ function resolveProductReference(text, context) {
     return result({ type: 'alternative', ambiguous: true, resolvedFrom: products.length ? 'ordered_list' : 'focus' });
   }
 
-  const relativeType = /^(es\s+)?a\s+(szappan|krem|balzsam|sampon)(?:\?|$)/.exec(value);
+  const relativeType = /^(es\s+)?a\s+(szappant?|krem(?:et)?|balzsam(?:ot)?|sampont?)(?:\?|$)/.exec(value);
   if (relativeType && context.lastFocusProduct) {
     const { resolveRelation } = require('./product-relations.cjs');
     const relation = resolveRelation(context.lastFocusProduct, relativeType[2]);
-    if (relation?.relatedProduct) return result({
+    if (typeof relation?.relatedProduct === 'string' && relation.relatedProduct) return result({
       type: 'companion', productId: relation.relatedProduct, authoritative: true,
       resolvedFrom: 'product_relation', relationType: relation.type
     });

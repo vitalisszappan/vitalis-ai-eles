@@ -202,8 +202,18 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
   if (reference?.productId) {
     const catalogOrdinal = reference.type === 'ordinal' && reference.productId.startsWith('catalog:');
     const referenceGoal = catalogOrdinal || reference.type === 'alternative' ? 'select_recommendation' : base.goal;
-    const referenceIntent = catalogOrdinal ? 'select_recommendation' : reference.type === 'alternative' ? 'alternative_reference' : base.intent;
-    return decision({ ...base, goal: referenceGoal, intent: referenceIntent, route: 'context_followup', contextUsed: true, contextTarget: reference.productId, matchedCanonicalIds: reference.productId.startsWith('catalog:') ? [] : [reference.productId], matchedProductIds: [reference.productId], referenceType: reference.type || null, referenceAuthoritative: Boolean(reference.authoritative), confidence: 1, threshold: 1, responseSource: 'conversation-context' });
+    const inheritsUsage = reference.type === 'companion'
+      && ['usage', 'product_usage'].includes(conversationState?.lastAssistantIntent);
+    const referenceIntent = catalogOrdinal ? 'select_recommendation'
+      : reference.type === 'alternative' ? 'alternative_reference'
+        : inheritsUsage ? 'product_usage' : base.intent;
+    return decision({ ...base, goal: inheritsUsage ? 'ask_usage' : referenceGoal,
+      intent: referenceIntent, productQuestionIntent: inheritsUsage ? 'usage' : base.productQuestionIntent,
+      route: 'context_followup', contextUsed: true, contextTarget: reference.productId,
+      matchedCanonicalIds: reference.productId.startsWith('catalog:') ? [] : [reference.productId],
+      matchedProductIds: [reference.productId], referenceType: reference.type || null,
+      referenceAuthoritative: Boolean(reference.authoritative), confidence: 1, threshold: 1,
+      responseSource: 'conversation-context' });
   }
   if (reference?.ambiguous) {
     if (goal.goal === 'ask_variant' && reference.type !== 'alternative' && context.lastFocusProduct) {

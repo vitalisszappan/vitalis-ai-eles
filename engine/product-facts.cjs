@@ -51,11 +51,18 @@ function grounded(productId, value, evidence) {
 }
 function imageUrl(product) { return validUrl(typeof product?.image === 'string' ? product.image : product?.image?.url) || validUrl(product?.image?.sefUrl); }
 
-const HEADINGS = /(?:Kinek aj[aá]nljuk\?|Mire aj[aá]nljuk\?|Mi[eé]rt v[aá]laszd|Haszn[aá]lat(?:a)?|Hogyan haszn[aá]ld|Fontos tudnival[oó]k|Mire figyelj\?|Csomagol[aá]s|Gyakori k[eé]rd[eé]sek|[ÖO]sszetev[őo]k|INGREDIENTS\s*\(INCI\)|INCI)(?![A-Za-zÁÉÍÓÖŐÚÜŰáéíóöőúüű])\s*:?/gi;
+const HEADINGS = /(?:Kinek aj[aá]nljuk\?|Mire aj[aá]nljuk\?|Mi[eé]rt v[aá]laszd|Haszn[aá]lat(?:a)?|Hogyan haszn[aá]ld\??|Fontos tudnival[oó]k|Mire figyelj\?|Csomagol[aá]s|Gyakori k[eé]rd[eé]sek|[ÖO]sszetev[őo]k|INGREDIENTS\s*\(INCI\)|INCI)(?![A-Za-zÁÉÍÓÖŐÚÜŰáéíóöőúüű])\s*:?/gi;
 function section(text, labels) {
   const source = String(text || '');
   const matches = [...source.matchAll(HEADINGS)];
-  const wanted = matches.find((match) => labels.some((label) => label.test(fold(match[0]))));
+  // Labels are ordered from most explicit to least explicit. This prevents a
+  // prose phrase such as "rendszeres használat mellett" from outranking the
+  // later, explicit "Hogyan használd?" source heading.
+  const wanted = labels.map((label) => matches.find((match) => {
+    if (!label.test(fold(match[0]))) return false;
+    const continuation = fold(source.slice(match.index + match[0].length)).split(' ')[0];
+    return !/^hasznalat/.test(fold(match[0])) || !['mellett', 'soran', 'kozben', 'utan', 'elott'].includes(continuation);
+  })).find(Boolean);
   if (!wanted) return '';
   const next = matches.find((match) => match.index > wanted.index);
   return clean(source.slice(wanted.index + wanted[0].length, next?.index ?? source.length));
@@ -123,7 +130,7 @@ function createProductFactsResolver(options = {}) {
       inci: ingredients.length ? ingredients : null,
       keyIngredients: null,
       ingredientBenefits: benefits.length ? benefits : null,
-      usageInstructions: validSnapshot ? section(snapshot.longDescription, [/^hasznalat/, /^hogyan hasznald/]) || null : null,
+      usageInstructions: validSnapshot ? section(snapshot.longDescription, [/^hogyan hasznald/, /^hasznalat/]) || null : null,
       recommendedFor: validSnapshot ? section(snapshot.longDescription, [/^kinek ajanljuk/, /^mire ajanljuk/]) || null : null,
       productBenefits: null,
       approvedClaims: null,
