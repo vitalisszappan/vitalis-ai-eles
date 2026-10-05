@@ -208,10 +208,15 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
   if((HAIR_WASH_TYPES.includes(productTypeConstraint)&&(['availability','recommendation'].includes(productQuestionIntent)||problem))||explicitHairProductRequest||genericShampooAvailability)return decision({...base,route:'hair_product_type',intent:productQuestionIntent==='availability'?'product_type_availability':'product_recommendation',goal:'find_product',domain:'shampoo',confidence:1,threshold:1,responseSource:'approved-product-type-rule'});
 
   const reference = resolveProductReference(question, context);
+  if (reference?.explicitProductId && !['ask_child_usage', 'ask_usage', 'ask_product_information', 'ask_variant'].includes(goal.goal)) {
+    return decision({ ...base, route: 'exact_product', goal: 'find_product', intent: 'product_detail', domain: 'product',
+      matchedCanonicalIds: [reference.explicitProductId], matchedProductIds: [reference.explicitProductId],
+      confidence: 1, threshold: 1, responseSource: 'product-context' });
+  }
   if (reference?.productId) {
     const catalogOrdinal = reference.type === 'ordinal' && reference.productId.startsWith('catalog:');
     const referenceGoal = catalogOrdinal || reference.type === 'alternative' ? 'select_recommendation' : base.goal;
-    const inheritsUsage = reference.type === 'companion'
+    const inheritsUsage = ['companion', 'category', 'explicit_product'].includes(reference.type)
       && ['usage', 'product_usage'].includes(conversationState?.lastAssistantIntent);
     const referenceIntent = catalogOrdinal ? 'select_recommendation'
       : reference.type === 'alternative' ? 'alternative_reference'
@@ -228,7 +233,10 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
     if (goal.goal === 'ask_variant' && reference.type !== 'alternative' && context.lastFocusProduct) {
       return decision({ ...base, route: 'context_followup', contextUsed: true, contextTarget: context.lastFocusProduct, matchedCanonicalIds: [context.lastFocusProduct], matchedProductIds: [context.lastFocusProduct], confidence: 1, threshold: 1, responseSource: 'conversation-context' });
     }
-    return decision({ ...base, route: 'clarification', contextUsed: true, contextTarget: 'product', confidence: 1, threshold: 1, rejectionReasons: ['ambiguous_product_reference'], responseSource: 'conversation-context' });
+    return decision({ ...base, route: 'clarification',
+      ...(reference.type === 'category' ? { intent: 'conversation-clarification', matchedCanonicalIds: reference.candidates || [], matchedProductIds: reference.candidates || [] } : {}),
+      contextUsed: true, contextTarget: 'product', confidence: 1, threshold: 1,
+      rejectionReasons: ['ambiguous_product_reference'], responseSource: 'conversation-context' });
   }
   const current = normalize(question);
   const typedFollowup = /^(es\s+)?(szappant?|kremet?|balzsamot?|sampont?)\b/.exec(current);

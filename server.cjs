@@ -1425,7 +1425,8 @@ function validateConversationHistoryEvent(value) {
   if(value.targetProductId!==null && (!validId(value.targetProductId)||!value.products.some(p=>p.id===value.targetProductId)))return null;
   if(value.kind==='selection'){
     if(!value.products.length||!['subtype_catalog','expert_rule','context_followup','commerce'].includes(value.route))return null;
-    if(['subtype_catalog','expert_rule'].includes(value.route)&&!value.productTypeConstraint)return null;
+    if(value.route==='subtype_catalog'&&!value.productTypeConstraint)return null;
+    if(value.route==='expert_rule'&&!value.productTypeConstraint&&value.targetProductId===null)return null;
   }else{
     if(value.products.length||value.targetProductId!==null)return null;
     if(value.kind==='empty' && (value.route!=='subtype_catalog'||!value.productTypeConstraint))return null;
@@ -1438,14 +1439,26 @@ function buildConversationHistoryEvent(result, turnId) {
   const type=['body_lotion','facial_cream'].includes(result.productTypeConstraint)?result.productTypeConstraint:null;
   const route=result.route,links=Array.isArray(result.links)?result.links:[];
   const scoped=type && ['subtype_catalog','expert_rule'].includes(route);
-  const focused=['context_followup','commerce'].includes(route) && links.some(p=>typeof p.id==='string'&&p.id.startsWith('catalog:'));
-  if (!scoped && !focused && links.length) return null; // Legacy, non-constrained selection contract.
+  const explicitPrimary=result.targetProductId||result.primaryProductId||null;
+  const matchedIds=Array.isArray(result.routing?.matchedProductIds)?result.routing.matchedProductIds:[];
+  const catalogFocus=['context_followup','commerce'].includes(route) && links.some(p=>typeof p.id==='string'&&p.id.startsWith('catalog:'));
+  const canonicalFocus=route==='context_followup' && typeof explicitPrimary==='string'
+    && /^[a-z0-9_]{1,80}$/.test(explicitPrimary) && links.length===1 && links[0]?.id===explicitPrimary
+    && result.routing?.route==='context_followup' && result.routing?.contextUsed===true
+    && result.routing?.contextTarget===explicitPrimary
+    && Array.isArray(result.routing?.matchedCanonicalIds) && result.routing.matchedCanonicalIds.length===1
+    && result.routing.matchedCanonicalIds[0]===explicitPrimary
+    && matchedIds.length===1 && matchedIds[0]===explicitPrimary;
+  const focused=catalogFocus||canonicalFocus;
+  const primaryExpert=route==='expert_rule' && !type && typeof explicitPrimary==='string'
+    && links.some(p=>p?.id===explicitPrimary) && matchedIds.includes(explicitPrimary);
+  if (!scoped && !focused && !primaryExpert && links.length) return null; // Legacy, non-constrained selection contract.
   const empty=route==='subtype_catalog' && type && result.catalogStatus==='CATALOG_AVAILABLE_NO_MATCH'
     && result.routing?.catalogStatus==='CATALOG_AVAILABLE_NO_MATCH' && links.length===0;
-  const selection=(scoped||focused) && links.length>0;
+  const selection=(scoped||focused||primaryExpert) && links.length>0;
   const event={version:1,turnId:typeof turnId==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(turnId)?turnId:null,
     kind:empty?'empty':selection?'selection':'none',route:empty||selection?route:['safety','complaint','coupon_policy'].includes(route)?route:null,
-    productTypeConstraint:empty||selection?type:null,products:selection?links.map(p=>({id:p.id,name:p.name||p.title})):[],targetProductId:selection?(result.targetProductId||result.primaryProductId||null):null};
+    productTypeConstraint:empty||selection?type:null,products:selection?links.map(p=>({id:p.id,name:p.name||p.title})):[],targetProductId:selection?explicitPrimary:null};
   // Only service-validated emitted identities may enter the persistence event.
   if(selection && (links.length>6 || !Array.isArray(result.routing?.matchedProductIds)
     || links.some(p=>!result.routing.matchedProductIds.includes(p.id))))return null;

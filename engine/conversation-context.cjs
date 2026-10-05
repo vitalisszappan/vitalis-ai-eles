@@ -7,6 +7,8 @@ const {
 );
 const { resolvePersistedProductEvidence } = require('./persisted-product-evidence.cjs');
 const { hasLiteralAcneSignal } = require('./acne-decision.cjs');
+const { PRODUCTS } = require('./product-catalog.cjs');
+const { detectProductTypeConstraint, matchesProductType } = require('./product-type-constraint.cjs');
 
 /* =========================================================
    SEGÉDFÜGGVÉNYEK
@@ -332,6 +334,37 @@ function resolveProductReference(text, context) {
     type: 'existing', productId: null, authoritative: false, ambiguous: false,
     resolvedFrom: null, ordinalStatus: 'NO_EXPLICIT_ORDINAL', ...overrides
   });
+
+  // A current-turn canonical identity or product type is stronger than an
+  // inherited focus or an incidental numeric list marker. Type evidence may
+  // select only one product from the trusted, ordered recommendation context.
+  // An unrelated named product stays on the router's normal explicit-product
+  // path instead of being collapsed to a same-type contextual product.
+  const directProduct = findProductInText(value);
+  if (directProduct && products.includes(directProduct)) {
+    return result({ type: 'explicit_product', productId: directProduct, authoritative: true, resolvedFrom: 'ordered_list' });
+  }
+  if (directProduct) {
+    return result({ type: 'external_product', explicitProductId: directProduct, authoritative: true, resolvedFrom: 'current_utterance' });
+  }
+  const explicitType = detectProductTypeConstraint(value);
+  if (explicitType) {
+    const candidates = products.filter((id) => matchesProductType(PRODUCTS[id] || { id }, explicitType));
+    if (candidates.length === 1) {
+      return result({ type: 'category', productId: candidates[0], authoritative: true, resolvedFrom: 'ordered_list' });
+    }
+    if (candidates.length > 1) {
+      return result({ type: 'category', ambiguous: true, candidates, resolvedFrom: 'ordered_list' });
+    }
+    if (context.lastFocusProduct) {
+      const { resolveRelation } = require('./product-relations.cjs');
+      const relation = resolveRelation(context.lastFocusProduct, explicitType);
+      if (typeof relation?.relatedProduct === 'string' && relation.relatedProduct) {
+        return result({ type: 'companion', productId: relation.relatedProduct, authoritative: true,
+          resolvedFrom: 'product_relation', relationType: relation.type });
+      }
+    }
+  }
 
   if (/\b(az )?elsot?\b/.test(value)) index = 0;
   if (/\b(a )?masodik(?:at)?\b/.test(value)) index = 1;
