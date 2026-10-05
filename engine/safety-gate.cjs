@@ -37,6 +37,10 @@ function evaluateSafety(question, problem = null) {
   if (problem && ['varicose_cosmetic', 'circulation_claim'].includes(problem.domain)) {
     return { safetyClass: 'caution_with_boundary', evidence: [`safety:${problem.domain}`] };
   }
+  if (/\b(?:meg|ki)?gyogyit\w*/.test(text)
+    || /\bkezel(?:i|ik)\b.*\b(ekcema|pikkelysomor|betegseg)\w*/.test(text)) {
+    return { safetyClass: 'medical_escalation', evidence: ['safety:diagnosis_or_medicine'] };
+  }
   if (problem?.domain === 'child_usage' || /\b(gyerek|gyermek|baba|[0-9]{1,2} eves)\b/.test(text)) {
     return { safetyClass: 'safe_cosmetic_answer', evidence: ['safety:child_usage'] };
   }

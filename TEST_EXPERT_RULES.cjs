@@ -39,4 +39,34 @@ assert.equal(soap.links.some(item=>item.id==='holt_tengeri_iszapos_szappan'),fal
 const itchy=ask('Viszket a fejbőröm. Melyik sampont ajánlod?');
 assert.equal(itchy.intent,'scalp_itchy');
 assert.deepEqual(itchy.links.map(item=>item.id),['dermavital_sampon','rozmaringos_samponszappan']);
+
+const genericMedicineDisclaimer = /kozmetikumok?,? (?:de )?nem gyógyszerek?|nem helyettesítik? az orvosi kezelést/i;
+const eczema=ask('Melyik terméket ajánlod ekcémára?');
+assert.equal(eczema.route,'expert_rule');
+assert.deepEqual(eczema.links.map(item=>item.id),['dermavital_krem','dermavital_szappan']);
+assert.doesNotMatch(eczema.answer,genericMedicineDisclaimer);
+
+const psoriasis=ask('Mit ajánlasz pikkelysömörre hajlamos bőrre?');
+assert.equal(psoriasis.route,'expert_rule');
+assert.equal(psoriasis.links[0].id,'psorivital_csomag');
+assert.doesNotMatch(psoriasis.answer,genericMedicineDisclaimer);
+
+const sensitive=ask('Mit ajánlasz száraz, érzékeny bőrre?');
+assert.notEqual(sensitive.route,'safety');
+assert.doesNotMatch(sensitive.answer,genericMedicineDisclaimer);
+
+for(const question of [
+  'Ez meggyógyítja az ekcémát?',
+  'Kiválthatom vele az orvos által felírt gyógyszert?',
+  'Abbahagyhatom a gyógyszeremet, ha ezt használom?'
+]){
+  const result=ask(question);
+  assert.equal(result.route,'safety',question);
+  assert.equal(result.safetyClass,'medical_escalation',question);
+  assert.deepEqual(result.links,[],question);
+  assert.match(result.answer,/orvosi segítséget|sürgős ellátás/i,question);
+}
+
+assert.doesNotMatch(engine.resolve('Melyik terméket ajánlod ekcémára?',[]).answer,genericMedicineDisclaimer);
+assert.match(engine.resolve('Ez meggyógyítja az ekcémát?',[]).answer,genericMedicineDisclaimer);
 if(failed){console.error(`\n${failed} teszt hibás.`);process.exit(1);} else console.log(`\nMinden teszt sikeres (${tests.length}/${tests.length}).`);

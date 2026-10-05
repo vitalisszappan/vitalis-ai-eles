@@ -7,6 +7,17 @@ const { buildConversationContext } = require('./conversation-context.cjs');
 const { isRelationQuestion, resolveRelation } = require('./product-relations.cjs');
 const { resolveAdministrativeIntent } = require('./admin-intents.cjs');
 
+function requiresMedicalBoundary(question) {
+  const text = normalize(question);
+  return /\b(diagnosztiz|(?:meg|ki)?gyogyit|gyogyszer|antibiotikum|tabletta|orvosi kezeles|kivalt|helyettesit|abbahagy)\w*/.test(text)
+    || /\bkezel(?:i|ik)\b.*\b(ekcema|pikkelysomor|betegseg)\w*/.test(text);
+}
+
+function isGenericMedicineDisclaimer(note) {
+  const text = normalize(note);
+  return /\bnem gyogyszer\w*/.test(text) || /\bnem helyettesit\w*\b.*\borvosi kezeles\w*/.test(text);
+}
+
 class ExpertRuleEngine {
   constructor(rulePath) {
     this.rulePath = rulePath;
@@ -120,7 +131,9 @@ class ExpertRuleEngine {
     if (!rule) return null;
     const ids = [rule.primaryProduct, ...(rule.secondaryProducts || [])].filter(Boolean);
     let answer = rule.answer;
-    if (rule.safetyNote) answer += `\n\n${rule.safetyNote}`;
+    if (rule.safetyNote && (!isGenericMedicineDisclaimer(rule.safetyNote) || requiresMedicalBoundary(question))) {
+      answer += `\n\n${rule.safetyNote}`;
+    }
     return {
       source: 'expert-rule',
       ruleId: rule.id,
