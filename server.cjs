@@ -1429,7 +1429,7 @@ function validateConversationHistoryEvent(value) {
   }else{
     if(value.products.length||value.targetProductId!==null)return null;
     if(value.kind==='empty' && (value.route!=='subtype_catalog'||!value.productTypeConstraint))return null;
-    if(value.kind==='none' && (![null,'safety','complaint'].includes(value.route)||value.productTypeConstraint!==null))return null;
+    if(value.kind==='none' && (![null,'safety','complaint','coupon_policy'].includes(value.route)||value.productTypeConstraint!==null))return null;
   }
   return {version:1,turnId:value.turnId,kind:value.kind,route:value.route,productTypeConstraint:value.productTypeConstraint,products:value.products.map(p=>({id:p.id,name:p.name})),targetProductId:value.targetProductId};
 }
@@ -1444,7 +1444,7 @@ function buildConversationHistoryEvent(result, turnId) {
     && result.routing?.catalogStatus==='CATALOG_AVAILABLE_NO_MATCH' && links.length===0;
   const selection=(scoped||focused) && links.length>0;
   const event={version:1,turnId:typeof turnId==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(turnId)?turnId:null,
-    kind:empty?'empty':selection?'selection':'none',route:empty||selection?route:['safety','complaint'].includes(route)?route:null,
+    kind:empty?'empty':selection?'selection':'none',route:empty||selection?route:['safety','complaint','coupon_policy'].includes(route)?route:null,
     productTypeConstraint:empty||selection?type:null,products:selection?links.map(p=>({id:p.id,name:p.name||p.title})):[],targetProductId:selection?(result.targetProductId||result.primaryProductId||null):null};
   // Only service-validated emitted identities may enter the persistence event.
   if(selection && (links.length>6 || !Array.isArray(result.routing?.matchedProductIds)
@@ -4283,7 +4283,7 @@ async function startServer() {
   );
 }
 
-startServer()
+if (require.main === module) startServer()
   .catch(
     (
       error
@@ -4331,12 +4331,12 @@ function cleanupPid() {
   } catch {}
 }
 
-process.on(
+if (require.main === module) process.on(
   'exit',
   cleanupPid
 );
 
-process.on(
+if (require.main === module) process.on(
   'SIGINT',
 
   () => {
@@ -4349,7 +4349,7 @@ process.on(
   }
 );
 
-process.on(
+if (require.main === module) process.on(
   'SIGTERM',
 
   () => {
@@ -4361,3 +4361,8 @@ process.on(
     );
   }
 );
+
+module.exports = {
+  buildConversationHistoryEvent,
+  validateConversationHistoryRows
+};

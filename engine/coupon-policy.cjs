@@ -36,9 +36,11 @@ function loadCouponPolicy(policyPath = DEFAULT_POLICY_PATH) {
 }
 
 function couponContext(history = []) {
-  return history.slice(-6).some((message) => message?.route === 'coupon_policy'
+  return history.slice(-6).some((message) => !message?.historyEventInvalid
+    && !message?.historyEventUncorrelated
+    && (message?.route === 'coupon_policy'
     || message?.routing?.route === 'coupon_policy'
-    || message?.domain === 'coupon');
+    || message?.domain === 'coupon'));
 }
 
 function detectCouponIntent(question, history = []) {
@@ -56,6 +58,7 @@ function detectCouponIntent(question, history = []) {
   if (/\b(hova|hol)\b.*\b(beir|megad|ervenyesit)|\bkuponkod\b.*\b(beir|megad)\b/.test(q)) return 'entry_location';
   if (/\b(hogyan|hogy)\b.*\b(kap|juthat)\w*.*\b(kupon|kod)\w*/.test(q)
     || /^(es )?hogyan kapom meg$/.test(q)) return 'acquisition';
+  if (contextual && /^(es )?ezt (hogyan|hogy) kapom meg$/.test(q)) return 'acquisition';
   if (/\b(mekkora|mennyi|hany szazalek)\b.*\b(kedvezmeny|kupon)\b/.test(q)) return 'discount_value';
   if (/\b(van)\b.*\b(kupon|kedvezmeny)\w*|\b(hogyan|hogy)\b.*\bkaphat\w*\b.*\bkupont\b/.test(q)) return 'coupon_exists';
   if (/\b(regisztral\w*|regisztracio\w*)\b/.test(q)) return 'registration';
@@ -107,7 +110,7 @@ function createCouponPolicyResolver(options = {}) {
       const discount = use('newsletterCoupon.discountValue');
       const delivery = use('newsletterCoupon.deliveryChannel');
       if (exists.status !== 'grounded' || discount.status !== 'grounded' || delivery.status !== 'grounded') return unavailable();
-      return { answer: `Igen. A hírlevélre feliratkozók jelenleg ${discount.value}%-os bevezető kupont kapnak, amelyet automatikusan e-mailben küldünk el.`, factsUsed: used, groundingStatus: 'grounded' };
+      return { answer: `Igen, ha feliratkozol a hírlevelünkre, ${discount.value}% kedvezményt kapsz, a kupont pedig e-mailben küldjük el.`, factsUsed: used, groundingStatus: 'grounded' };
     }
     if (intent === 'discount_value') {
       const discount = use('newsletterCoupon.discountValue');
@@ -122,23 +125,23 @@ function createCouponPolicyResolver(options = {}) {
       const automation = use('newsletterCoupon.deliveryAutomation');
       if (discount.status !== 'grounded' || delivery.status !== 'grounded' || automation.status !== 'grounded') return unavailable();
       const suffix = intent === 'protected_code_probe' ? ' Egy konkrét kód működését vagy érvényességét itt nem tudom megerősíteni.' : '';
-      return { answer: `A ${discount.value}%-os kupon a hírlevél-feliratkozáshoz jár, és a kódot az üdvözlő folyamat automatikusan e-mailben küldi el.${suffix}`, factsUsed: used, groundingStatus: 'grounded' };
+      return { answer: `Iratkozz fel a hírlevelünkre, és a ${discount.value}%-os kupont automatikusan elküldjük e-mailben.${suffix}`, factsUsed: used, groundingStatus: 'grounded' };
     }
     if (intent === 'entry_location' || intent === 'coupon_context') {
       const location = use('checkout.couponEntryLocation');
       if (location.status !== 'grounded') return unavailable();
       const v = location.value;
-      return { answer: `A kosár oldalon nyisd meg a ${v.sectionLabel} részt, írd be a kódot a ${v.fieldLabel} mezőbe, majd válaszd az ${v.actionLabel} lehetőséget a rendelés folytatása előtt.`, factsUsed: used, groundingStatus: 'grounded' };
+      return { answer: `A kosár oldalon keresd a ${v.sectionLabel} részt, írd be a kódot a ${v.fieldLabel} mezőbe, majd kattints az ${v.actionLabel} gombra.`, factsUsed: used, groundingStatus: 'grounded' };
     }
     if (intent === 'sale_cart') {
       const sale = use('eligibility.orderTotalCouponRedeemableWhenCartContainsSaleProduct');
       if (sale.status !== 'grounded') return unavailable();
-      return { answer: sale.value ? 'A jelenlegi beállítás szerint a végösszegkupon akciós terméket tartalmazó kosárnál is beváltható.' : 'A jelenlegi UNAS-beállítás szerint ez a végösszegkupon nem váltható be, ha a kosár akciós terméket tartalmaz.', factsUsed: used, groundingStatus: 'grounded' };
+      return { answer: sale.value ? 'Ez a kupon akkor is használható, ha a kosárban akciós termék van.' : 'Ha a kosárban akciós termék van, ez a kupon jelenleg nem használható.', factsUsed: used, groundingStatus: 'grounded' };
     }
     if (intent === 'use_limit') {
       const limit = use('newsletterCoupon.singleUse');
       if (limit.status !== 'grounded') return unavailable();
-      return { answer: limit.value ? 'A kupon vásárlónként egyszer használható; a jelenlegi UNAS-limit is egy felhasználást enged vásárlónként.' : 'A kupon többször használható.', factsUsed: used, groundingStatus: 'grounded' };
+      return { answer: limit.value ? 'A kupon vásárlónként egyszer használható.' : 'A kupon többször használható.', factsUsed: used, groundingStatus: 'grounded' };
     }
     if (intent === 'minimum_order') {
       const minimum = use('eligibility.minimumOrderValue');
