@@ -51,7 +51,7 @@ function grounded(productId, value, evidence) {
 }
 function imageUrl(product) { return validUrl(typeof product?.image === 'string' ? product.image : product?.image?.url) || validUrl(product?.image?.sefUrl); }
 
-const HEADINGS = /(?:Kinek aj[aá]nljuk\?|Mire aj[aá]nljuk\?|Mi[eé]rt v[aá]laszd|Haszn[aá]lat(?:a)?|Hogyan haszn[aá]ld\??|Fontos tudnival[oó]k|Mire figyelj\?|Csomagol[aá]s|Gyakori k[eé]rd[eé]sek|[ÖO]sszetev[őo]k|INGREDIENTS\s*\(INCI\)|INCI)(?![A-Za-zÁÉÍÓÖŐÚÜŰáéíóöőúüű])\s*:?/gi;
+const HEADINGS = /(?:Kinek aj[aá]nljuk\?|Mire aj[aá]nljuk\?|Mi[eé]rt v[aá]laszd|Haszn[aá]lat(?:a)?|Hogyan haszn[aá]ld\??|Fontos tudnival[oó]k|Mire figyelj\?|Csomagol[aá]s|Gyakori k[eé]rd[eé]sek|[ÖO]sszetev[őo]k|INGREDIENTS\s*\(INCI\)|INCI)(?![A-Za-zÁÉÍÓÖŐÚÜŰáéíóöőúüű])\s*:?|(?<=[.!?])\s+A\s+[A-ZÁÉÍÓÖŐÚÜŰ][A-Za-zÁÉÍÓÖŐÚÜŰáéíóöőúüű0-9 -]{0,80}\s+term[eé]kcsal[aá]d(?=\s+[A-ZÁÉÍÓÖŐÚÜŰ])/gi;
 function section(text, labels) {
   const source = String(text || '');
   const matches = [...source.matchAll(HEADINGS)];

@@ -1,6 +1,7 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
 const path = require('node:path');
 const { installCatalogFixture } = require('./test/helpers/install-catalog-fixture.cjs');
 const restoreCatalogFixture = installCatalogFixture(path.join(__dirname, 'test', 'fixtures', 'knowledge-builder-catalog.json'));
@@ -51,4 +52,33 @@ assert.equal(identityOnly.hasIngredient('identity_only', 'Karbamid').exists, tru
 assert.equal(identityOnly.getFact('identity_only', 'ingredientBenefits').status, 'unavailable');
 assert.equal(identityOnly.getFact('identity_only', 'ingredientBenefits').value, null);
 
-console.log('Product Facts regressions: PASS (known, unknown, missing, provenance, alias, conflict, no inferred benefit)');
+const realMapping = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'canonical-unas-mapping.json'), 'utf8'));
+const realSnapshot = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'unas-catalog-snapshot.json'), 'utf8'));
+const realResolver = createProductFactsResolver({ mappingData: realMapping, snapshotData: realSnapshot });
+const shampooUsage = realResolver.getFact('dermavital_sampon', 'usageInstructions');
+assert.equal(shampooUsage.status, 'grounded');
+assert.equal(shampooUsage.provenance[0].sourceType, 'unas_snapshot');
+assert.equal(shampooUsage.provenance[0].sourceId, 'unas:1553769891');
+assert.match(shampooUsage.value, /Vigyél fel kisebb mennyiséget a nedves hajra/);
+assert.match(shampooUsage.value, /egészítsd ki a Dermavital termékcsalád többi tagjával\.$/);
+assert.doesNotMatch(shampooUsage.value, /A Dermavital termékcsalád A Dermavital Sampon/);
+
+const soapUsage = realResolver.getFact('dermavital_szappan', 'usageInstructions');
+assert.equal(soapUsage.status, 'grounded');
+assert.equal(soapUsage.provenance[0].sourceType, 'unas_snapshot');
+assert.match(soapUsage.value, /^Nedvesítsd be a szappant/);
+assert.match(soapUsage.value, /Holt-tengeri só balzsamot is\.$/);
+assert.doesNotMatch(soapUsage.value, /nedves hajra|Dermavital Sampon/);
+assert.doesNotMatch(shampooUsage.value, /Nedvesítsd be a szappant/);
+
+const malformedSnapshot = {
+  ...realSnapshot,
+  products: realSnapshot.products.map((product) => String(product.unasId) === '1553769891'
+    ? { ...product, longDescription: 'A rendszeres használat mellett fontos a kíméletes hajápolás. Nincs külön használati fejezet.' }
+    : product)
+};
+const malformedResolver = createProductFactsResolver({ mappingData: realMapping, snapshotData: malformedSnapshot });
+assert.equal(malformedResolver.getFact('dermavital_sampon', 'usageInstructions').status, 'unavailable');
+assert.equal(malformedResolver.getFact('dermavital_sampon', 'usageInstructions').value, null);
+
+console.log('Product Facts regressions: PASS (known, unknown, missing, provenance, alias, conflict, usage boundary, no inferred benefit)');
