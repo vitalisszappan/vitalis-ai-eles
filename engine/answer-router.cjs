@@ -91,7 +91,10 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
   }
 
   const explicitOrdinal = resolveProductReference(question, context);
-  if (explicitOrdinal?.ordinalStatus === 'EXPLICIT_INVALID_OR_OUT_OF_RANGE_ORDINAL') {
+  const trustedPendingAcneAnswer = conversationState?.acneDecision?.trusted === true
+    && conversationState?.pendingClarification?.domain === 'acne'
+    && /^\s*\d+\s*(?:\.|\)|-)\s*\S.+$/u.test(String(question));
+  if (explicitOrdinal?.ordinalStatus === 'EXPLICIT_INVALID_OR_OUT_OF_RANGE_ORDINAL' && !trustedPendingAcneAnswer) {
     return decision({ ...base, route: 'clarification', contextUsed: true, contextTarget: 'product',
       rejectionReasons: ['ambiguous_product_reference'], responseSource: 'conversation-context' });
   }

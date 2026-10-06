@@ -103,6 +103,36 @@ async function reload(rows, clientHistory = []) {
     else for (const [key, value] of Object.entries(expected)) assert.equal(result.routing.acneDecision.factors[key], value, question);
   }
 
+  // Incidental list numbering must not outrank a trusted pending clarification.
+  for (const question of [
+    '1. Eléggé, az arcomon és a hátamon is.',
+    '1) Eléggé, az arcomon és a hátamon is.',
+    '1 - Eléggé, az arcomon és a hátamon is.',
+    'Eléggé, az arcomon és a hátamon is.'
+  ]) {
+    const isolated = await reload([firstRow]);
+    const result = ask(question, isolated.history, isolated.state);
+    assert.equal(result.route, 'clarification', question);
+    assert.equal(result.intent, 'acne', question);
+    assert.equal(result.routing.responseSource, 'acne-decision', question);
+    assert.equal(result.routing.acneDecision.factors.affectedArea, 'multiple', question);
+  }
+
+  // Without trusted pending state, the same numbered prose cannot mint acne context.
+  const freshNumbered = ask('1. Eléggé, az arcomon és a hátamon is.', [], structuredState([]));
+  assert.notEqual(freshNumbered.intent, 'acne');
+  assert.notEqual(freshNumbered.routing.domain, 'acne');
+  assert.equal(freshNumbered.routing.acneDecision, undefined);
+
+  // A standalone ordinal still selects from a real server-owned ordered list.
+  const eczemaQuestion = 'Melyik terméket ajánlod ekcémára?';
+  const eczema = ask(eczemaQuestion);
+  const eczemaRow = row(eczemaQuestion, eczema, '2026-10-06T08:00:30.000Z');
+  const eczemaMemory = await reload([eczemaRow]);
+  const ordinalOnly = ask('1.', eczemaMemory.history, eczemaMemory.state);
+  assert.equal(ordinalOnly.routing.contextTarget, 'dermavital_krem');
+  assert.deepEqual(ordinalOnly.links.map((item) => item.id), ['dermavital_krem']);
+
   // Accumulation survives a second real persistence/rehydration boundary.
   const frequent = ask('Rendszeresen.', memory.history, memory.state);
   const frequentRow = row('Rendszeresen.', frequent, '2026-10-06T08:01:00.000Z');
