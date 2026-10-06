@@ -81,4 +81,106 @@ const malformedResolver = createProductFactsResolver({ mappingData: realMapping,
 assert.equal(malformedResolver.getFact('dermavital_sampon', 'usageInstructions').status, 'unavailable');
 assert.equal(malformedResolver.getFact('dermavital_sampon', 'usageInstructions').value, null);
 
-console.log('Product Facts regressions: PASS (known, unknown, missing, provenance, alias, conflict, usage boundary, no inferred benefit)');
+const repairedUsageCases = {
+  solid_shampoo_normal_green_tea: {
+    sourceId: 'unas:1229849469', include: /Habosítsd fel a sampont/, exclude: /használat mellett|Milyen összetevőkkel|INCI/
+  },
+  shea_vajas_szappan: {
+    sourceId: 'unas:111374997', include: /Habosítsd fel nedves bőrön/, exclude: /használat mellett|Fedezd fel|Összetevők/
+  },
+  natur_kecsketejes_szappan: {
+    sourceId: 'unas:1241472589', include: /hagyja hatni néhány másodpercig/, exclude: /használat mellett|További száraz bőrre|Összetevők/
+  },
+  kecsketejes_levendulas_szappan: {
+    sourceId: 'unas:1241471919', include: /hagyd hatni néhány másodpercig/, exclude: /használat mellett|További száraz bőrre|illatmentes megoldást/
+  },
+  psorivital_csomag: {
+    sourceId: 'unas:1120057029', include: /Használd napi 1–2 alkalommal rendszeresen\.$/, exclude: /Miért működik|összehangolt használata/
+  },
+  holt_tengeri_so_balzsam: {
+    sourceId: 'unas:163833663', include: /Vigyél fel egy vékony réteget/, exclude: /Miért választják|Tipp|Nem tudod|Mire figyelj/
+  }
+};
+const repairedValues = [];
+for (const [productId, expected] of Object.entries(repairedUsageCases)) {
+  const record = realResolver.getProductFacts(productId);
+  assert.equal(record.canonicalProductId, productId);
+  const usage = record.facts.usageInstructions;
+  assert.equal(usage.status, 'grounded', productId);
+  assert.equal(usage.provenance[0].sourceType, 'unas_snapshot', productId);
+  assert.equal(usage.provenance[0].sourceId, expected.sourceId, productId);
+  assert.equal(usage.provenance[0].productId, productId);
+  assert.match(usage.value, expected.include, productId);
+  assert.doesNotMatch(usage.value, expected.exclude, productId);
+  repairedValues.push(usage.value);
+}
+assert.equal(new Set(repairedValues).size, repairedValues.length);
+assert.doesNotMatch(realResolver.getFact('solid_shampoo_normal_green_tea', 'usageInstructions').value, /Habosítsd fel nedves bőrön/);
+assert.doesNotMatch(realResolver.getFact('shea_vajas_szappan', 'usageInstructions').value, /fejbőrödbe|Holt-tengeri iszapos/);
+
+for (const [productId, marker] of [
+  ['dermavital_sampon', /Vigyél fel kisebb mennyiséget a nedves hajra/],
+  ['dermavital_szappan', /^Nedvesítsd be a szappant/],
+  ['dermavital_krem', /^Vékony rétegben vidd fel/],
+  ['holt_tengeri_iszapos_szappan', /^Nedvesítsd meg a bőrt/],
+  ['parajdi_sotomb', /^Zuhanyzás vagy fürdés után/]
+]) {
+  const usage = realResolver.getFact(productId, 'usageInstructions');
+  assert.equal(usage.status, 'grounded', productId);
+  assert.equal(usage.provenance[0].sourceType, 'unas_snapshot', productId);
+  assert.match(usage.value, marker, productId);
+}
+const tarUsage = realResolver.getFact('katrany_szappan', 'usageInstructions');
+assert.equal(tarUsage.status, 'grounded');
+assert.equal(tarUsage.provenance[0].sourceType, 'owner_approved');
+assert.equal(tarUsage.provenance[0].sourceId, 'owner-approved:acne:katrany:hair-washing:v1');
+
+function fixtureUsage(longDescription) {
+  const fixture = createProductFactsResolver({
+    mappingData: { mappings: [{ canonicalId: 'fixture', unasId: 'fixture-1', sku: 'FIXTURE', mappingStatus: 'approved' }] },
+    snapshotData: { generatedAt: '2026-10-06T00:00:00Z', products: [{
+      unasId: 'fixture-1', sku: 'FIXTURE', name: 'Fixture', longDescription,
+      actualPriceGross: 1, currency: 'HUF', url: 'https://www.vitalis-szappan.hu/fixture'
+    }] },
+    deterministicProducts: {}
+  });
+  return fixture.getFact('fixture', 'usageInstructions');
+}
+
+for (const prose of [
+  'Miért jó rendszeres használat mellett?',
+  'A rendszeres használat mellett: puhább érzet várható.',
+  'Használat során figyelj a bőröd jelzéseire.',
+  'Használat közben kerüld a szembe jutást.',
+  'A termék használatával komfortosabb érzet érhető el.',
+  'A mindennapi használathoz készült.'
+]) {
+  assert.equal(fixtureUsage(prose).status, 'unavailable', prose);
+}
+
+for (const [description, included, excluded] of [
+  ['Használati javaslat Kend fel vékony rétegben. Miért választják sokan? Marketing szöveg.', /Kend fel vékony rétegben\.$/, /Miért|Marketing/],
+  ['Használati utasítás: Nedvesítsd be, majd öblítsd le. INCI: Aqua, Urea', /Nedvesítsd be, majd öblítsd le\.$/, /INCI|Aqua/],
+  ['Hogyan használd? Vidd fel, majd öblítsd le. Mire figyelj? Kerüld a szemet.', /Vidd fel, majd öblítsd le\.$/, /Mire figyelj|Kerüld/]
+]) {
+  const usage = fixtureUsage(description);
+  assert.equal(usage.status, 'grounded', description);
+  assert.match(usage.value, included, description);
+  assert.doesNotMatch(usage.value, excluded, description);
+}
+assert.equal(fixtureUsage('Használati javaslat Összetevők: Aqua').status, 'unavailable');
+assert.equal(fixtureUsage('Használati javaslat Kend fel. Következő rész: bizonytalan tartalom.').status, 'unavailable');
+
+const mappedIds = realMapping.mappings.filter((item) => item.mappingStatus === 'approved').map((item) => item.canonicalId);
+const groundedUsageIds = mappedIds.filter((productId) => realResolver.getFact(productId, 'usageInstructions').status === 'grounded');
+const trueUsageGaps = mappedIds.filter((productId) => realResolver.getFact(productId, 'usageInstructions').status !== 'grounded');
+assert.equal(mappedIds.length, 18);
+assert.equal(groundedUsageIds.length, 15);
+assert.deepEqual(trueUsageGaps.sort(), ['oliva_szappan', 'teafa_szappan', 'tengeri_soszappan']);
+for (const productId of groundedUsageIds) {
+  assert.doesNotMatch(realResolver.getFact(productId, 'usageInstructions').value,
+    /(?:használat mellett[?:]|Miért működik együtt|Miért választják sokan|Fedezd fel további|További száraz bőrre|\bINCI\b|Összetevők)/i,
+    productId);
+}
+
+console.log('Product Facts regressions: PASS (15/18 safe usage, boundaries, provenance, fail-closed negatives)');

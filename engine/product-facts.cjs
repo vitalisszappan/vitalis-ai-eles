@@ -67,6 +67,58 @@ function section(text, labels) {
   const next = matches.find((match) => match.index > wanted.index);
   return clean(source.slice(wanted.index + wanted[0].length, next?.index ?? source.length));
 }
+
+function scanFold(value) {
+  return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
+const FALSE_USAGE_CONTINUATIONS = /^(?:mellett|soran|kozben|utan|elott)\b/;
+const USAGE_START = /\b(?:hogyan\s+hasznald(?:\s+[^.!?]{1,80})?\?|hogyan\s+hasznald\b|hasznalati\s+(?:javaslat|utasitas)\s*:?\s*|hasznalat\s*:?\s*)/g;
+const USAGE_BOUNDARIES = [
+  /\b(?:ingredients\s*(?:\(inci\))?|inci(?:\/osszetevok)?|osszetevok(?:\s*\(inci\))?)\b\s*:?/g,
+  /\b(?:miert|milyen|mitol|mit|mire|kinek|hogyan)\s+[^.!?]{1,120}\?/g,
+  /\b(?:fontos\s+tudnivalok?|mire\s+figyelj|csomagolas|gyakori\s+kerdesek(?:\s+[^.!?]{0,80})?|tipp)\b/g,
+  /(?:^|[.!?]\s+)(?:a|az)\s+[a-z0-9 -]{1,60}\s+termekcsalad\b/g,
+  /(?:^|[.!?]\s+)(?:fedezd\s+fel|tovabbi|tudj(?:on)?\s+meg|olvasd\s+el|nem\s+tudod)\b/g,
+  /(?:^|[.!?]\s+)[a-z][a-z0-9 -]{1,80}:\s+/g
+];
+
+function firstUsageBoundary(foldedTail) {
+  let first = null;
+  for (const pattern of USAGE_BOUNDARIES) {
+    pattern.lastIndex = 0;
+    const match = pattern.exec(foldedTail);
+    if (!match) continue;
+    const leading = /^(?:[.!?]\s+)/.exec(match[0]);
+    const index = match.index + (leading?.[0].length || 0);
+    if (first === null || index < first) first = index;
+  }
+  return first;
+}
+
+function usageSection(text) {
+  const source = String(text || '');
+  const folded = scanFold(source);
+  USAGE_START.lastIndex = 0;
+  const starts = [];
+  for (const match of folded.matchAll(USAGE_START)) {
+    const heading = match[0].trim().replace(/\s*:\s*$/, '');
+    const bodyStart = match.index + match[0].length;
+    const continuation = scanFold(source.slice(bodyStart)).trimStart().match(/^[^\s.,;:!?]+/)?.[0] || '';
+    if (heading === 'hasznalat' && FALSE_USAGE_CONTINUATIONS.test(continuation)) continue;
+    if (heading === 'hasznalat' && !/^\s*[A-ZÁÉÍÓÖŐÚÜŰ]/u.test(source.slice(bodyStart))) continue;
+    starts.push({ bodyStart, priority: heading.startsWith('hogyan hasznald') ? 3 : heading.startsWith('hasznalati ') ? 2 : 1 });
+  }
+  const start = starts.sort((left, right) => right.priority - left.priority || left.bodyStart - right.bodyStart)[0]?.bodyStart ?? null;
+  if (start === null) return '';
+  const tail = source.slice(start);
+  const boundary = firstUsageBoundary(scanFold(tail));
+  const value = clean(tail.slice(0, boundary ?? tail.length));
+  if (!value || value.length < 12 || value.length > 1200) return '';
+  if (FALSE_USAGE_CONTINUATIONS.test(scanFold(value).replace(/^[\s.,;:!?-]+/, ''))) return '';
+  if (firstUsageBoundary(scanFold(value)) !== null) return '';
+  return value;
+}
 function splitList(value) {
   return clean(value).split(/\s*(?:,|;|\n|\r|\u2022|\*)\s*/).map(clean).filter(Boolean);
 }
@@ -130,7 +182,7 @@ function createProductFactsResolver(options = {}) {
       inci: ingredients.length ? ingredients : null,
       keyIngredients: null,
       ingredientBenefits: benefits.length ? benefits : null,
-      usageInstructions: validSnapshot ? section(snapshot.longDescription, [/^hogyan hasznald/, /^hasznalat/]) || null : null,
+      usageInstructions: validSnapshot ? usageSection(snapshot.longDescription) || null : null,
       recommendedFor: validSnapshot ? section(snapshot.longDescription, [/^kinek ajanljuk/, /^mire ajanljuk/]) || null : null,
       productBenefits: null,
       approvedClaims: null,
