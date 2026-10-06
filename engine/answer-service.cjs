@@ -379,12 +379,26 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
     const factsApi = require('./product-facts.cjs');
     const fact = selected ? factsApi.getFact(selected, factType) : null;
     const evidence = fact?.provenance || [];
-    if (!selected) return attachDecision({
+    if (!selected) {
+      const missing = new Set(routing.acneDecision?.requestedDimensions || []);
+      const answer = missing.size === 3
+        ? 'Mennyire zsíros a bőröd, inkább néha vagy rendszeresen jelentkeznek a pattanások, és az arcodon, a fejbőrödön vagy a hátad, vállad területén érintett?'
+        : missing.has('skinOiliness') && missing.has('acneFrequencyOrIntensity')
+          ? 'Mennyire zsíros a bőröd, és inkább néha vagy rendszeresen jelentkeznek a pattanások?'
+          : missing.has('skinOiliness')
+            ? 'Mennyire zsíros a bőröd: inkább enyhén, kombináltan vagy erősen?'
+            : missing.has('acneFrequencyOrIntensity')
+              ? 'Inkább néha vagy rendszeresen jelentkeznek a pattanások?'
+              : missing.has('affectedArea')
+                ? 'Az arcodon, a fejbőrödön vagy inkább a hátad, vállad területén érintett?'
+                : 'Kérlek, pontosítsd a bőröd zsírosságát, a pattanások gyakoriságát és az érintett területet.';
+      return attachDecision({
       source: 'owner-approved-acne-decision',
-      answer: 'Mennyire zsíros a bőröd, inkább néha vagy rendszeresen jelentkeznek a pattanások, és az arcodon, a fejbőrödön vagy a hátad, vállad területén érintett?',
+      answer,
       confidence: 100, links: [], suggestions: [], ruleId: 'acne-decision-clarification', intent: 'acne', matchedKnowledgeIds: [],
       answerIntent: 'product_recommendation', targetProductId: null, factsUsed: [], groundingStatus: 'ambiguous', responseStrategy: 'targeted_clarification', ctaStrategy: 'clarify_need'
     }, routing);
+    }
     const rawCard = productCards([selected])[0] || null;
     const card = rawCard && selected === 'aktiv_szenes_szappan'
       ? { ...rawCard, url: '', commerce: undefined, price: undefined, priceGross: undefined, actualPriceGross: undefined, currency: undefined, availability: undefined }

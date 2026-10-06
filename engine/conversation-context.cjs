@@ -705,10 +705,9 @@ function buildConversationContext(
        PROBLÉMA
     ------------------------- */
 
-    const problem =
-      detectProblem(
-        originalText
-      );
+    const problem = message.role === 'user'
+      ? detectProblem(originalText)
+      : null;
 
     if (
       problem

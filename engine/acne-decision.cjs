@@ -9,6 +9,10 @@ function emptyFactors() {
   return { acneFrequencyOrIntensity: UNKNOWN, skinOiliness: UNKNOWN, affectedArea: UNKNOWN };
 }
 
+function requestedDimensions(factors = emptyFactors()) {
+  return Object.keys(emptyFactors()).filter((key) => factors[key] === UNKNOWN);
+}
+
 function hasLiteralAcneSignal(text) {
   return /\b(akne|aknes|pattanas|pattanasos|mitesszer)\w*/.test(text)
     && !/\bpattanasig\s+feszul\w*\b/.test(text);
@@ -24,7 +28,7 @@ function extractFactors(question) {
   ].filter(Boolean);
   factors.affectedArea = new Set(areas).size > 1 ? 'multiple' : areas[0] || UNKNOWN;
   const mildlyOily = /\b(kombinalt|enyhen zsiros)\w*/.test(text);
-  const stronglyOily = /\b(nagyon zsiros|erosen zsiros)\b/.test(text);
+  const stronglyOily = /\b(nagyon zsiros|erosen zsiros|eleg zsiros|elegge zsiros)\b/.test(text);
   const oily = stronglyOily || (!mildlyOily && /\bzsiros a (?:borom|bor|arcom|fejborom)\b/.test(text));
   const occasional = /\b(neha|ritkan|alkalmankent|enyhe|enyhen|egy-ket)\b/.test(text);
   const frequent = /\b(gyakran|rendszeresen|surun|eros|erosebb|makacs)\w*/.test(text);
@@ -37,7 +41,9 @@ function extractFactors(question) {
 
 function acneContext(history = [], conversationState = null) {
   if (conversationState?.acneDecision) return conversationState.acneDecision;
-  const lastAcneAssistant = [...history].reverse().find((item) => item?.role === 'assistant' && (item?.routing?.acneDecision || item?.domain === 'acne' || item?.routing?.domain === 'acne'));
+  const lastAcneAssistant = [...history].reverse().find((item) => item?.role === 'assistant'
+    && !item.historyEventInvalid && !item.historyEventUncorrelated
+    && (item?.routing?.acneDecision || item?.domain === 'acne' || item?.routing?.domain === 'acne'));
   if (!lastAcneAssistant) return null;
   const stored = lastAcneAssistant?.routing?.acneDecision?.factors || lastAcneAssistant?.acneDecision?.factors;
   return { factors: stored || emptyFactors(), active: true };
@@ -51,12 +57,13 @@ function resolveAcneDecision({ question, history = [], conversationState = null 
   const extracted = extractFactors(question);
   const context = acneContext(history, conversationState);
   const direct = hasLiteralAcneSignal(extracted.text);
+  const boundedPendingReply = Boolean(context?.active) && /^(?:fokepp?\s+|foleg\s+)?(?:az?\s+)?(?:arcomon|arcon|hatamon|haton|vallamon|vallon|fejboromon|fejboron|mindketton|mindketto|rendszeresen|gyakran|neha|ritkan|elegge)(?:\b|$)/.test(extracted.text);
   const hairUsage = /\bkatrany\s+szappan\w*\b/.test(extracted.text) && /\b(hajat mos|hajmosas|hajra hasznal|lehet.*haj)\w*/.test(extracted.text);
   if (hairUsage) return { kind: 'usage', selectedProductId: 'katrany_szappan', factors: extracted.factors, reasonCode: 'approved_hair_washing_fact' };
   if (!direct && !context) return null;
   const factors = mergeFactors(extracted.factors, context?.factors);
   const currentHasFactors = Object.values(extracted.factors).some((value) => value !== UNKNOWN);
-  if (!direct && !currentHasFactors) return null;
+  if (!direct && !currentHasFactors && !boundedPendingReply) return null;
   let selectedProductId = null;
   let reasonCode = 'insufficient_evidence';
   if (extracted.contradictory) {
@@ -81,10 +88,11 @@ function resolveAcneDecision({ question, history = [], conversationState = null 
     factors,
     reasonCode,
     source: direct ? 'current-turn' : 'conversation-context',
+    requestedDimensions: requestedDimensions(factors),
     ...(concernContext ? { concernContext } : {}),
     ...(applicationArea ? { applicationArea } : {}),
     ...(recommendationRole ? { recommendationRole } : {})
   };
 }
 
-module.exports = { emptyFactors, extractFactors, hasLiteralAcneSignal, resolveAcneDecision };
+module.exports = { emptyFactors, requestedDimensions, extractFactors, hasLiteralAcneSignal, resolveAcneDecision };

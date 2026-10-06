@@ -1409,6 +1409,20 @@ function validateConversationHistoryRows(rows) {
 }
 function validateConversationHistoryEvent(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  if (value.version === 2) {
+    const keys=['version','turnId','kind','route','domain','clarificationType','factors','requestedDimensions'];
+    if (Object.keys(value).length!==keys.length || keys.some(key=>!Object.hasOwn(value,key))) return null;
+    if(value.turnId!==null && !(typeof value.turnId==='string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(value.turnId))) return null;
+    if(value.kind!=='pending_clarification'||value.route!=='clarification'||value.domain!=='acne'||value.clarificationType!=='acne_decision')return null;
+    const factorKeys=['acneFrequencyOrIntensity','affectedArea','skinOiliness'];
+    if(!value.factors||typeof value.factors!=='object'||Array.isArray(value.factors)||Object.keys(value.factors).sort().join(',')!==factorKeys.join(','))return null;
+    const allowed={acneFrequencyOrIntensity:['unknown','occasional_mild','frequent_or_stronger'],affectedArea:['unknown','face','body','scalp','multiple'],skinOiliness:['unknown','combination_or_mildly_oily','oily']};
+    if(factorKeys.some(key=>!allowed[key].includes(value.factors[key])))return null;
+    if(!Array.isArray(value.requestedDimensions)||new Set(value.requestedDimensions).size!==value.requestedDimensions.length)return null;
+    const expected=factorKeys.filter(key=>value.factors[key]==='unknown');
+    if(!expected.length||value.requestedDimensions.length!==expected.length||expected.some((key,index)=>value.requestedDimensions[index]!==key))return null;
+    return {version:2,turnId:value.turnId,kind:value.kind,route:value.route,domain:value.domain,clarificationType:value.clarificationType,factors:{...value.factors},requestedDimensions:[...value.requestedDimensions]};
+  }
   const keys=['version','turnId','kind','route','productTypeConstraint','products','targetProductId'];
   if (Object.keys(value).length!==keys.length || keys.some(key=>!Object.hasOwn(value,key)) || value.version!==1) return null;
   if (value.turnId!==null && !(typeof value.turnId==='string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(value.turnId))) return null;
@@ -1436,6 +1450,19 @@ function validateConversationHistoryEvent(value) {
 }
 function buildConversationHistoryEvent(result, turnId) {
   if (!result || typeof result!=='object') return null;
+  const routing=result.routing&&typeof result.routing==='object'?result.routing:null;
+  const acne=routing?.acneDecision;
+  const pendingAcne=result.route==='clarification'&&routing?.route==='clarification'
+    &&routing.responseSource==='acne-decision'&&routing.contextTarget==='acne_decision'
+    &&routing.goal==='clarify_need'&&routing.domain==='acne'&&acne?.kind==='clarification'
+    &&acne.selectedProductId==null&&acne.factors&&typeof acne.factors==='object';
+  if(pendingAcne){
+    const factors={acneFrequencyOrIntensity:acne.factors.acneFrequencyOrIntensity,affectedArea:acne.factors.affectedArea,skinOiliness:acne.factors.skinOiliness};
+    const requestedDimensions=Object.keys(factors).filter(key=>factors[key]==='unknown');
+    const event={version:2,turnId:typeof turnId==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(turnId)?turnId:null,
+      kind:'pending_clarification',route:'clarification',domain:'acne',clarificationType:'acne_decision',factors,requestedDimensions};
+    return validateConversationHistoryEvent(event) || validateConversationHistoryEvent({version:1,turnId:event.turnId,kind:'none',route:null,productTypeConstraint:null,products:[],targetProductId:null});
+  }
   const type=['body_lotion','facial_cream'].includes(result.productTypeConstraint)?result.productTypeConstraint:null;
   const route=result.route,links=Array.isArray(result.links)?result.links:[];
   const scoped=type && ['subtype_catalog','expert_rule'].includes(route);
