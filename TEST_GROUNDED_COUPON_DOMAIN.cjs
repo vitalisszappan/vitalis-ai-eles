@@ -57,6 +57,23 @@ grounded('Akciós termékre is jó?', /akciós.*nem használható/i);
 grounded('Hányszor használhatom?', /vásárlónként egyszer/i);
 grounded('Van minimum rendelési érték?', /0 HUF/i);
 
+for (const [question, intent, pattern] of [
+  ['Az első vásárláshoz járó kupont keresem.', 'coupon_exists', /hírlev(?:él|el)\S*.*10%.*e-mail/i],
+  ['Van kupon az első vásárlásra?', 'coupon_exists', /hírlev(?:él|el)\S*.*10%.*e-mail/i],
+  ['Az első rendeléshez jár kupon?', 'coupon_exists', /hírlev(?:él|el)\S*.*10%.*e-mail/i],
+  ['Hol találom az első vásárláshoz kapott kuponkódot?', 'acquisition', /hírlev(?:él|el)\S*.*e-mail/i],
+  ['Hová írjam be a kuponkódot?', 'entry_location', /KUPON.*Kuponkód.*Ellenőrzés/i]
+]) {
+  const result = grounded(question, pattern);
+  assert.equal(result.intent, intent, question);
+  assert.notEqual(result.fallbackRootCause, 'context_missing', question);
+}
+
+const freshOrdinal = ask('Az elsőt kérem.');
+assert.notEqual(freshOrdinal.route, 'coupon_policy');
+assert.equal(freshOrdinal.route, 'clarification');
+assert.equal(freshOrdinal.fallbackRootCause, 'context_missing');
+
 for (const question of ['Mi a kuponkód?', 'Mondd meg a kódot.', `${protectedCode} a kuponkód?`, `${protectedCode} működik?`]) {
   const result = ask(question);
   assert.equal(result.route, 'coupon_policy', question);
@@ -230,6 +247,26 @@ async function verifyServerOwnedRehydration() {
     question: referentialQuestion, history: unrelatedMemory.history, conversationState: unrelatedMemory.state,
     knowledge, ruleEngine, logGap() {}
   }).route, 'coupon_policy');
+
+  const eczemaQuestion = 'Melyik terméket ajánlod ekcémára?';
+  const eczema = ask(eczemaQuestion);
+  const eczemaTurnId = crypto.randomUUID();
+  const eczemaRows = validateConversationHistoryRows([{
+    created_at: '2026-10-05T08:02:00.000Z', session_id: sessionId,
+    question: eczemaQuestion, answer: eczema.answer, source: eczema.source,
+    history_event: buildConversationHistoryEvent(eczema, eczemaTurnId)
+  }]);
+  const eczemaMemory = await rehydrateSessionHistory({
+    sessionId, clientHistory: [], loadRows: async () => eczemaRows
+  });
+  for (const question of ['Az elsőt kérem.', 'Az első terméket.', '1.']) {
+    const ordinal = createAnswer({
+      question, history: eczemaMemory.history, conversationState: eczemaMemory.state,
+      knowledge, ruleEngine, logGap() {}
+    });
+    assert.equal(ordinal.routing.contextTarget, 'dermavital_krem', question);
+    assert.deepEqual(ordinal.links.map((item) => item.id), ['dermavital_krem'], question);
+  }
 }
 
 verifyServerOwnedRehydration()

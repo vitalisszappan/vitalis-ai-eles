@@ -55,12 +55,14 @@ function detectCouponIntent(question, history = []) {
   if (/\b(akcios\w*).*(jo|hasznal|bevalt)|\b(jo|hasznal|bevalt).*\bakcios\w*/.test(q)) return 'sale_cart';
   if (/\b(minimum|minimalis)\b.*\b(rendeles\w*|kosar\w*)\b/.test(q)) return 'minimum_order';
   if (/\b(hanyszor|hany alkalommal)\b.*\b(hasznal|bevalt)|^(es )?hanyszor hasznalhatom$/.test(q)) return 'use_limit';
-  if (/\b(hova|hol)\b.*\b(beir|megad|ervenyesit)|\bkuponkod\b.*\b(beir|megad)\b/.test(q)) return 'entry_location';
+  if (/\b(hova|hol)\b.*\b(beir\w*|ir\w*\s+be|megad\w*|ervenyesit\w*)\b|\bkuponkod\b.*\b(beir\w*|ir\w*\s+be|megad\w*)\b/.test(q)) return 'entry_location';
+  if (couponWord && /\bhol\b.*\b(talal\w*|kapott\w*)\b/.test(q)) return 'acquisition';
   if (/\b(hogyan|hogy)\b.*\b(kap|juthat)\w*.*\b(kupon|kod)\w*/.test(q)
     || /^(es )?hogyan kapom meg$/.test(q)) return 'acquisition';
   if (contextual && /^(es )?ezt (hogyan|hogy) kapom meg$/.test(q)) return 'acquisition';
   if (/\b(mekkora|mennyi|hany szazalek)\b.*\b(kedvezmeny|kupon)\b/.test(q)) return 'discount_value';
-  if (/\b(van)\b.*\b(kupon|kedvezmeny)\w*|\b(hogyan|hogy)\b.*\bkaphat\w*\b.*\bkupont\b/.test(q)) return 'coupon_exists';
+  if (/\b(van)\b.*\b(kupon|kedvezmeny)\w*|\b(hogyan|hogy)\b.*\bkaphat\w*\b.*\bkupont\b/.test(q)
+    || (couponWord && /\b(jar|keres)\w*\b/.test(q))) return 'coupon_exists';
   if (/\b(regisztral\w*|regisztracio\w*)\b/.test(q)) return 'registration';
   if (/\b(bejelentkez\w*|jelentkez\w*|belep\w*)\b/.test(q)) return 'login';
   if (/\b(csak hirlevel|barki|ki hasznalhat)\b/.test(q)) return 'business_eligibility';
