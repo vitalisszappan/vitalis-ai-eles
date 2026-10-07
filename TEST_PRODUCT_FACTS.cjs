@@ -245,6 +245,13 @@ assert.equal(tarUsage.status, 'grounded');
 assert.equal(tarUsage.provenance[0].sourceType, 'owner_approved');
 assert.equal(tarUsage.provenance[0].sourceId, 'owner-approved:acne:katrany:hair-washing:v1');
 
+const shampooSuitability = realResolver.getFact('dermavital_sampon', 'recommendedFor');
+assert.equal(shampooSuitability.status, 'grounded');
+assert.equal(shampooSuitability.provenance[0].sourceType, 'unas_snapshot');
+assert.equal(shampooSuitability.provenance[0].sourceId, 'unas:1553769891');
+assert.match(shampooSuitability.value, /mindennapi ápolásához keresnek kíméletes kozmetikumot\.$/);
+assert.doesNotMatch(shampooSuitability.value, /csodát ígérni|Azt viszont tudjuk|visszatérő vásárló/i);
+
 function fixtureUsage(longDescription) {
   const fixture = createProductFactsResolver({
     mappingData: { mappings: [{ canonicalId: 'fixture', unasId: 'fixture-1', sku: 'FIXTURE', mappingStatus: 'approved' }] },

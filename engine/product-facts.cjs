@@ -68,6 +68,14 @@ function section(text, labels) {
   return clean(source.slice(wanted.index + wanted[0].length, next?.index ?? source.length));
 }
 
+function recommendedForSection(text) {
+  const value = section(text, [/^kinek ajanljuk/, /^mire ajanljuk/]);
+  if (!value) return '';
+  const sentences = value.split(/(?<=[.!?])\s+/);
+  const metaIndex = sentences.findIndex((sentence) => /^(?:nem\s+(?:szeretnenk|akarunk)\s+csodat\s+igerni|azt\s+viszont\s+tudjuk\b|(?:nagyon\s+sok\s+)?(?:visszatero\s+)?vasarlonk\s+szamolt\s+be\b)/.test(fold(sentence)));
+  return clean(sentences.slice(0, metaIndex < 0 ? sentences.length : metaIndex).join(' '));
+}
+
 function scanFold(value) {
   return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 }
@@ -327,7 +335,7 @@ function createProductFactsResolver(options = {}) {
       keyIngredients: null,
       ingredientBenefits: benefits.length ? benefits : null,
       usageInstructions: validSnapshot ? usageSection(snapshot.longDescription) || null : null,
-      recommendedFor: validSnapshot ? section(snapshot.longDescription, [/^kinek ajanljuk/, /^mire ajanljuk/]) || null : null,
+      recommendedFor: validSnapshot ? recommendedForSection(snapshot.longDescription) || null : null,
       productDescription: validSnapshot ? authoritativeProductDescription(snapshot) || null : null,
       productBenefits: null,
       approvedClaims: null,
