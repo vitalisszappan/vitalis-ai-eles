@@ -66,4 +66,22 @@ assert.equal(answer.answer, fullUsage);
 assert.equal(answer.factsUsed[0].provenance[0].sourceType, 'unas_snapshot');
 assert.equal(answer.factsUsed[0].provenance[0].sourceId, 'unas:1462570616');
 
+for (const [question, productId, intent, factType] of [
+  ['Mi ez a Dermavital sampon?', 'dermavital_sampon', 'product_description', 'productDescription'],
+  ['Mire való a Dermavital sampon?', 'dermavital_sampon', 'product_description', 'productDescription'],
+  ['Mit tud a Dermavital szappan?', 'dermavital_szappan', 'product_description', 'productDescription'],
+  ['Kinek ajánlott a Dermavital szappan?', 'dermavital_szappan', 'product_suitability', 'recommendedFor']
+]) {
+  const result = createAnswer({
+    question, history: [], knowledge: [],
+    ruleEngine: new ExpertRuleEngine(path.join(__dirname, 'data', 'rules', 'expert-rules.json')),
+    logGap: () => {}, conversationState: null, logDiagnostic: () => {}
+  });
+  assert.equal(result.targetProductId, productId, question);
+  assert.equal(result.answerIntent, intent, question);
+  assert.equal(result.factsUsed[0].factType, factType, question);
+  assert.equal(result.factsUsed[0].provenance[0].sourceType, 'unas_snapshot', question);
+  assert.doesNotMatch(result.answer, /Hogyan használd|INCI|Ingredients|Összetevők|Fontos tudnivaló/i, question);
+}
+
 console.log('FIRST_REAL_CONTENT_ANSWER_OK');

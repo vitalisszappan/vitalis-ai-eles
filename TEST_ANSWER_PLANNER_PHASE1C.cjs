@@ -71,4 +71,44 @@ assert.equal(primaryNotMatched.targetProductId, null); assert.equal(primaryNotMa
 const missingBenefit = planAnswer({ question: 'Mire jó?', routing: { route: 'context_followup', contextTarget: 'x', matchedProductIds: ['x'] }, conversationState: {}, factsApi: noBenefitEvidenceFacts });
 assert.equal(missingBenefit.groundingStatus, 'unavailable'); assert.equal(missingBenefit.ctaStrategy, 'none');
 
+// Neutral descriptions, suitability and benefit claims remain separate facts.
+const descriptionFacts = {
+  getProductFacts(productId) { return { canonicalProductId: productId, facts: {} }; },
+  getFact(productId, factType) {
+    const values = { productDescription: 'Grounded description.', recommendedFor: ['érzékeny bőr'] };
+    return values[factType] == null
+      ? { status: 'unavailable', value: null, productId, provenance: [] }
+      : { status: 'grounded', value: values[factType], productId, provenance: [{ sourceType: 'unas_snapshot', sourceId: 'unas:test', productId }] };
+  },
+  normalizeIngredient(value) { return value; },
+  hasIngredient() { return { status: 'unavailable', exists: null, provenance: [] }; }
+};
+const descriptionPlan = planAnswer({
+  question: 'Mi ez a termék?',
+  routing: { route: 'exact_product', productQuestionIntent: 'description', matchedCanonicalIds: ['dermavital_sampon'] },
+  conversationState: {}, factsApi: descriptionFacts
+});
+assert.equal(descriptionPlan.answerIntent, 'product_description');
+assert.deepEqual(descriptionPlan.requiredFacts, ['productDescription']);
+assert.equal(descriptionPlan.factsUsed[0].factType, 'productDescription');
+assert.equal(descriptionPlan.factsUsed[0].provenance[0].sourceType, 'unas_snapshot');
+
+const suitabilityPlan = planAnswer({
+  question: 'Kinek ajánlott?',
+  routing: { route: 'exact_product', productQuestionIntent: 'suitability', matchedCanonicalIds: ['dermavital_szappan'] },
+  conversationState: {}, factsApi: descriptionFacts
+});
+assert.equal(suitabilityPlan.answerIntent, 'product_suitability');
+assert.deepEqual(suitabilityPlan.requiredFacts, ['recommendedFor']);
+
+const unavailableDescription = planAnswer({
+  question: 'Mi ez a termék?',
+  routing: { route: 'exact_product', productQuestionIntent: 'description', matchedCanonicalIds: ['x'] },
+  conversationState: {}, factsApi: noBenefitEvidenceFacts
+});
+assert.equal(unavailableDescription.groundingStatus, 'unavailable');
+assert.equal(unavailableDescription.factsUsed[0].factType, 'productDescription');
+assert.equal(unavailableDescription.factsUsed[0].status, 'unavailable');
+assert.equal(unavailableDescription.factsUsed.some((fact) => fact.factType === 'productBenefits'), false);
+
 console.log('Answer Planner Phase 1C: PASS (recommendation + benefits + safety negatives)');

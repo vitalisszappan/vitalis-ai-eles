@@ -3,7 +3,7 @@
 const productFacts = require('./product-facts.cjs');
 const { normalize } = require('./normalizer.cjs');
 
-const SUPPORTED_INTENTS = Object.freeze(['product_recommendation', 'product_benefits', 'ingredients', 'ingredient_benefit', 'usage', 'price_query', 'order_start', 'comparison']);
+const SUPPORTED_INTENTS = Object.freeze(['product_recommendation', 'product_description', 'product_suitability', 'product_benefits', 'ingredients', 'ingredient_benefit', 'usage', 'price_query', 'order_start', 'comparison']);
 
 function detectAnswerIntent(question, routing) {
   const text = normalize(question);
@@ -11,7 +11,9 @@ function detectAnswerIntent(question, routing) {
   if (routing?.route === 'product_comparison' || routing?.intent === 'compare_products') return 'comparison';
   if (routing?.route === 'commerce' && routing.intent === 'order_start') return 'order_start';
   if (/\b(mire jo benne|mit csinal benne|miert van benne)\b/.test(text)) return 'ingredient_benefit';
-  if (/\b(miert ezt ajanlod|miert ajanlod|miert jo ez|mire jo|mire valo|mit tud ez(?: a krem)?|miben segit)\b/.test(text)) return 'product_benefits';
+  if (routing?.productQuestionIntent === 'description' || /\b(mi ez(?: a termek)?|mire valo(?: ez| a)?|mit tud (?:ez|a)\b)\b/.test(text)) return 'product_description';
+  if (routing?.productQuestionIntent === 'suitability' || /\b(kinek ajanlott|kinek valo|milyen (?:borre|hajra|fejborre) valo)\b/.test(text)) return 'product_suitability';
+  if (/\b(miert ezt ajanlod|miert ajanlod|miert jo ez|mire jo|miben segit)\b/.test(text)) return 'product_benefits';
   if (routing?.route === 'expert_rule' && /\b(mit ajanl|mit javasol|melyiket ajanl|milyen termeket ajanl|mit hasznaljak)\w*/.test(text)) return 'product_recommendation';
   if (['ingredients', 'ingredient_existence'].includes(routing?.productQuestionIntent)) return 'ingredients';
   if (routing?.productQuestionIntent === 'benefits') return 'product_benefits';
@@ -81,6 +83,7 @@ function planAnswer({ question, routing, conversationState, factsApi = productFa
   const ambiguous = (routing?.route === 'clarification' && routing?.rejectionReasons?.includes('ambiguous_product_reference')) || (conversationState?.productContextStatus === 'ambiguous' && !authoritativeReference);
   const requiredByIntent = {
     product_recommendation: ['productBenefits'], product_benefits: ['productBenefits'],
+    product_description: ['productDescription'], product_suitability: ['recommendedFor'],
     ingredients: ['ingredients'], ingredient_benefit: ['ingredients', 'ingredientBenefits'],
     usage: ['usageInstructions'], price_query: ['price', 'currency'], order_start: []
   };

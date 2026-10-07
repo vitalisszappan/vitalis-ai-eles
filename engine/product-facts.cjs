@@ -29,7 +29,7 @@ const INGREDIENT_ALIASES = Object.freeze({
 const FACT_TYPES = Object.freeze([
   'name', 'price', 'currency', 'url', 'image', 'ingredients', 'inci',
   'keyIngredients', 'ingredientBenefits', 'usageInstructions',
-  'recommendedFor', 'productBenefits', 'approvedClaims', 'warnings'
+  'recommendedFor', 'productDescription', 'productBenefits', 'approvedClaims', 'warnings'
 ]);
 
 function clean(value) { return typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : ''; }
@@ -219,6 +219,75 @@ function explicitBenefits(text, ingredients) {
 }
 function uniqueByJson(items) { const seen = new Set(); return items.filter((item) => { const key = JSON.stringify(item); if (seen.has(key)) return false; seen.add(key); return true; }); }
 
+const DESCRIPTION_SECTION_BOUNDARY = /\b(?:hogyan\s+hasznald|hasznalati\s+(?:javaslat|utasitas)|hasznalat\s*:|ingredients\s*(?:\(inci\))?|inci(?:\/osszetevok)?|osszetevok(?:\s*\(inci\))?|fontos\s+tudnivalok?|mire\s+figyelj|gyakori\s+kerdesek|csomagolas|fedezd\s+fel|tovabbi|olvasd\s+el|rendeld\s+meg|vasarold\s+meg|iratkozz\s+fel)\b/g;
+const DESCRIPTION_STRONG_CLAIMS = /\b(?:gyogyaszati|gyogyit\w*|meggyogy\w*|kezeles(?:e|re|et)?|fertotlen\w*|antibakterialis|gyulladas(?:t|ok?at)?\s+csokkent\w*|csokkenti\s+a\s+gyullad\w*|serkenti\s+a\s+hajnovekedest|hajnovekedest\s+serkent\w*|megszuntet\w*|tunetek?\s+(?:enyhul\w*|megszun\w*)|gyogyszerkent|fantasztikus\s+hatas|jotekony\s+hatas|hatekony\s+apolas|egyedulallo|kiveteles\s+valasztas|megelozo|vitalizalo|vedelem\s+erdekeben|valasztasunk)\b|100\s*%/;
+const DESCRIPTION_PRODUCT_TERMS = /\b(?:termek|kozmetikum|sampon|samponszappan|szappan|krem|balzsam|csomag|sotomb|rendszer|formula)\b/;
+const DESCRIPTION_PURPOSE_TERMS = /\b(?:keszult|fejlesztett|apolas|apolasara|tisztitas|tisztitasara|tisztit|borapolo|hajapolo|mindennapi|kimeletes|erzekeny|szaraz|zsiros|hajra|fejborre|borre|komforterzet)\w*/;
+
+function descriptionSentences(value) {
+  return clean(value).split(/(?<=[.!?])\s+/).map(clean).filter(Boolean);
+}
+
+function hasDescriptionMeaning(value) {
+  const normalized = fold(value);
+  return DESCRIPTION_PRODUCT_TERMS.test(normalized) && DESCRIPTION_PURPOSE_TERMS.test(normalized);
+}
+
+function isSafeDescriptionCandidate(value) {
+  const text = clean(value);
+  const normalized = fold(text);
+  DESCRIPTION_SECTION_BOUNDARY.lastIndex = 0;
+  return text.length >= 70 && text.length <= 700
+    && descriptionSentences(text).length <= 4
+    && hasDescriptionMeaning(text)
+    && !DESCRIPTION_STRONG_CLAIMS.test(normalized)
+    && !DESCRIPTION_SECTION_BOUNDARY.test(normalized)
+    && !/\b(?:vasarloi\s+visszajelzesek|reszletes\s+leirasert|termekcsalad\s+(?:harmadik|kovetkezo)\s+tagja|tartalma\s*:|vitalis\s+torzsvasarloi\s+ar)\b/.test(normalized)
+    && !/\b(?:hasznalat|kiszereles|tomeg)\s*:/.test(normalized)
+    && !/:\s/.test(text)
+    && !/[?]/.test(text)
+    && normalized.split(' ').length <= 55
+    && !/\.pos\b|\?\w/.test(normalized);
+}
+
+function shortProductDescription(value) {
+  const text = clean(value)
+    .replace(/^(?:Vásárlói visszajelzések alapján kedvelt (?:termék|szappan)\s+)?(?:Természetes bőrápolás válogatott alapanyagokkal\s+)?(?:Magyar kézműves (?:kozmetikum|szappan)\s+)?/iu, '')
+    .replace(/\s+(?:Tömeg|Kiszerelés)\s*:.*$/iu, '');
+  return isSafeDescriptionCandidate(text) ? text : '';
+}
+
+function boundedLongProductDescription(value) {
+  const source = clean(value).slice(0, 2400);
+  if (!source) return '';
+  const normalized = scanFold(source);
+  DESCRIPTION_SECTION_BOUNDARY.lastIndex = 0;
+  const boundary = DESCRIPTION_SECTION_BOUNDARY.exec(normalized);
+  const opening = clean(source.slice(0, boundary?.index ?? source.length));
+  const sentences = descriptionSentences(opening).map((sentence) => sentence.replace(/\s*:\s*(?:Milyen|Miért|Kinek|Hogyan)\b.*$/u, ''));
+  const candidates = sentences.filter((sentence) => !/\?$/.test(sentence) && hasDescriptionMeaning(sentence) && isSafeDescriptionCandidate(sentence));
+  const score = (sentence) => {
+    const normalizedSentence = fold(sentence);
+    return (/\b(?:keszult|fejlesztett|apolasara|tisztitasara)\b/.test(normalizedSentence) ? 4 : 0)
+      + (/\b(?:mindennapi|kimeletes|erzekeny|szaraz|zsiros)\b/.test(normalizedSentence) ? 2 : 0)
+      - (/\b(?:nem\s+az|nem\s+csak|sokan|problema)\b/.test(normalizedSentence) ? 2 : 0);
+  };
+  if (candidates.length) return candidates.sort((left, right) => score(right) - score(left))[0];
+  for (let index = 0; index < sentences.length - 1; index += 1) {
+    const pair = `${sentences[index]} ${sentences[index + 1]}`;
+    if (!/\?$/.test(sentences[index]) && isSafeDescriptionCandidate(pair)) return pair;
+  }
+  const purposeBlock = /\bmiert\s+valaszd\??\s+(.+?)(?=\bhogyan\s+hasznald\b|\bhasznalati\b|\bfontos\s+tudnival)/.exec(normalized)?.[1] || '';
+  const originalPurposeBlock = purposeBlock ? opening.slice(normalized.indexOf(purposeBlock), normalized.indexOf(purposeBlock) + purposeBlock.length) : '';
+  return isSafeDescriptionCandidate(originalPurposeBlock) ? clean(originalPurposeBlock) : '';
+}
+
+function authoritativeProductDescription(product) {
+  return shortProductDescription(product?.shortDescription)
+    || boundedLongProductDescription(product?.longDescription)
+    || '';
+}
+
 function createProductFactsResolver(options = {}) {
   const mappingData = options.mappingData ?? readJson(options.mappingPath || DEFAULT_MAPPING_PATH);
   const snapshotData = options.snapshotData ?? readJson(options.snapshotPath || DEFAULT_SNAPSHOT_PATH);
@@ -259,6 +328,7 @@ function createProductFactsResolver(options = {}) {
       ingredientBenefits: benefits.length ? benefits : null,
       usageInstructions: validSnapshot ? usageSection(snapshot.longDescription) || null : null,
       recommendedFor: validSnapshot ? section(snapshot.longDescription, [/^kinek ajanljuk/, /^mire ajanljuk/]) || null : null,
+      productDescription: validSnapshot ? authoritativeProductDescription(snapshot) || null : null,
       productBenefits: null,
       approvedClaims: null,
       warnings: validSnapshot ? section(snapshot.longDescription, [/^fontos tudnivalok/, /^mire figyelj/]) || null : null

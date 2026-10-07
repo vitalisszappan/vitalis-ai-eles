@@ -293,4 +293,70 @@ for (const productId of groundedUsageIds) {
     productId);
 }
 
+const groundedDescriptionIds = mappedIds.filter((productId) => realResolver.getFact(productId, 'productDescription').status === 'grounded');
+const unavailableDescriptionIds = mappedIds.filter((productId) => realResolver.getFact(productId, 'productDescription').status !== 'grounded');
+assert.equal(groundedDescriptionIds.length, 14);
+assert.deepEqual(unavailableDescriptionIds.sort(), ['katrany_szappan', 'oliva_szappan', 'teafa_szappan', 'tengeri_soszappan']);
+
+const directDescriptionCases = {
+  rozmaringos_samponszappan: /hajmosó szappan/i,
+  teafa_aktiv_szen_samponszappan: /zsíros, gyorsan zsírosodó hajra/i,
+  dermavital_krem: /bőrápoló krém/i,
+  dermavital_szappan: /kíméletesen tisztítja/i,
+  shea_vajas_szappan: /száraz, vízhiányos bőr/i,
+  kecsketejes_levendulas_szappan: /érzékeny, kipirosodásra hajlamos bőr/i,
+  parajdi_sotomb: /természetes sótömb/i
+};
+for (const [productId, marker] of Object.entries(directDescriptionCases)) {
+  const fact = realResolver.getFact(productId, 'productDescription');
+  assert.equal(fact.status, 'grounded', productId);
+  assert.match(fact.value, marker, productId);
+  assert.equal(fact.provenance[0].sourceType, 'unas_snapshot', productId);
+  assert.equal(fact.provenance[0].productId, productId);
+}
+
+const recoveredDescriptionCases = {
+  dermavital_sampon: /Dermavital Sampon/i,
+  solid_shampoo_normal_green_tea: /szilárd sampon/i,
+  solid_shampoo_oily_rosemary_caffeine: /zsírosodásra hajlamos/i,
+  psorivital_csomag: /napi ápolási rendszer/i,
+  holt_tengeri_so_balzsam: /Intenzív bőrápoló balzsam/i,
+  holt_tengeri_iszapos_szappan: /Holt-tengeri iszap szappan/i,
+  natur_kecsketejes_szappan: /mindennapos ápolására készült/i
+};
+for (const [productId, marker] of Object.entries(recoveredDescriptionCases)) {
+  const fact = realResolver.getFact(productId, 'productDescription');
+  assert.equal(fact.status, 'grounded', productId);
+  assert.match(fact.value, marker, productId);
+}
+
+for (const productId of groundedDescriptionIds) {
+  const value = realResolver.getFact(productId, 'productDescription').value;
+  assert.doesNotMatch(value, /Hogyan használd|Használati|\bINCI\b|Ingredients\s*:|Összetevők\s*:|Fontos tudnival|Gyakori kérdések|Fedezd fel|Iratkozz fel|Rendeld meg/i, productId);
+  assert.doesNotMatch(value, /gyógyít|kezelés|antibakteriális|fertőtlen|serkenti a hajnövekedést|csökkenti a gyulladást|megszünteti/i, productId);
+}
+
+function fixtureDescription({ shortDescription = null, longDescription = null, approvedFacts = [], deterministic = {} }) {
+  const fixture = createProductFactsResolver({
+    mappingData: { mappings: [{ canonicalId: 'description_fixture', unasId: 'description-1', sku: 'DESC', mappingStatus: 'approved' }] },
+    snapshotData: { generatedAt: '2026-10-07T00:00:00Z', products: [{ unasId: 'description-1', sku: 'DESC', name: 'Fixture szappan', shortDescription, longDescription }] },
+    deterministicProducts: deterministic,
+    approvedFactData: { facts: approvedFacts }
+  });
+  return fixture.getFact('description_fixture', 'productDescription');
+}
+
+assert.equal(fixtureDescription({ shortDescription: 'Kíméletes kézműves szappan száraz és érzékeny bőr mindennapi kozmetikai tisztítására.' }).status, 'grounded');
+assert.equal(fixtureDescription({ shortDescription: 'Antibakteriális szappan, amely csökkenti a gyulladást és kezeli a problémás bőrt.' }).status, 'unavailable');
+assert.equal(fixtureDescription({ shortDescription: 'Használat: nedves bőrön habosítsd fel a szappant.' }).status, 'unavailable');
+assert.equal(fixtureDescription({ longDescription: 'Ez a kíméletes kézműves szappan száraz és érzékeny bőr mindennapi kozmetikai tisztítására készült. Hogyan használd? Habosítsd fel. INCI: Aqua.' }).value,
+  'Ez a kíméletes kézműves szappan száraz és érzékeny bőr mindennapi kozmetikai tisztítására készült.');
+assert.equal(fixtureDescription({ deterministic: { description_fixture: { name: 'Fixture', description: 'Statikus leírás.' } } }).status, 'unavailable');
+const ownerDescription = fixtureDescription({
+  shortDescription: 'Kíméletes kézműves szappan száraz és érzékeny bőr mindennapi kozmetikai tisztítására.',
+  approvedFacts: [{ productId: 'description_fixture', factType: 'productDescription', value: 'Tulajdonos által jóváhagyott leírás.', sourceType: 'owner_approved', sourceId: 'owner:description:v1', approved: true }]
+});
+assert.equal(ownerDescription.value, 'Tulajdonos által jóváhagyott leírás.');
+assert.equal(ownerDescription.provenance[0].sourceType, 'owner_approved');
+
 console.log('Product Facts regressions: PASS (15/18 safe usage, boundaries, provenance, fail-closed negatives)');

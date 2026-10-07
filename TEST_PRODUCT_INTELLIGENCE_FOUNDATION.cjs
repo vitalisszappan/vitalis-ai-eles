@@ -6,7 +6,9 @@ const { PRODUCTS } = require('./engine/product-catalog.cjs');
 const { DIMENSIONS, APPROVAL_SCOPES, migrateLegacyApprovedFact } = require('./engine/product-intelligence-schema.cjs');
 const { validateProductFact } = require('./engine/product-intelligence-validator.cjs');
 
-assert.deepEqual(Object.keys(DIMENSIONS).sort(), ['applicationArea', 'concerns', 'currency', 'frequency', 'inci', 'ingredients', 'keyIngredients', 'limitations', 'price', 'primaryPurpose', 'productBenefits', 'productType', 'recommendedFor', 'scalpTypes', 'skinTypes', 'usageInstructions', 'usageRole', 'warnings']);
+assert.deepEqual(Object.keys(DIMENSIONS).sort(), ['applicationArea', 'concerns', 'currency', 'frequency', 'inci', 'ingredients', 'keyIngredients', 'limitations', 'price', 'primaryPurpose', 'productBenefits', 'productDescription', 'productType', 'recommendedFor', 'scalpTypes', 'skinTypes', 'usageInstructions', 'usageRole', 'warnings']);
+assert.equal(DIMENSIONS.productDescription.valueType, 'string');
+assert.equal(DIMENSIONS.productDescription.decisionSupportCapable, false);
 assert.equal(DIMENSIONS.productBenefits.comparisonCapable, true);
 assert.equal(DIMENSIONS.price.decisionSupportCapable, false);
 

@@ -38,6 +38,7 @@ const DIMENSIONS = Object.freeze({
   warnings: { valueType: 'string_list', multiple: true, comparisonCapable: true, decisionSupportCapable: true, ownership: 'knowledge' },
   price: { valueType: 'money', multiple: false, comparisonCapable: true, decisionSupportCapable: false, ownership: 'commerce' },
   currency: { valueType: 'currency', multiple: false, comparisonCapable: true, decisionSupportCapable: false, ownership: 'commerce' },
+  productDescription: { valueType: 'string', multiple: false, comparisonCapable: false, decisionSupportCapable: false, ownership: 'commerce' },
   productBenefits: { valueType: 'claim_list', multiple: true, comparisonCapable: true, decisionSupportCapable: true, ownership: 'knowledge' }
 });
 

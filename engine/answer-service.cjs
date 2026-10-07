@@ -231,6 +231,16 @@ function materializePlannedAnswer(plan, routing) {
     const claim = firstClaim(byType.productBenefits);
     return { ...base, answer: claim || 'Ehhez a termékhez nincs jóváhagyott, termékspecifikus előnyállításunk.' };
   }
+  if (plan.answerIntent === 'product_description') {
+    const description = byType.productDescription;
+    return { ...base, answer: description?.status === 'grounded' ? description.value : 'Ehhez a termékhez nincs elérhető, bizonyított termékleírásunk.' };
+  }
+  if (plan.answerIntent === 'product_suitability') {
+    const suitability = byType.recommendedFor;
+    if (suitability?.status !== 'grounded') return { ...base, answer: 'Ehhez a termékhez nincs elérhető, bizonyított ajánlási információnk.' };
+    const value = Array.isArray(suitability.value) ? suitability.value.join(', ') : suitability.value;
+    return { ...base, answer: value };
+  }
   if (plan.answerIntent === 'ingredients') {
     const ingredients = byType.ingredients;
     const existence = byType.ingredientExistence;
