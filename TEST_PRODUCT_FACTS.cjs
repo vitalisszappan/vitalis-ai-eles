@@ -81,6 +81,116 @@ const malformedResolver = createProductFactsResolver({ mappingData: realMapping,
 assert.equal(malformedResolver.getFact('dermavital_sampon', 'usageInstructions').status, 'unavailable');
 assert.equal(malformedResolver.getFact('dermavital_sampon', 'usageInstructions').value, null);
 
+const typedIngredientCases = {
+  rozmaringos_samponszappan: { sourceId: 'unas:1467825966', ingredients: /Rozmaring illóolaj/, inci: /Rosmarinus Officinalis Leaf Oil/ },
+  teafa_aktiv_szen_samponszappan: { sourceId: 'unas:1467818511', ingredients: /Aktív szén/, inci: /Charcoal Powder/ },
+  holt_tengeri_iszapos_szappan: { sourceId: 'unas:111374989', ingredients: /Holt Tengeri iszap/, inci: null },
+  katrany_szappan: { sourceId: 'unas:111374984', ingredients: null, inci: /Sodium shale oil sulfonate/ },
+  shea_vajas_szappan: { sourceId: 'unas:111374997', ingredients: /Shea vaj/, inci: /Butyrospermum Parkii Butter/ },
+  kecsketejes_levendulas_szappan: { sourceId: 'unas:1241471919', ingredients: /Levendula illóolaj/, inci: /Lavandula Angustifolia Oil/ },
+  oliva_szappan: { sourceId: 'unas:111374990', ingredients: /kecsketej/, inci: /Caprae Lac/ },
+  teafa_szappan: { sourceId: 'unas:111374987', ingredients: /Argán olaj/, inci: /Melaleuca Alternifolia Oil/ },
+  tengeri_soszappan: { sourceId: 'unas:111374991', ingredients: /Tengeri só/, inci: /Sodium Chloride/ }
+};
+const typedFingerprints = [];
+for (const [productId, expected] of Object.entries(typedIngredientCases)) {
+  const record = realResolver.getProductFacts(productId);
+  assert.equal(record.canonicalProductId, productId);
+  for (const [factType, marker] of [['ingredients', expected.ingredients], ['inci', expected.inci]]) {
+    const fact = record.facts[factType];
+    if (!marker) {
+      assert.equal(fact.status, 'unavailable', `${productId}:${factType}`);
+      assert.equal(fact.value, null, `${productId}:${factType}`);
+      continue;
+    }
+    assert.equal(fact.status, 'grounded', `${productId}:${factType}`);
+    assert.equal(fact.provenance[0].sourceType, 'unas_snapshot', `${productId}:${factType}`);
+    assert.equal(fact.provenance[0].sourceId, expected.sourceId, `${productId}:${factType}`);
+    assert.equal(fact.provenance[0].productId, productId, `${productId}:${factType}`);
+    const rawValues = factType === 'ingredients' ? fact.value.map((item) => item.rawName) : fact.value;
+    const serialized = rawValues.join(' | ');
+    assert.match(serialized, marker, `${productId}:${factType}`);
+    assert.doesNotMatch(serialized, /\b(?:INCI|Ingredients|Összetevők)\b|\*|szappanosodás során|illóolaj(?:ok)? természetes összetevői/i, `${productId}:${factType}`);
+    if (factType === 'ingredients') assert.doesNotMatch(serialized, /\bSodium\b|\bAqua\b|\bCaprae Lac\b/, productId);
+    typedFingerprints.push(`${productId}:${factType}:${JSON.stringify(rawValues)}`);
+  }
+}
+assert.equal(new Set(typedFingerprints).size, typedFingerprints.length);
+assert.doesNotMatch(realResolver.getFact('rozmaringos_samponszappan', 'ingredients').value.map((item) => item.rawName).join(' '), /Charcoal|Melaleuca/);
+assert.doesNotMatch(realResolver.getFact('teafa_szappan', 'inci').value.join(' '), /Sodium Chloride|Rosmarinus Officinalis/);
+
+const creamInci = realResolver.getFact('dermavital_krem', 'inci');
+assert.equal(creamInci.status, 'grounded');
+assert.equal(creamInci.provenance[0].sourceId, 'unas:1412837511');
+assert.match(creamInci.value.join(' | '), /Urea \(Karbamid\)/);
+assert.equal(realResolver.getFact('dermavital_krem', 'ingredients').status, 'unavailable');
+const greenTeaInci = realResolver.getFact('solid_shampoo_normal_green_tea', 'inci');
+assert.equal(greenTeaInci.status, 'grounded');
+assert.equal(greenTeaInci.provenance[0].sourceId, 'unas:1229849469');
+assert.match(greenTeaInci.value.join(' | '), /Sodium Cocoyl Isethionate – SCI/);
+assert.match(greenTeaInci.value.join(' | '), /Parfum – Illat \(zöldtea és bergamott\)/);
+
+function fixtureFacts(longDescription) {
+  const fixture = createProductFactsResolver({
+    mappingData: { mappings: [{ canonicalId: 'ingredient_fixture', unasId: 'ingredient-1', sku: 'ING', mappingStatus: 'approved' }] },
+    snapshotData: { generatedAt: '2026-10-06T00:00:00Z', products: [{
+      unasId: 'ingredient-1', sku: 'ING', name: 'Ingredient fixture', longDescription,
+      actualPriceGross: 1, currency: 'HUF', url: 'https://www.vitalis-szappan.hu/ingredient-fixture'
+    }] },
+    deterministicProducts: {}
+  });
+  return { ingredients: fixture.getFact('ingredient_fixture', 'ingredients'), inci: fixture.getFact('ingredient_fixture', 'inci') };
+}
+
+for (const description of [
+  'Összetevők: Kókuszolaj, Shea vaj INCI: Sodium Cocoate, Aqua',
+  'Összetevők (INCI): Sodium Cocoate, Aqua Összetevők: Kókuszolaj, Shea vaj',
+  'Összetevők: Kókuszolaj, Shea vaj Ingredients: Sodium Cocoate, Aqua *: magyarázó lábjegyzet'
+]) {
+  const facts = fixtureFacts(description);
+  assert.equal(facts.ingredients.status, 'grounded', description);
+  assert.equal(facts.inci.status, 'grounded', description);
+  assert.deepEqual(facts.ingredients.value.map((item) => item.rawName), ['Kókuszolaj', 'Shea vaj'], description);
+  assert.deepEqual(facts.inci.value, ['Sodium Cocoate', 'Aqua'], description);
+}
+
+const marketingOnly = fixtureFacts('A rozmaringolaj és a shea vaj ápoló hatásáról ismert, az aktív szén pedig tiszta érzetet ad.');
+assert.equal(marketingOnly.ingredients.status, 'unavailable');
+assert.equal(marketingOnly.inci.status, 'unavailable');
+const questionableInci = fixtureFacts('INCI: Sodium Cocoate, Sodium Sunflowerseedate?, Aqua');
+assert.equal(questionableInci.inci.status, 'unavailable');
+const cleanPlainMalformedInci = fixtureFacts('Összetevők: Kókuszolaj, Shea vaj INCI: Sodium Cocoate, Broken?');
+assert.equal(cleanPlainMalformedInci.ingredients.status, 'grounded');
+assert.equal(cleanPlainMalformedInci.inci.status, 'unavailable');
+const malformedPlainCleanInci = fixtureFacts('Összetevők: szappanosított, ricinus olaj INCI: Sodium Castorate, Aqua');
+assert.equal(malformedPlainCleanInci.ingredients.status, 'unavailable');
+assert.equal(malformedPlainCleanInci.inci.status, 'grounded');
+const uncertainBoundary = fixtureFacts('Összetevők: Kókuszolaj, Shea vaj Ismeretlen rész: marketing szöveg.');
+assert.equal(uncertainBoundary.ingredients.status, 'unavailable');
+assert.equal(uncertainBoundary.inci.status, 'unavailable');
+
+const mappedIngredientFacts = realMapping.mappings.filter((item) => item.mappingStatus === 'approved').map((item) => ({
+  productId: item.canonicalId,
+  ingredients: realResolver.getFact(item.canonicalId, 'ingredients'),
+  inci: realResolver.getFact(item.canonicalId, 'inci')
+}));
+assert.equal(mappedIngredientFacts.length, 18);
+assert.equal(mappedIngredientFacts.filter((item) => item.ingredients.status === 'grounded').length, 8);
+assert.equal(mappedIngredientFacts.filter((item) => item.inci.status === 'grounded').length, 10);
+assert.equal(mappedIngredientFacts.filter((item) => item.ingredients.status === 'grounded' && item.inci.status === 'grounded').length, 7);
+assert.equal(mappedIngredientFacts.filter((item) => item.ingredients.status === 'grounded' || item.inci.status === 'grounded').length, 11);
+assert.deepEqual(mappedIngredientFacts.filter((item) => item.ingredients.status !== 'grounded' && item.inci.status !== 'grounded')
+  .map((item) => item.productId).sort(), [
+  'dermavital_sampon', 'dermavital_szappan', 'holt_tengeri_so_balzsam', 'natur_kecsketejes_szappan',
+  'parajdi_sotomb', 'psorivital_csomag', 'solid_shampoo_oily_rosemary_caffeine'
+]);
+for (const item of mappedIngredientFacts) {
+  const benefits = realResolver.getFact(item.productId, 'ingredientBenefits');
+  if (benefits.status === 'grounded') {
+    assert.ok(benefits.value.every((benefit) => realResolver.hasIngredient(item.productId, benefit.ingredientId).exists === true), item.productId);
+  }
+}
+
 const repairedUsageCases = {
   solid_shampoo_normal_green_tea: {
     sourceId: 'unas:1229849469', include: /Habosítsd fel a sampont/, exclude: /használat mellett|Milyen összetevőkkel|INCI/

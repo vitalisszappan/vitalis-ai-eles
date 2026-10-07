@@ -122,15 +122,89 @@ function usageSection(text) {
 function splitList(value) {
   return clean(value).split(/\s*(?:,|;|\n|\r|\u2022|\*)\s*/).map(clean).filter(Boolean);
 }
-function explicitIngredientBlock(text) {
+const TYPED_INGREDIENT_HEADING = /(?:INGREDIENTS\s*\(INCI\)|[ÖO]sszetev[őo]k\s*\(INCI\)|INCI\s*\/\s*[ÖO]sszetev[őo]k|INCI|Ingredients|[ÖO]sszetev[őo]k)\s*:\s*/gi;
+const INGREDIENT_SECTION_BOUNDARIES = [
+  /\b(?:kinek\s+ajanljuk|mire\s+ajanljuk|hasznalati\s+(?:javaslat|utasitas)|hasznalat|hogyan\s+hasznald|fontos\s+tudnivalok?|mire\s+figyelj|csomagolas|gyakori\s+kerdesek)\b/g,
+  /\b(?:miert|milyen|mitol|mit|mire|kinek|hogyan)\s+[^.!?]{1,120}\?/g,
+  /(?:^|[.!?]\s+)(?:a|az)\s+[a-z0-9 -]{1,60}\s+termekcsalad\b/g,
+  /(?:^|[.!?]\s+)(?:fedezd\s+fel|tovabbi|tudj(?:on)?\s+meg|olvasd\s+el|nem\s+tudod)\b/g,
+  /\s+(?:\(\s*)?\*{1,2}\s*(?::\s*|(?=(?:szappanosodas|az\s+illoolaj|a\s+levendula)))/g
+];
+
+function typedIngredientHeadingType(heading) {
+  const value = fold(heading);
+  return value === 'osszetevok:' ? 'plain_ingredients' : 'formal_inci';
+}
+
+function firstIngredientSectionBoundary(text) {
+  const folded = scanFold(text);
+  let first = null;
+  for (const pattern of INGREDIENT_SECTION_BOUNDARIES) {
+    pattern.lastIndex = 0;
+    const match = pattern.exec(folded);
+    if (!match) continue;
+    const leading = /^(?:[.!?]\s+)/.exec(match[0]);
+    const index = match.index + (leading?.[0].length || 0);
+    if (first === null || index < first) first = index;
+  }
+  return first;
+}
+
+function ingredientSectionCandidates(text) {
   const source = String(text || '');
-  const match = /(?:INGREDIENTS\s*\(INCI\)|INCI|[ÖO]sszetev[őo]k)\s*:\s*/i.exec(source);
-  if (!match) return [];
-  const tail = source.slice(match.index + match[0].length);
-  const stop = /\b(?:Kinek aj[aá]nljuk|Mire aj[aá]nljuk|Haszn[aá]lat|Hogyan haszn[aá]ld|Fontos tudnival[oó]k|Mire figyelj|Csomagol[aá]s|Gyakori k[eé]rd[eé]sek)\b/i.exec(tail);
-  const block = clean(tail.slice(0, stop?.index ?? tail.length));
-  if (!block || block.length > 4000) return [];
-  return splitList(block).filter((item) => item.length <= 180);
+  TYPED_INGREDIENT_HEADING.lastIndex = 0;
+  const starts = [...source.matchAll(TYPED_INGREDIENT_HEADING)].map((match) => ({
+    index: match.index,
+    bodyStart: match.index + match[0].length,
+    type: typedIngredientHeadingType(match[0])
+  }));
+  return starts.map((candidate, index) => {
+    const nextStart = starts[index + 1]?.index ?? source.length;
+    const tail = source.slice(candidate.bodyStart, nextStart);
+    const boundary = firstIngredientSectionBoundary(tail);
+    return { ...candidate, value: clean(tail.slice(0, boundary ?? tail.length)) };
+  });
+}
+
+function cleanTypedIngredientItem(item) {
+  return clean(item).replace(/\*+$/g, '').replace(/\.$/, '').trim();
+}
+
+function splitTypedIngredientList(value) {
+  return clean(value).split(/\s*(?:,|;|\n|\r|\u2022)\s*/).map(cleanTypedIngredientItem).filter(Boolean);
+}
+
+function validCommonIngredientItem(item) {
+  const normalized = fold(item);
+  return item.length >= 2 && item.length <= 180
+    && /^[\p{L}\p{N}]/u.test(item)
+    && !/[?:]/.test(item)
+    && !/\*|\b(?:inci|ingredients|osszetevok|fedezd|tovabbi|olvasd|marketing)\b/.test(normalized);
+}
+
+function validateFormalInci(value) {
+  if (!value || value.length > 4000 || /[?]|\*{1,2}\s*:/.test(value)) return [];
+  const items = splitTypedIngredientList(value);
+  if (items.length < 2 || items.some((item) => !validCommonIngredientItem(item))) return [];
+  return items;
+}
+
+function validatePlainIngredients(value) {
+  if (!value || value.length > 4000 || /[?]|\*{1,2}\s*:/.test(value)) return [];
+  const items = splitTypedIngredientList(value);
+  if (items.length < 2 || items.some((item) => !validCommonIngredientItem(item)
+    || fold(item) === 'szappanositott' || fold(item).split(' ').length > 14)) return [];
+  return items;
+}
+
+function typedIngredientBlocks(text) {
+  const candidates = ingredientSectionCandidates(text);
+  const formal = candidates.filter((item) => item.type === 'formal_inci');
+  const plain = candidates.filter((item) => item.type === 'plain_ingredients');
+  return {
+    inci: formal.length === 1 ? validateFormalInci(formal[0].value) : [],
+    ingredients: plain.length === 1 ? validatePlainIngredients(plain[0].value) : []
+  };
 }
 function explicitBenefits(text, ingredients) {
   const source = String(text || '');
@@ -170,16 +244,17 @@ function createProductFactsResolver(options = {}) {
     const validSnapshot = Boolean(mapping && snapshot && clean(snapshot.sku) === clean(mapping.sku));
     const updatedAt = validSnapshot ? snapshot.updatedAt || snapshotData?.generatedAt || null : null;
     const source = validSnapshot ? provenance('unas_snapshot', `unas:${mapping.unasId}`, productId, updatedAt) : null;
-    const ingredients = validSnapshot ? explicitIngredientBlock(snapshot.longDescription) : [];
-    const normalizedIngredients = ingredients.map((rawName) => ({ rawName, ingredientId: normalizeIngredient(rawName) })).filter((item) => item.ingredientId);
-    const benefits = validSnapshot ? explicitBenefits(snapshot.longDescription, normalizedIngredients) : [];
+    const ingredientBlocks = validSnapshot ? typedIngredientBlocks(snapshot.longDescription) : { inci: [], ingredients: [] };
+    const normalizedIngredients = ingredientBlocks.ingredients.map((rawName) => ({ rawName, ingredientId: normalizeIngredient(rawName) })).filter((item) => item.ingredientId);
+    const normalizedInci = ingredientBlocks.inci.map((rawName) => ({ rawName, ingredientId: normalizeIngredient(rawName) })).filter((item) => item.ingredientId);
+    const benefits = validSnapshot ? explicitBenefits(snapshot.longDescription, uniqueByJson([...normalizedIngredients, ...normalizedInci])) : [];
     const values = {
       name: validSnapshot ? clean(snapshot.name) || null : null,
       price: validSnapshot && Number.isFinite(snapshot.actualPriceGross) ? snapshot.actualPriceGross : validSnapshot && Number.isFinite(snapshot.priceGross) ? snapshot.priceGross : null,
       currency: validSnapshot ? clean(snapshot.currency) || 'HUF' : null,
       url: validSnapshot ? validUrl(snapshot.url) : null, image: validSnapshot ? imageUrl(snapshot) : null,
       ingredients: normalizedIngredients.length ? normalizedIngredients : null,
-      inci: ingredients.length ? ingredients : null,
+      inci: ingredientBlocks.inci.length ? ingredientBlocks.inci : null,
       keyIngredients: null,
       ingredientBenefits: benefits.length ? benefits : null,
       usageInstructions: validSnapshot ? usageSection(snapshot.longDescription) || null : null,
@@ -241,9 +316,14 @@ function createProductFactsResolver(options = {}) {
   }
   function getFact(productId, factType) { return getProductFacts(productId)?.facts?.[factType] || unavailable(clean(productId)); }
   function hasIngredient(productId, ingredient) {
-    const fact = getFact(productId, 'ingredients');
     const ingredientId = normalizeIngredient(ingredient);
-    return { status: fact.status, productId: clean(productId), ingredientId, exists: fact.status === 'grounded' ? fact.value.some((item) => item.ingredientId === ingredientId) : null, provenance: fact.provenance };
+    const plain = getFact(productId, 'ingredients');
+    const inci = getFact(productId, 'inci');
+    const plainMatch = plain.status === 'grounded' && plain.value.some((item) => item.ingredientId === ingredientId);
+    const inciMatch = inci.status === 'grounded' && inci.value.some((item) => normalizeIngredient(item) === ingredientId);
+    const evidence = plainMatch ? plain : inciMatch ? inci : plain.status === 'grounded' ? plain : inci;
+    return { status: evidence.status, productId: clean(productId), ingredientId,
+      exists: evidence.status === 'grounded' ? Boolean(plainMatch || inciMatch) : null, provenance: evidence.provenance };
   }
   function getGrounding(productId, factType = null) {
     const record = getProductFacts(productId);
