@@ -246,6 +246,10 @@ const DESCRIPTION_STRONG_CLAIMS = /\b(?:gyogyaszati|gyogyit\w*|meggyogy\w*|kezel
 const DESCRIPTION_PRODUCT_TERMS = /\b(?:termek|keszitmeny|kozmetikum|sampon|samponszappan|szappan|krem|balzsam|csomag|sotomb|rendszer|formula)\w*\b/;
 const DESCRIPTION_PURPOSE_TERMS = /\b(?:keszult|fejlesztett|apolas|apolasara|tisztitas|tisztitasara|tisztit|borapolo|hajapolo|mindennapi|kimeletes|erzekeny|szaraz|zsiros|hajra|fejborre|borre|komforterzet)\w*/;
 
+const EXTENDED_DESCRIPTION_PRODUCT_TERMS = /\b(?:tusfurdo|testapolo|habkrem|ajakbalzsam|fogkrem|fogfeherito\s+por|hajkondicionalo\s+pakolas|keztiszt(?:it)?o\s+gel)\w*\b/;
+const EXTENDED_DESCRIPTION_PURPOSE_TERMS = /\b(?:keszult|apolas|apol|tisztit|tisztasag|mindennapi|kimeletes|hidratal|puhit|frissit|kenheto|borre|hajra|ajak)\w*/;
+const EXTENDED_DESCRIPTION_REJECT = /\b(?:fedezd\s+fel|kenyeztesd|szerezd\s+be|verhetetlen\s+ar|torzsvasarloi\s+ar|hatoanyagok|felhasznalasi\s+terulet|mire\s+hasznalhatod|jotekony\s+hatas|vasarloi\s+visszajelzes|vasarloink|gyogyit|kezeles|fertotlen|antibakterialis|gyulladascsokkento|csodaszer|garantaltan)\b/;
+
 function descriptionSentences(value) {
   return clean(value).split(/(?<=[.!?])\s+/).map(clean).filter(Boolean);
 }
@@ -279,6 +283,39 @@ function shortProductDescription(value) {
     .replace(/^(?:Vásárlói visszajelzések alapján kedvelt (?:termék|szappan)\s+)?(?:Természetes bőrápolás válogatott alapanyagokkal\s+)?(?:Magyar kézműves (?:kozmetikum|szappan)\s+)?/iu, '')
     .replace(/\s+(?:Tömeg|Kiszerelés)\s*:.*$/iu, '');
   return isSafeDescriptionCandidate(text) ? text : '';
+}
+
+function isSafeExtendedDescription(value) {
+  const text = clean(value);
+  const normalized = fold(text);
+  const hasProductIdentity = EXTENDED_DESCRIPTION_PRODUCT_TERMS.test(normalized)
+    || /^(?:a|az)\s+(?!felhasznalt\b)[^.!?]{0,30}\bolaj\b/.test(normalized);
+  DESCRIPTION_SECTION_BOUNDARY.lastIndex = 0;
+  return text.length >= 50 && text.length <= 500
+    && descriptionSentences(text).length <= 3
+    && hasProductIdentity
+    && EXTENDED_DESCRIPTION_PURPOSE_TERMS.test(normalized)
+    && !DESCRIPTION_STRONG_CLAIMS.test(normalized)
+    && !EXTENDED_DESCRIPTION_REJECT.test(normalized)
+    && !DESCRIPTION_SECTION_BOUNDARY.test(normalized)
+    && !/\b(?:habosits|vidd\s+fel|oblitsd|hasznald|masszirozd|nedvesitsd|kend\s+fel|csepegtess)\w*\b/.test(normalized)
+    && !/[?]/.test(text)
+    && !/:\s/.test(text);
+}
+
+function extendedShortProductDescription(value) {
+  const sentences = descriptionSentences(value);
+  while (sentences.length && /^(?:vitalis\s+torzsvasarloi\s+ar|ar|kiszereles|tomeg|tartalma)\s*:/i.test(fold(sentences[0]))) sentences.shift();
+  for (let length = 1; length <= Math.min(3, sentences.length); length += 1) {
+    const candidate = clean(sentences.slice(0, length).join(' '));
+    if (isSafeExtendedDescription(candidate)) return candidate;
+  }
+  return '';
+}
+
+function extendedLongProductDescription(value) {
+  const sentences = descriptionSentences(clean(value).slice(0, 5000));
+  return sentences.find((sentence) => isSafeExtendedDescription(sentence)) || '';
 }
 
 function withoutDescriptionHeadingPrefix(value) {
@@ -322,6 +359,8 @@ function boundedLongProductDescription(value) {
 function authoritativeProductDescription(product) {
   return shortProductDescription(product?.shortDescription)
     || boundedLongProductDescription(product?.longDescription)
+    || extendedShortProductDescription(product?.shortDescription)
+    || extendedLongProductDescription(product?.longDescription)
     || '';
 }
 

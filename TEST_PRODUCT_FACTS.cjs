@@ -470,21 +470,39 @@ for (const productId of groundedUsageIds) {
 
 const groundedDescriptionIds = mappedIds.filter((productId) => realResolver.getFact(productId, 'productDescription').status === 'grounded');
 const unavailableDescriptionIds = mappedIds.filter((productId) => realResolver.getFact(productId, 'productDescription').status !== 'grounded');
-assert.equal(groundedDescriptionIds.length, 41);
+assert.equal(groundedDescriptionIds.length, 52);
 assert.deepEqual(unavailableDescriptionIds.sort(), [
-  'ajakkaland_csilis_ajakbalzsam', 'aktiv_szenes_fogfeherito_por_borsmenta',
-  'alkoholos_keztisztito_gel', 'argan_olaj', 'cherry_blossom_furdobomba',
-  'chilis_etcsokis_szappan', 'eper_furdobomba', 'hevizi_gyogyiszapos_termal_szappan',
-  'jojoba_olaj', 'kakaovaj_organikus', 'katrany_szappan', 'kecsketejes_etcsokis_kremvarazs_szappan',
-  'kecsketejes_levendulas_testapolo_krem', 'kokuszvajas_testapolo_habkrem_kakaovajjal',
-  'levendula_furdobomba', 'mentas_citrom_tusfurdo', 'mojito_ajakbalzsam', 'oliva_szappan',
-  'parajdi_furdoso_natur',
+  'cherry_blossom_furdobomba', 'chilis_etcsokis_szappan', 'eper_furdobomba',
+  'hevizi_gyogyiszapos_termal_szappan', 'kakaovaj_organikus', 'katrany_szappan',
+  'kecsketejes_etcsokis_kremvarazs_szappan', 'kokuszvajas_testapolo_habkrem_kakaovajjal',
+  'levendula_furdobomba', 'oliva_szappan', 'parajdi_furdoso_natur',
   'shea_vaj_finomitatlan', 'shea_vaj_gyomber_citrom', 'shea_vaj_levendula', 'shea_vaj_narancs_levendula',
   'shea_vajas_mandulaolajos_testapolo_habkrem_citromfu_geranium',
-  'sherbet_lemon_ajakbalzsam', 'taplalo_hajkondicionalo_pakolas_argan_ricinus',
-  'teafa_levendula_dezodor', 'teafa_parajdi_so_furdobomba', 'teafa_szappan', 'tengeri_soszappan',
-  'termeszetes_fogkrem_zold_agyag_menta', 'vanilla_fountain_furdobomba'
+  'teafa_levendula_dezodor', 'teafa_parajdi_so_furdobomba', 'teafa_szappan',
+  'tengeri_soszappan', 'vanilla_fountain_furdobomba'
 ]);
+
+const newlyRecoveredDescriptionCases = {
+  mentas_citrom_tusfurdo: [/tusfürdő/i, /Kinek ajánljuk|Összetevők/i],
+  kecsketejes_levendulas_testapolo_krem: [/testápolót mindennapos ápolásra/i, /Használat|Összetevők/i],
+  ajakkaland_csilis_ajakbalzsam: [/Kézműves ajakbalzsam/i, /Kinek ajánljuk|INCI/i],
+  mojito_ajakbalzsam: [/ajakbalzsam/i, /Kinek ajánljuk|INCI/i],
+  sherbet_lemon_ajakbalzsam: [/ajakbalzsam/i, /Kinek ajánljuk|INCI/i],
+  termeszetes_fogkrem_zold_agyag_menta: [/természetes fogkrém/i, /Hogyan használd|Kinek ajánljuk/i],
+  aktiv_szenes_fogfeherito_por_borsmenta: [/fogfehérítő por/i, /Hogyan használd|Kinek ajánljuk/i],
+  taplalo_hajkondicionalo_pakolas_argan_ricinus: [/hajkondicionáló pakolás/i, /Használati utasítás|Miért válaszd/i],
+  alkoholos_keztisztito_gel: [/Kéztisztó gél/i, /Összetevők|jellemzői/i],
+  jojoba_olaj: [/jojoba olaj/i, /Mire használhatod|Használat/i],
+  argan_olaj: [/argán olaj/i, /hogyan használd|Használata/i]
+};
+for (const [productId, [included, excluded]] of Object.entries(newlyRecoveredDescriptionCases)) {
+  const fact = realResolver.getFact(productId, 'productDescription');
+  assert.equal(fact.status, 'grounded', productId);
+  assert.equal(fact.provenance[0].sourceType, 'unas_snapshot', productId);
+  assert.match(fact.value, included, productId);
+  assert.doesNotMatch(fact.value, excluded, productId);
+}
+assert.equal(realResolver.getFact('kokuszvajas_testapolo_habkrem_kakaovajjal', 'productDescription').status, 'unavailable');
 
 const directDescriptionCases = {
   rozmaringos_samponszappan: /hajmosó szappan/i,
@@ -540,6 +558,15 @@ function fixtureDescription({ shortDescription = null, longDescription = null, a
 assert.equal(fixtureDescription({ shortDescription: 'Kíméletes kézműves szappan száraz és érzékeny bőr mindennapi kozmetikai tisztítására.' }).status, 'grounded');
 assert.equal(fixtureDescription({ shortDescription: 'Antibakteriális szappan, amely csökkenti a gyulladást és kezeli a problémás bőrt.' }).status, 'unavailable');
 assert.equal(fixtureDescription({ shortDescription: 'Használat: nedves bőrön habosítsd fel a szappant.' }).status, 'unavailable');
+assert.equal(fixtureDescription({ shortDescription: 'Prémium ajakbalzsam 15 ml.' }).status, 'unavailable');
+assert.equal(fixtureDescription({ shortDescription: 'A ragyogás élménye minden nap!' }).status, 'unavailable');
+assert.equal(fixtureDescription({ longDescription: 'Kinek ajánljuk? Száraz bőrre ajánljuk ezt az olajat.' }).status, 'unavailable');
+assert.equal(fixtureDescription({ longDescription: 'Összetevők: Kókuszolaj, olívaolaj és illóolaj.' }).status, 'unavailable');
+assert.equal(fixtureDescription({ longDescription: 'Vásárlói visszajelzések szerint ez az olaj mindenkinek csodálatos élményt ad.' }).status, 'unavailable');
+assert.equal(fixtureDescription({ longDescription: 'Az ápoló olaj gyógyítja és kezeli a gyulladt bőrt.' }).status, 'unavailable');
+assert.equal(fixtureDescription({ longDescription: 'Használati útmutató Kend fel az ápoló olajat, majd masszírozd be.' }).status, 'unavailable');
+assert.match(fixtureDescription({ shortDescription: 'Vitalis Törzsvásárlói Ár: 990 Ft. Kézműves ajakbalzsam mindennapi ajakápolásra készült.' }).value, /^Kézműves ajakbalzsam/);
+assert.match(fixtureDescription({ longDescription: 'Bevezető reklámszöveg. Az ápoló olaj mindennapi bőr- és hajápolásra készült. Használati útmutató Kend fel.' }).value, /^Az ápoló olaj/);
 assert.equal(fixtureDescription({ longDescription: 'Ez a kíméletes kézműves szappan száraz és érzékeny bőr mindennapi kozmetikai tisztítására készült. Hogyan használd? Habosítsd fel. INCI: Aqua.' }).value,
   'Ez a kíméletes kézműves szappan száraz és érzékeny bőr mindennapi kozmetikai tisztítására készült.');
 assert.equal(fixtureDescription({ deterministic: { description_fixture: { name: 'Fixture', description: 'Statikus leírás.' } } }).status, 'unavailable');
