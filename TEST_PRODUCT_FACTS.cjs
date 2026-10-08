@@ -299,6 +299,10 @@ for (const [description, included, excluded] of [
 }
 assert.equal(fixtureUsage('Használati javaslat Összetevők: Aqua').status, 'unavailable');
 assert.equal(fixtureUsage('Használati javaslat Kend fel. Következő rész: bizonytalan tartalom.').status, 'unavailable');
+assert.match(fixtureUsage('Használati útmutató Nedvesítsd be, majd öblítsd le. Összetevők: Aqua, Urea').value, /Nedvesítsd be, majd öblítsd le\.$/);
+assert.match(fixtureUsage('Használati utasítás: Mosd meg: Nedvesítsd be. Vidd fel: Masszírozd be. Kinek ajánljuk? Mindenkinek.').value, /Vidd fel: Masszírozd be\.$/);
+assert.doesNotMatch(fixtureUsage('Használati javaslat Kend fel vékony rétegben. Mire figyelj? Szembe ne kerüljön.').value, /Mire figyelj|Szembe/);
+assert.equal(fixtureUsage('Az alkalmazása után a bőr kellemesebb érzetű lehet.').status, 'unavailable');
 
 const mappedIds = realMapping.mappings.filter((item) => item.mappingStatus === 'approved').map((item) => item.canonicalId);
 const batch2MappedIds = new Set([
@@ -416,27 +420,48 @@ for (const productId of [
 const groundedUsageIds = mappedIds.filter((productId) => realResolver.getFact(productId, 'usageInstructions').status === 'grounded');
 const trueUsageGaps = mappedIds.filter((productId) => realResolver.getFact(productId, 'usageInstructions').status !== 'grounded');
 assert.equal(mappedIds.length, 73);
-assert.equal(groundedUsageIds.length, 25);
+assert.equal(groundedUsageIds.length, 31);
 assert.deepEqual(trueUsageGaps.sort(), [
   'ajakkaland_csilis_ajakbalzsam', 'alkoholos_keztisztito_gel', 'barack_tusfurdo',
   'cherry_blossom_furdobomba', 'chilis_etcsokis_szappan', 'csalan_szappan',
-  'csiga_kivonatos_regeneralo_arckrem', 'dioliget_szappan',
+  'csiga_kivonatos_regeneralo_arckrem',
   'eper_ajakbalzsam', 'eper_furdobomba', 'gyogynoveny_szappan', 'hevizi_gyogyiszapos_termal_szappan',
   'hortobagyi_mester_balzsam', 'hyaluron_feszesito_arckrem',
   'jojoba_olaj', 'kakaovaj_organikus', 'kecsketejes_etcsokis_kremvarazs_szappan',
-  'kokuszolaj', 'kokuszvajas_testapolo_habkrem_kakaovajjal', 'koromvirag_szappan',
-  'levendula_furdobomba', 'levendula_szappan',
+  'kokuszolaj', 'kokuszvajas_testapolo_habkrem_kakaovajjal',
+  'levendula_furdobomba',
   'levendula_tusfurdo', 'mentas_citrom_tusfurdo', 'mezes_ajakbalzsam', 'mojito_ajakbalzsam',
-  'natur_ajakbalzsam', 'natur_dezodor', 'oliva_szappan', 'parajdi_furdoso_natur', 'rozsa_tusfurdo',
+  'natur_ajakbalzsam', 'oliva_szappan', 'parajdi_furdoso_natur', 'rozsa_tusfurdo',
   'sargarepa_shea_vajas_szappan',
-  'shea_vaj_finomitatlan', 'shea_vaj_gyomber_citrom', 'shea_vaj_levendula', 'shea_vaj_narancs_levendula',
+  'shea_vaj_gyomber_citrom', 'shea_vaj_levendula', 'shea_vaj_narancs_levendula',
   'shea_vajas_hidratalo_krem',
   'shea_vajas_mandulaolajos_testapolo_habkrem_citromfu_geranium',
-  'sherbet_lemon_ajakbalzsam', 'taplalo_hajkondicionalo_pakolas_argan_ricinus',
+  'sherbet_lemon_ajakbalzsam',
   'teafa_levendula_tusfurdo', 'teafa_parajdi_so_furdobomba', 'teafa_szappan', 'tengeri_soszappan',
   'vadgesztenyes_balzsam', 'vanilla_fountain_furdobomba', 'yin_yang_izuleti_balzsam',
   'ylang_ylang_narancs_dezodor'
 ]);
+const recoveredUsageCases = {
+  shea_vaj_finomitatlan: [/tiszta bőrfelületre használd/i, /neves kozmetikai|Összetétel|INCI/i],
+  taplalo_hajkondicionalo_pakolas_argan_ricinus: [/Hagyd hatni.*10-15 percig/i, /Miért válaszd|Ingredientes|Összetevők/i],
+  natur_dezodor: [/Borsónyi mennyiséget/i, /Hűvös helyen|Összetétel|INCI/i],
+  dioliget_szappan: [/Habosítsd fel nedves bőrön/i, /Összetevők|INCI/i],
+  koromvirag_szappan: [/Habosítsd fel a szappant/i, /Összetevők|INCI/i],
+  levendula_szappan: [/Nedvesítsd be a szappant/i, /Összetevők|Gyakori kérdések/i]
+};
+for (const [productId, [included, excluded]] of Object.entries(recoveredUsageCases)) {
+  const fact = realResolver.getFact(productId, 'usageInstructions');
+  assert.equal(fact.status, 'grounded', productId);
+  assert.equal(fact.provenance[0].sourceType, 'unas_snapshot', productId);
+  assert.match(fact.value, included, productId);
+  assert.doesNotMatch(fact.value, excluded, productId);
+}
+for (const productId of [
+  'shea_vaj_gyomber_citrom', 'shea_vaj_levendula', 'alkoholos_keztisztito_gel',
+  'kokuszolaj', 'jojoba_olaj', 'vanilla_fountain_furdobomba'
+]) {
+  assert.equal(realResolver.getFact(productId, 'usageInstructions').status, 'unavailable', productId);
+}
 for (const productId of groundedUsageIds) {
   assert.doesNotMatch(realResolver.getFact(productId, 'usageInstructions').value,
     /(?:használat mellett[?:]|Miért működik együtt|Miért választják sokan|Fedezd fel további|További száraz bőrre|\bINCI\b|Összetevők)/i,
@@ -554,4 +579,4 @@ const ownerDescription = fixtureDescription({
 assert.equal(ownerDescription.value, 'Tulajdonos által jóváhagyott leírás.');
 assert.equal(ownerDescription.provenance[0].sourceType, 'owner_approved');
 
-console.log('Product Facts regressions: PASS (25/73 safe usage, boundaries, provenance, fail-closed negatives)');
+console.log('Product Facts regressions: PASS (31/73 safe usage, boundaries, provenance, fail-closed negatives)');

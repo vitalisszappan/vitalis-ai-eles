@@ -81,15 +81,19 @@ function scanFold(value) {
 }
 
 const FALSE_USAGE_CONTINUATIONS = /^(?:mellett|soran|kozben|utan|elott)\b/;
-const USAGE_START = /\b(?:hogyan\s+hasznald(?:\s+[^.!?]{1,80})?\?|hogyan\s+hasznald\b|hasznalati\s+(?:javaslat|utasitas)\s*:?\s*|hasznalat\s*:?\s*)/g;
+const USAGE_START = /\b(?:hogyan\s+hasznald(?:\s+[^.!?]{1,80})?\?|hogyan\s+hasznald\b|hasznalati\s+(?:javaslat|utasitas|utmutato|tanacs)\s*[:.-]?\s*|mire\s+figyelj\s+hasznalatakor\s*\?\s*|hasznalat\s*:?\s*)/g;
 const USAGE_BOUNDARIES = [
   /\b(?:ingredients\s*(?:\(inci\))?|inci(?:\/osszetevok)?|osszetevok(?:\s*\(inci\))?)\b\s*:?/g,
   /\b(?:miert|milyen|mitol|mit|mire|kinek|hogyan)\s+[^.!?]{1,120}\?/g,
   /\b(?:fontos\s+tudnivalok?|mire\s+figyelj|csomagolas|gyakori\s+kerdesek(?:\s+[^.!?]{0,80})?|tipp)\b/g,
+  /\bosszetetel\b\s*:?/g,
   /(?:^|[.!?]\s+)(?:a|az)\s+[a-z0-9 -]{1,60}\s+termekcsalad\b/g,
   /(?:^|[.!?]\s+)(?:fedezd\s+fel|tovabbi|tudj(?:on)?\s+meg|olvasd\s+el|nem\s+tudod)\b/g,
-  /(?:^|[.!?]\s+)[a-z][a-z0-9 -]{1,80}:\s+/g
+  /(?:^|[.!?]\s+)(?!(?:kezdd?|mosd|vidd|oszlasd|masszirozd|hagyd|oblitsd)\b)[a-z][a-z0-9 -]{1,80}:\s+/g,
+  /(?:^|[.!?]\s+)huvos\s+helyen\s+tarold\b/g
 ];
+
+const USAGE_ACTION = /\b(?:alkalmaz|csepegtess|dolgoz|dorzsol|hagy|habosits|hasznal|helyez|ken|massziroz|mos|nedvesit|oblit|oszlat|tedd|tegy|vidd)\w*\b/;
 
 function firstUsageBoundary(foldedTail) {
   let first = null;
@@ -117,15 +121,25 @@ function usageSection(text) {
     if (heading === 'hasznalat' && !/^\s*[A-ZÁÉÍÓÖŐÚÜŰ]/u.test(source.slice(bodyStart))) continue;
     starts.push({ bodyStart, priority: heading.startsWith('hogyan hasznald') ? 3 : heading.startsWith('hasznalati ') ? 2 : 1 });
   }
-  const start = starts.sort((left, right) => right.priority - left.priority || left.bodyStart - right.bodyStart)[0]?.bodyStart ?? null;
-  if (start === null) return '';
-  const tail = source.slice(start);
-  const boundary = firstUsageBoundary(scanFold(tail));
-  const value = clean(tail.slice(0, boundary ?? tail.length));
-  if (!value || value.length < 12 || value.length > 1200) return '';
-  if (FALSE_USAGE_CONTINUATIONS.test(scanFold(value).replace(/^[\s.,;:!?-]+/, ''))) return '';
-  if (firstUsageBoundary(scanFold(value)) !== null) return '';
-  return value;
+  for (const candidate of starts.sort((left, right) => right.priority - left.priority || left.bodyStart - right.bodyStart)) {
+    const tail = source.slice(candidate.bodyStart);
+    const boundary = firstUsageBoundary(scanFold(tail));
+    let value = clean(tail.slice(0, boundary ?? tail.length));
+    if (value.length > 1200) {
+      const actionable = [];
+      for (const sentence of value.split(/(?<=[.!?])\s+/).map(clean).filter(Boolean)) {
+        if (!USAGE_ACTION.test(scanFold(sentence))) break;
+        actionable.push(sentence);
+      }
+      value = clean(actionable.join(' '));
+    }
+    if (!value || value.length < 12 || value.length > 1200) continue;
+    if (FALSE_USAGE_CONTINUATIONS.test(scanFold(value).replace(/^[\s.,;:!?-]+/, ''))) continue;
+    if (firstUsageBoundary(scanFold(value)) !== null) continue;
+    if (!USAGE_ACTION.test(scanFold(value))) continue;
+    return value;
+  }
+  return '';
 }
 function splitList(value) {
   return clean(value).split(/\s*(?:,|;|\n|\r|\u2022|\*)\s*/).map(clean).filter(Boolean);
