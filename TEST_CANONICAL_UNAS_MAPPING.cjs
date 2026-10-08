@@ -39,9 +39,19 @@ const BATCH_2 = [
   ['kokuszvajas_testapolo_habkrem_kakaovajjal', '111374972', 'VHK01', 'body_lotion']
 ];
 
-const HELD_BACK_BATCH_2_UNAS_IDS = [
-  '138721785', '112116789', '111374981', '111374980', '111374979', '111374978',
-  '1437951756', '1437928551', '1437913216', '1437903471', '111374967', '111374966'
+const BATCH_3 = [
+  ['shea_vaj_gyomber_citrom', '138721785', 'VSV04', 'body_butter'],
+  ['kakaovaj_organikus', '112116789', 'VKAK01', 'body_butter'],
+  ['shea_vaj_narancs_levendula', '111374981', 'VSV03', 'body_butter'],
+  ['shea_vaj_levendula', '111374980', 'VSV02', 'body_butter'],
+  ['shea_vaj_finomitatlan', '111374979', 'VS01', 'body_butter'],
+  ['parajdi_furdoso_natur', '111374978', 'VPS01', 'bath_salt'],
+  ['ajakkaland_csilis_ajakbalzsam', '1437951756', 'VAJ06', 'lip_balm'],
+  ['natur_ajakbalzsam', '1437928551', 'VAJ05', 'lip_balm'],
+  ['mojito_ajakbalzsam', '1437913216', 'VAJ04', 'lip_balm'],
+  ['mezes_ajakbalzsam', '1437903471', 'VAJ03', 'lip_balm'],
+  ['eper_ajakbalzsam', '111374967', 'Vaj02', 'lip_balm'],
+  ['sherbet_lemon_ajakbalzsam', '111374966', 'VAJ01', 'lip_balm']
 ];
 
 const EXPECTED_CANONICAL_IDS = [
@@ -65,7 +75,8 @@ const EXPECTED_CANONICAL_IDS = [
   'teafa_szappan',
   'parajdi_sotomb',
   ...BATCH_1.map(([canonicalId]) => canonicalId),
-  ...BATCH_2.map(([canonicalId]) => canonicalId)
+  ...BATCH_2.map(([canonicalId]) => canonicalId),
+  ...BATCH_3.map(([canonicalId]) => canonicalId)
 ];
 
 function assertUnique(values, label) {
@@ -79,14 +90,14 @@ function assertUnique(values, label) {
 assert.equal(mapping.schema, 'vitalis-canonical-unas-mapping/v1');
 assert.equal(mapping.version, 1);
 assert.ok(Array.isArray(mapping.mappings));
-assert.equal(mapping.mappings.length, 47);
+assert.equal(mapping.mappings.length, 59);
 
 const canonicalIds = mapping.mappings.map((item) => item.canonicalId);
 assertUnique(canonicalIds, 'canonicalId');
 assert.deepEqual([...canonicalIds].sort(), [...EXPECTED_CANONICAL_IDS].sort());
 
 const approved = mapping.mappings.filter((item) => item.mappingStatus === 'approved');
-assert.equal(approved.length, 46);
+assert.equal(approved.length, 58);
 
 for (const item of approved) {
   assert.equal(typeof item.canonicalId, 'string');
@@ -135,8 +146,24 @@ for (const [canonicalId, unasId, sku, productType] of BATCH_2) {
   assert.equal(products[0].name, item.verifiedName, canonicalId);
 }
 
-for (const unasId of HELD_BACK_BATCH_2_UNAS_IDS) {
-  assert.equal(approved.some((item) => item.unasId === unasId), false, unasId);
+for (const [canonicalId, unasId, sku, productType] of BATCH_3) {
+  const item = approved.find((candidate) => candidate.canonicalId === canonicalId);
+  assert.ok(item, canonicalId);
+  assert.equal(item.unasId, unasId, canonicalId);
+  assert.equal(item.sku, sku, canonicalId);
+  assert.equal(item.productType, productType, canonicalId);
+  const products = snapshot.products.filter((product) => String(product.unasId) === unasId);
+  assert.equal(products.length, 1, canonicalId);
+  assert.equal(products[0].sku, sku, canonicalId);
+  assert.equal(products[0].name, item.verifiedName, canonicalId);
+}
+assert.equal(approved.find((item) => item.canonicalId === 'eper_ajakbalzsam').sku, 'Vaj02');
+
+const { PRODUCT_TYPE_VALUES } = require('./engine/conversation-decision-envelope-schema.cjs');
+const { CONTROLLED_VALUES } = require('./engine/product-intelligence-selection-criterion-schema.cjs');
+for (const neutralType of ['body_butter', 'bath_salt', 'lip_balm']) {
+  assert.equal(PRODUCT_TYPE_VALUES.includes(neutralType), false, neutralType);
+  assert.equal(CONTROLLED_VALUES.productType.includes(neutralType), false, neutralType);
 }
 
 function indexWithMutation(mutate) {
@@ -146,7 +173,7 @@ function indexWithMutation(mutate) {
 }
 
 const controlIndex = buildCommerceIndex(mapping, snapshot);
-assert.equal(controlIndex.size, 46);
+assert.equal(controlIndex.size, 58);
 assert.equal(indexWithMutation((items) => { items.find((item) => item.canonicalId === 'mentas_kave_szappan').canonicalId = 'dermavital_sampon'; }).has('dermavital_sampon'), false);
 assert.equal(indexWithMutation((items) => { items.find((item) => item.canonicalId === 'mentas_kave_szappan').unasId = '1553769891'; }).has('mentas_kave_szappan'), false);
 assert.equal(indexWithMutation((items) => { items.find((item) => item.canonicalId === 'mentas_kave_szappan').sku = 'Vitdermsamp01'; }).has('mentas_kave_szappan'), false);

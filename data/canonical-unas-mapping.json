@@ -408,6 +408,114 @@
       "productType": "body_lotion",
       "mappingStatus": "approved",
       "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "shea_vaj_gyomber_citrom",
+      "unasId": "138721785",
+      "sku": "VSV04",
+      "verifiedName": "Shea vaj – Gyömbér és citrom illóolajokkal 100 ml",
+      "productType": "body_butter",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "kakaovaj_organikus",
+      "unasId": "112116789",
+      "sku": "VKAK01",
+      "verifiedName": "Kakaóvaj – 100% tisztaságú, organikus 100g",
+      "productType": "body_butter",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "shea_vaj_narancs_levendula",
+      "unasId": "111374981",
+      "sku": "VSV03",
+      "verifiedName": "Shea vaj – Narancs, Levendula 100 ml",
+      "productType": "body_butter",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "shea_vaj_levendula",
+      "unasId": "111374980",
+      "sku": "VSV02",
+      "verifiedName": "Shea vaj – Finomítatlan – Bio – Levendula 100 ml",
+      "productType": "body_butter",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "shea_vaj_finomitatlan",
+      "unasId": "111374979",
+      "sku": "VS01",
+      "verifiedName": "Shea vaj – Finomítatlan 100 ml",
+      "productType": "body_butter",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "parajdi_furdoso_natur",
+      "unasId": "111374978",
+      "sku": "VPS01",
+      "verifiedName": "Parajdi fürdősó natúr - 1000gr",
+      "productType": "bath_salt",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "ajakkaland_csilis_ajakbalzsam",
+      "unasId": "1437951756",
+      "sku": "VAJ06",
+      "verifiedName": "Ajakkaland Csilis | Kézműves ajakbalzsam csili kivonattal 8 ml",
+      "productType": "lip_balm",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "natur_ajakbalzsam",
+      "unasId": "1437928551",
+      "sku": "VAJ05",
+      "verifiedName": "Ajakbalzsam – Natúr | Illatmentes, kézműves ajakápoló balzsam 8 ml",
+      "productType": "lip_balm",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "mojito_ajakbalzsam",
+      "unasId": "1437913216",
+      "sku": "VAJ04",
+      "verifiedName": "Ajakbalzsam – Mojito | Kézműves ajakápoló balzsam 8 ml",
+      "productType": "lip_balm",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "mezes_ajakbalzsam",
+      "unasId": "1437903471",
+      "sku": "VAJ03",
+      "verifiedName": "Ajakbalzsam – Mézes | Kézműves ajakápoló balzsam 8 ml",
+      "productType": "lip_balm",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "eper_ajakbalzsam",
+      "unasId": "111374967",
+      "sku": "Vaj02",
+      "verifiedName": "Ajakbalzsam – Eper | Kézműves ajakápoló balzsam 8 ml",
+      "productType": "lip_balm",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "sherbet_lemon_ajakbalzsam",
+      "unasId": "111374966",
+      "sku": "VAJ01",
+      "verifiedName": "Ajakbalzsam – Sherbet Lemon | Kézműves ajakápoló balzsam 8 ml",
+      "productType": "lip_balm",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
     }
   ]
 }

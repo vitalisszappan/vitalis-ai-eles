@@ -174,22 +174,24 @@ const mappedIngredientFacts = realMapping.mappings.filter((item) => item.mapping
   ingredients: realResolver.getFact(item.canonicalId, 'ingredients'),
   inci: realResolver.getFact(item.canonicalId, 'inci')
 }));
-assert.equal(mappedIngredientFacts.length, 46);
-assert.equal(mappedIngredientFacts.filter((item) => item.ingredients.status === 'grounded').length, 17);
-assert.equal(mappedIngredientFacts.filter((item) => item.inci.status === 'grounded').length, 20);
+assert.equal(mappedIngredientFacts.length, 58);
+assert.equal(mappedIngredientFacts.filter((item) => item.ingredients.status === 'grounded').length, 18);
+assert.equal(mappedIngredientFacts.filter((item) => item.inci.status === 'grounded').length, 21);
 assert.equal(mappedIngredientFacts.filter((item) => item.ingredients.status === 'grounded' && item.inci.status === 'grounded').length, 15);
-assert.equal(mappedIngredientFacts.filter((item) => item.ingredients.status === 'grounded' || item.inci.status === 'grounded').length, 22);
+assert.equal(mappedIngredientFacts.filter((item) => item.ingredients.status === 'grounded' || item.inci.status === 'grounded').length, 24);
 assert.deepEqual(mappedIngredientFacts.filter((item) => item.ingredients.status !== 'grounded' && item.inci.status !== 'grounded')
   .map((item) => item.productId).sort(), [
-  'barack_tusfurdo', 'chilis_etcsokis_szappan', 'csiga_kivonatos_regeneralo_arckrem',
+  'ajakkaland_csilis_ajakbalzsam', 'barack_tusfurdo', 'chilis_etcsokis_szappan', 'csiga_kivonatos_regeneralo_arckrem',
   'csipkebogyo_szappan', 'dermavital_sampon',
-  'dermavital_szappan', 'hevizi_gyogyiszapos_termal_szappan', 'holt_tengeri_so_balzsam',
+  'dermavital_szappan', 'eper_ajakbalzsam', 'hevizi_gyogyiszapos_termal_szappan', 'holt_tengeri_so_balzsam',
   'hortobagyi_mester_balzsam', 'hyaluron_feszesito_arckrem',
-  'kokuszvajas_testapolo_habkrem_kakaovajjal', 'levendula_szappan', 'levendula_tusfurdo', 'mentas_citrom_tusfurdo',
-  'natur_kecsketejes_szappan', 'parajdi_sotomb', 'psorivital_csomag',
-  'rozsa_tusfurdo', 'shea_vajas_hidratalo_krem',
+  'kakaovaj_organikus', 'kokuszvajas_testapolo_habkrem_kakaovajjal', 'levendula_szappan',
+  'levendula_tusfurdo', 'mentas_citrom_tusfurdo', 'mezes_ajakbalzsam', 'mojito_ajakbalzsam',
+  'natur_ajakbalzsam', 'natur_kecsketejes_szappan', 'parajdi_furdoso_natur', 'parajdi_sotomb', 'psorivital_csomag',
+  'rozsa_tusfurdo', 'shea_vaj_finomitatlan', 'shea_vaj_narancs_levendula',
+  'shea_vajas_hidratalo_krem',
   'shea_vajas_mandulaolajos_testapolo_habkrem_citromfu_geranium',
-  'solid_shampoo_oily_rosemary_caffeine', 'teafa_levendula_tusfurdo',
+  'sherbet_lemon_ajakbalzsam', 'solid_shampoo_oily_rosemary_caffeine', 'teafa_levendula_tusfurdo',
   'vadgesztenyes_balzsam', 'yin_yang_izuleti_balzsam'
 ]);
 for (const item of mappedIngredientFacts) {
@@ -308,6 +310,12 @@ const batch2MappedIds = new Set([
   'shea_vajas_mandulaolajos_testapolo_habkrem_citromfu_geranium',
   'kokuszvajas_testapolo_habkrem_kakaovajjal'
 ]);
+const batch3MappedIds = new Set([
+  'shea_vaj_gyomber_citrom', 'kakaovaj_organikus', 'shea_vaj_narancs_levendula',
+  'shea_vaj_levendula', 'shea_vaj_finomitatlan', 'parajdi_furdoso_natur',
+  'ajakkaland_csilis_ajakbalzsam', 'natur_ajakbalzsam', 'mojito_ajakbalzsam',
+  'mezes_ajakbalzsam', 'eper_ajakbalzsam', 'sherbet_lemon_ajakbalzsam'
+]);
 for (const productId of [
   'mentas_kave_szappan',
   'mentas_citrom_tusfurdo',
@@ -319,6 +327,28 @@ for (const productId of [
   const facts = realResolver.getProductFacts(productId);
   assert.ok(mapping, productId);
   assert.equal(mapping.mappingStatus, 'approved', productId);
+  assert.equal(facts.canonicalProductId, productId);
+  assert.deepEqual(facts.identityProvenance.map((item) => item.sourceId),
+    [`mapping:${productId}:${mapping.unasId}:${mapping.sku}`], productId);
+  assert.equal(facts.facts.name.status, 'grounded', productId);
+  assert.equal(facts.facts.name.value, mapping.verifiedName, productId);
+  assert.equal(facts.facts.name.provenance[0].sourceType, 'unas_snapshot', productId);
+  assert.equal(facts.facts.name.provenance[0].sourceId, `unas:${mapping.unasId}`, productId);
+  assert.equal(facts.facts.price.status, 'grounded', productId);
+  assert.equal(facts.facts.url.status, 'grounded', productId);
+}
+for (const productId of [
+  'shea_vaj_gyomber_citrom',
+  'shea_vaj_finomitatlan',
+  'parajdi_furdoso_natur',
+  'natur_ajakbalzsam',
+  'eper_ajakbalzsam'
+]) {
+  const mapping = realMapping.mappings.find((item) => item.canonicalId === productId);
+  const facts = realResolver.getProductFacts(productId);
+  assert.ok(mapping, productId);
+  assert.equal(mapping.mappingStatus, 'approved', productId);
+  assert.ok(['body_butter', 'bath_salt', 'lip_balm'].includes(mapping.productType), productId);
   assert.equal(facts.canonicalProductId, productId);
   assert.deepEqual(facts.identityProvenance.map((item) => item.sourceId),
     [`mapping:${productId}:${mapping.unasId}:${mapping.sku}`], productId);
@@ -352,19 +382,22 @@ for (const productId of [
 }
 const groundedUsageIds = mappedIds.filter((productId) => realResolver.getFact(productId, 'usageInstructions').status === 'grounded');
 const trueUsageGaps = mappedIds.filter((productId) => realResolver.getFact(productId, 'usageInstructions').status !== 'grounded');
-assert.equal(mappedIds.length, 46);
+assert.equal(mappedIds.length, 58);
 assert.equal(groundedUsageIds.length, 21);
 assert.deepEqual(trueUsageGaps.sort(), [
-  'barack_tusfurdo', 'chilis_etcsokis_szappan', 'csalan_szappan',
+  'ajakkaland_csilis_ajakbalzsam', 'barack_tusfurdo', 'chilis_etcsokis_szappan', 'csalan_szappan',
   'csiga_kivonatos_regeneralo_arckrem', 'dioliget_szappan',
-  'gyogynoveny_szappan', 'hevizi_gyogyiszapos_termal_szappan',
+  'eper_ajakbalzsam', 'gyogynoveny_szappan', 'hevizi_gyogyiszapos_termal_szappan',
   'hortobagyi_mester_balzsam', 'hyaluron_feszesito_arckrem',
-  'kecsketejes_etcsokis_kremvarazs_szappan',
+  'kakaovaj_organikus', 'kecsketejes_etcsokis_kremvarazs_szappan',
   'kokuszvajas_testapolo_habkrem_kakaovajjal', 'koromvirag_szappan', 'levendula_szappan',
-  'levendula_tusfurdo', 'mentas_citrom_tusfurdo', 'oliva_szappan', 'rozsa_tusfurdo',
-  'sargarepa_shea_vajas_szappan', 'shea_vajas_hidratalo_krem',
+  'levendula_tusfurdo', 'mentas_citrom_tusfurdo', 'mezes_ajakbalzsam', 'mojito_ajakbalzsam',
+  'natur_ajakbalzsam', 'oliva_szappan', 'parajdi_furdoso_natur', 'rozsa_tusfurdo',
+  'sargarepa_shea_vajas_szappan',
+  'shea_vaj_finomitatlan', 'shea_vaj_gyomber_citrom', 'shea_vaj_levendula', 'shea_vaj_narancs_levendula',
+  'shea_vajas_hidratalo_krem',
   'shea_vajas_mandulaolajos_testapolo_habkrem_citromfu_geranium',
-  'teafa_levendula_tusfurdo', 'teafa_szappan', 'tengeri_soszappan',
+  'sherbet_lemon_ajakbalzsam', 'teafa_levendula_tusfurdo', 'teafa_szappan', 'tengeri_soszappan',
   'vadgesztenyes_balzsam', 'yin_yang_izuleti_balzsam'
 ]);
 for (const productId of groundedUsageIds) {
@@ -375,14 +408,15 @@ for (const productId of groundedUsageIds) {
 
 const groundedDescriptionIds = mappedIds.filter((productId) => realResolver.getFact(productId, 'productDescription').status === 'grounded');
 const unavailableDescriptionIds = mappedIds.filter((productId) => realResolver.getFact(productId, 'productDescription').status !== 'grounded');
-assert.equal(groundedDescriptionIds.length, 35);
+assert.equal(groundedDescriptionIds.length, 38);
 assert.deepEqual(unavailableDescriptionIds.sort(), [
-  'chilis_etcsokis_szappan', 'hevizi_gyogyiszapos_termal_szappan',
-  'katrany_szappan', 'kecsketejes_etcsokis_kremvarazs_szappan',
+  'ajakkaland_csilis_ajakbalzsam', 'chilis_etcsokis_szappan', 'hevizi_gyogyiszapos_termal_szappan',
+  'kakaovaj_organikus', 'katrany_szappan', 'kecsketejes_etcsokis_kremvarazs_szappan',
   'kecsketejes_levendulas_testapolo_krem', 'kokuszvajas_testapolo_habkrem_kakaovajjal',
-  'mentas_citrom_tusfurdo', 'oliva_szappan',
+  'mentas_citrom_tusfurdo', 'mojito_ajakbalzsam', 'oliva_szappan', 'parajdi_furdoso_natur',
+  'shea_vaj_finomitatlan', 'shea_vaj_gyomber_citrom', 'shea_vaj_levendula', 'shea_vaj_narancs_levendula',
   'shea_vajas_mandulaolajos_testapolo_habkrem_citromfu_geranium',
-  'teafa_szappan', 'tengeri_soszappan'
+  'sherbet_lemon_ajakbalzsam', 'teafa_szappan', 'tengeri_soszappan'
 ]);
 
 const directDescriptionCases = {
@@ -419,7 +453,7 @@ for (const [productId, marker] of Object.entries(recoveredDescriptionCases)) {
 
 // Preserve the pre-Batch-2 content-safety regression boundary. Batch 2 is an
 // identity mapping change and does not approve or alter snapshot copy.
-for (const productId of groundedDescriptionIds.filter((id) => !batch2MappedIds.has(id))) {
+for (const productId of groundedDescriptionIds.filter((id) => !batch2MappedIds.has(id) && !batch3MappedIds.has(id))) {
   const value = realResolver.getFact(productId, 'productDescription').value;
   assert.doesNotMatch(value, /Hogyan használd|Használati|\bINCI\b|Ingredients\s*:|Összetevők\s*:|Fontos tudnival|Gyakori kérdések|Fedezd fel|Iratkozz fel|Rendeld meg/i, productId);
   assert.doesNotMatch(value, /gyógyít|kezelés|antibakteriális|fertőtlen|serkenti a hajnövekedést|csökkenti a gyulladást|megszünteti/i, productId);
@@ -477,4 +511,4 @@ const ownerDescription = fixtureDescription({
 assert.equal(ownerDescription.value, 'Tulajdonos által jóváhagyott leírás.');
 assert.equal(ownerDescription.provenance[0].sourceType, 'owner_approved');
 
-console.log('Product Facts regressions: PASS (21/46 safe usage, boundaries, provenance, fail-closed negatives)');
+console.log('Product Facts regressions: PASS (21/58 safe usage, boundaries, provenance, fail-closed negatives)');

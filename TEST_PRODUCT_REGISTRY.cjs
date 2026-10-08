@@ -182,7 +182,7 @@ assert.deepEqual(ids(ask('az elsőt', history)), ['psorivital_csomag']);
 
 const approvedMappings = require('./data/canonical-unas-mapping.json').mappings
   .filter((item) => item.mappingStatus === 'approved');
-assert.equal(approvedMappings.length, 46);
+assert.equal(approvedMappings.length, 58);
 const approvedCardMappings = approvedMappings.filter((item) => PRODUCTS[item.canonicalId]);
 assert.equal(approvedCardMappings.length, 18);
 const approvedProductRegistry = registry(
