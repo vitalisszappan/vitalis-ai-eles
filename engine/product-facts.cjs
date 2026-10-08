@@ -229,7 +229,7 @@ function uniqueByJson(items) { const seen = new Set(); return items.filter((item
 
 const DESCRIPTION_SECTION_BOUNDARY = /\b(?:hogyan\s+hasznald|hasznalati\s+(?:javaslat|utasitas)|hasznalat\s*:|ingredients\s*(?:\(inci\))?|inci(?:\/osszetevok)?|osszetevok(?:\s*\(inci\))?|fontos\s+tudnivalok?|mire\s+figyelj|gyakori\s+kerdesek|csomagolas|fedezd\s+fel|tovabbi|olvasd\s+el|rendeld\s+meg|vasarold\s+meg|iratkozz\s+fel)\b/g;
 const DESCRIPTION_STRONG_CLAIMS = /\b(?:gyogyaszati|gyogyit\w*|meggyogy\w*|kezeles(?:e|re|et)?|fertotlen\w*|antibakterialis|gyulladas(?:t|ok?at)?\s+csokkent\w*|csokkenti\s+a\s+gyullad\w*|serkenti\s+a\s+hajnovekedest|hajnovekedest\s+serkent\w*|megszuntet\w*|tunetek?\s+(?:enyhul\w*|megszun\w*)|gyogyszerkent|fantasztikus\s+hatas|jotekony\s+hatas|hatekony\s+apolas|egyedulallo|kiveteles\s+valasztas|megelozo|vitalizalo|vedelem\s+erdekeben|valasztasunk)\b|100\s*%/;
-const DESCRIPTION_PRODUCT_TERMS = /\b(?:termek|kozmetikum|sampon|samponszappan|szappan|krem|balzsam|csomag|sotomb|rendszer|formula)\b/;
+const DESCRIPTION_PRODUCT_TERMS = /\b(?:termek|keszitmeny|kozmetikum|sampon|samponszappan|szappan|krem|balzsam|csomag|sotomb|rendszer|formula)\w*\b/;
 const DESCRIPTION_PURPOSE_TERMS = /\b(?:keszult|fejlesztett|apolas|apolasara|tisztitas|tisztitasara|tisztit|borapolo|hajapolo|mindennapi|kimeletes|erzekeny|szaraz|zsiros|hajra|fejborre|borre|komforterzet)\w*/;
 
 function descriptionSentences(value) {
@@ -250,6 +250,8 @@ function isSafeDescriptionCandidate(value) {
     && hasDescriptionMeaning(text)
     && !DESCRIPTION_STRONG_CLAIMS.test(normalized)
     && !DESCRIPTION_SECTION_BOUNDARY.test(normalized)
+    && !/\b(?:habosits|tisztitsd|vidd\s+fel|oblitsd|hasznald|masszirozd|nedvesitsd|kenj)\w*\b/.test(normalized)
+    && !/\bnem\s+(?:minosul|gyogyhatasu|gyogyszer)\w*\b/.test(normalized)
     && !/\b(?:vasarloi\s+visszajelzesek|reszletes\s+leirasert|termekcsalad\s+(?:harmadik|kovetkezo)\s+tagja|tartalma\s*:|vitalis\s+torzsvasarloi\s+ar)\b/.test(normalized)
     && !/\b(?:hasznalat|kiszereles|tomeg)\s*:/.test(normalized)
     && !/:\s/.test(text)
@@ -265,20 +267,33 @@ function shortProductDescription(value) {
   return isSafeDescriptionCandidate(text) ? text : '';
 }
 
+function withoutDescriptionHeadingPrefix(value) {
+  const text = clean(value);
+  const match = /^([^.!?]{5,70}?)\s+((?:A|Az|Ez|Ezt)\s+[A-ZÁÉÍÓÖŐÚÜŰ].*)$/u.exec(text);
+  if (!match) return text;
+  const heading = fold(match[1]);
+  if (heading.split(' ').length > 8 || /\b(?:van|volt|lesz|keszult|fejlesztett|tisztitja|apolja|segit|tartalmaz)\w*\b/.test(heading)) return text;
+  return clean(match[2]);
+}
+
 function boundedLongProductDescription(value) {
-  const source = clean(value).slice(0, 2400);
+  const source = clean(value).slice(0, 5000);
   if (!source) return '';
   const normalized = scanFold(source);
   DESCRIPTION_SECTION_BOUNDARY.lastIndex = 0;
   const boundary = DESCRIPTION_SECTION_BOUNDARY.exec(normalized);
   const opening = clean(source.slice(0, boundary?.index ?? source.length));
-  const sentences = descriptionSentences(opening).map((sentence) => sentence.replace(/\s*:\s*(?:Milyen|Miért|Kinek|Hogyan)\b.*$/u, ''));
+  const sentences = descriptionSentences(opening).map((sentence) => withoutDescriptionHeadingPrefix(
+    sentence.replace(/\s*:\s*(?:Milyen|Miért|Kinek|Hogyan)\b.*$/u, '')
+  ));
   const candidates = sentences.filter((sentence) => !/\?$/.test(sentence) && hasDescriptionMeaning(sentence) && isSafeDescriptionCandidate(sentence));
   const score = (sentence) => {
     const normalizedSentence = fold(sentence);
-    return (/\b(?:keszult|fejlesztett|apolasara|tisztitasara)\b/.test(normalizedSentence) ? 4 : 0)
-      + (/\b(?:mindennapi|kimeletes|erzekeny|szaraz|zsiros)\b/.test(normalizedSentence) ? 2 : 0)
-      - (/\b(?:nem\s+az|nem\s+csak|sokan|problema)\b/.test(normalizedSentence) ? 2 : 0);
+    return (/^(?:a|az|ez|ezt)\s+[^.!?]{0,80}\b(?:termek|keszitmeny|sampon|samponszappan|szappan|krem|balzsam|csomag|sotomb)\b/.test(normalizedSentence) ? 6 : 0)
+      + (/\b(?:keszult|fejlesztett|apolasara|tisztitasara|azert\s+hogy)\b/.test(normalizedSentence) ? 8 : 0)
+      + (/\b(?:mindennapi|kimeletes|erzekeny|szaraz|zsiros|fejbor)\w*\b/.test(normalizedSentence) ? 3 : 0)
+      - (/\b(?:nem|sem|hanem)\b/.test(normalizedSentence) ? 12 : 0)
+      - (/\b(?:sokan|problema)\b/.test(normalizedSentence) ? 2 : 0);
   };
   if (candidates.length) return candidates.sort((left, right) => score(right) - score(left))[0];
   for (let index = 0; index < sentences.length - 1; index += 1) {

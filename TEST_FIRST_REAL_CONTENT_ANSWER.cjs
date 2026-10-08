@@ -82,6 +82,10 @@ for (const [question, productId, intent, factType] of [
   assert.equal(result.factsUsed[0].factType, factType, question);
   assert.equal(result.factsUsed[0].provenance[0].sourceType, 'unas_snapshot', question);
   assert.doesNotMatch(result.answer, /Hogyan használd|INCI|Ingredients|Összetevők|Fontos tudnivaló/i, question);
+  if (productId === 'dermavital_sampon' && intent === 'product_description') {
+    assert.doesNotMatch(result.answer, /Kíméletes tisztítás, tudatos összetétel|nem az erős tisztító hatásra épül/i, question);
+    assert.match(result.answer, /fejlesztettük|mindennapi ápolás|kíméletes/i, question);
+  }
   if (intent === 'product_suitability') assert.doesNotMatch(result.answer, /csodát ígérni|nem gyógyszer|nem helyettesíti/i, question);
 }
 
@@ -95,6 +99,15 @@ assert.equal(shampooSuitabilityAnswer.answerIntent, 'product_suitability');
 assert.equal(shampooSuitabilityAnswer.factsUsed[0].factType, 'recommendedFor');
 assert.match(shampooSuitabilityAnswer.answer, /mindennapi ápolásához keresnek kíméletes kozmetikumot\.$/);
 assert.doesNotMatch(shampooSuitabilityAnswer.answer, /csodát ígérni|nem gyógyszer|nem helyettesíti/i);
+
+const exclusionAnswer = createAnswer({
+  question: 'Tartalmaznak SLS-t vagy SLES-t a termékek?', history: [], knowledge: [],
+  ruleEngine: new ExpertRuleEngine(path.join(__dirname, 'data', 'rules', 'expert-rules.json')),
+  logGap: () => {}, conversationState: null, logDiagnostic: () => {}
+});
+assert.equal(exclusionAnswer.route, 'expert_rule');
+assert.equal(exclusionAnswer.intent, 'ingredient-question');
+assert.match(exclusionAnswer.answer, /nem tartalmaznak SLS-t vagy SLES-t/i);
 
 for (const question of [
   'Ez meggyógyítja az ekcémát?',

@@ -359,6 +359,35 @@ assert.equal(fixtureDescription({ shortDescription: 'Használat: nedves bőrön 
 assert.equal(fixtureDescription({ longDescription: 'Ez a kíméletes kézműves szappan száraz és érzékeny bőr mindennapi kozmetikai tisztítására készült. Hogyan használd? Habosítsd fel. INCI: Aqua.' }).value,
   'Ez a kíméletes kézműves szappan száraz és érzékeny bőr mindennapi kozmetikai tisztítására készült.');
 assert.equal(fixtureDescription({ deterministic: { description_fixture: { name: 'Fixture', description: 'Statikus leírás.' } } }).status, 'unavailable');
+
+const headingThenPurpose = fixtureDescription({
+  longDescription: 'Kíméletes tisztítás, tudatos összetétel A Fixture szappan száraz és érzékeny bőr mindennapi kozmetikai tisztítására készült.'
+});
+assert.equal(headingThenPurpose.status, 'grounded');
+assert.match(headingThenPurpose.value, /^A Fixture szappan/);
+assert.doesNotMatch(headingThenPurpose.value, /Kíméletes tisztítás, tudatos összetétel/);
+
+const positiveBeforeNegative = fixtureDescription({
+  longDescription: 'A Fixture szappan száraz és érzékeny bőr mindennapi kozmetikai tisztítására készült. A Fixture szappan nem az erős tisztító hatásra épül.'
+});
+assert.match(positiveBeforeNegative.value, /mindennapi kozmetikai tisztítására készült/);
+assert.doesNotMatch(positiveBeforeNegative.value, /nem az erős/);
+
+const negativeOnly = fixtureDescription({
+  longDescription: 'A Fixture szappan nem az erős tisztító hatásra épül, hanem érzékeny bőr mindennapi kíméletes ápolására szolgáló kozmetikum.'
+});
+assert.equal(negativeOnly.status, 'grounded');
+assert.match(negativeOnly.value, /nem az erős tisztító hatásra/);
+
+assert.equal(fixtureDescription({
+  longDescription: 'A Fixture szappan gyulladást csökkentő kezelésre és a problémás bőr meggyógyítására készült.'
+}).status, 'unavailable');
+
+const sloganThenPurpose = fixtureDescription({
+  longDescription: 'A természet ereje minden nap. A Fixture szappan száraz bőr kíméletes mindennapi kozmetikai tisztítására készült.'
+});
+assert.match(sloganThenPurpose.value, /^A Fixture szappan/);
+assert.doesNotMatch(sloganThenPurpose.value, /természet ereje/i);
 const ownerDescription = fixtureDescription({
   shortDescription: 'Kíméletes kézműves szappan száraz és érzékeny bőr mindennapi kozmetikai tisztítására.',
   approvedFacts: [{ productId: 'description_fixture', factType: 'productDescription', value: 'Tulajdonos által jóváhagyott leírás.', sourceType: 'owner_approved', sourceId: 'owner:description:v1', approved: true }]
