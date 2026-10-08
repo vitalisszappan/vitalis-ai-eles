@@ -516,6 +516,141 @@
       "productType": "lip_balm",
       "mappingStatus": "approved",
       "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "termeszetes_fogkrem_zold_agyag_menta",
+      "unasId": "1462215016",
+      "sku": "VFG",
+      "verifiedName": "Természetes fogkrém – Zöld agyaggal és mentával",
+      "productType": "toothpaste",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "aktiv_szenes_fogfeherito_por_borsmenta",
+      "unasId": "1462205581",
+      "sku": "VFFP",
+      "verifiedName": "Fogfehérítő por – Aktív kókusz szénnel és borsmentával 30 g",
+      "productType": "tooth_powder",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "taplalo_hajkondicionalo_pakolas_argan_ricinus",
+      "unasId": "999444670",
+      "sku": "VHB011",
+      "verifiedName": "Tápláló Hajkondicionáló Pakolás Argán- és Ricinus Olajjal 50 ml",
+      "productType": "hair_treatment",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "alkoholos_keztisztito_gel",
+      "unasId": "188248827",
+      "sku": "Vktg",
+      "verifiedName": "Kéztisztító gél 70% alkohol tartalommal",
+      "productType": "hand_sanitizer",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "levendula_furdobomba",
+      "unasId": "117505303",
+      "sku": "VFBLEV",
+      "verifiedName": "Fürdőbomba – Levendula 70 g",
+      "productType": "bath_bomb",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "cherry_blossom_furdobomba",
+      "unasId": "117503451",
+      "sku": "VFBCSV",
+      "verifiedName": "Fürdőbomba – Cherry Blossom 70 g",
+      "productType": "bath_bomb",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "eper_furdobomba",
+      "unasId": "117209249",
+      "sku": "VFBEP",
+      "verifiedName": "Fürdőbomba - Eper 70g",
+      "productType": "bath_bomb",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "kokuszolaj",
+      "unasId": "111401392",
+      "sku": "VK01",
+      "verifiedName": "Kókuszolaj 100 ml",
+      "productType": "cosmetic_oil",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "ylang_ylang_narancs_dezodor",
+      "unasId": "111374977",
+      "sku": "VKD03",
+      "verifiedName": "Alumínium mentes dezodor - Ylang Ylang-Narancs 50ml",
+      "productType": "deodorant",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "teafa_levendula_dezodor",
+      "unasId": "111374976",
+      "sku": "VKD02",
+      "verifiedName": "Alumínium mentes dezodor - Teafa, Levendula 50 ml",
+      "productType": "deodorant",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "natur_dezodor",
+      "unasId": "111374975",
+      "sku": "VKD01",
+      "verifiedName": "Alumíniummentes dezodor - Natúr 50ml",
+      "productType": "deodorant",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "jojoba_olaj",
+      "unasId": "111374973",
+      "sku": "VJO01",
+      "verifiedName": "Jojoba olaj",
+      "productType": "cosmetic_oil",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "vanilla_fountain_furdobomba",
+      "unasId": "111374971",
+      "sku": "VFB02",
+      "verifiedName": "Vanilla Fountain fürdőbomba 70 g",
+      "productType": "bath_bomb",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "teafa_parajdi_so_furdobomba",
+      "unasId": "111374970",
+      "sku": "VFB01",
+      "verifiedName": "Teafás fürdőbomba parajdi sóval 70 g",
+      "productType": "bath_bomb",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "argan_olaj",
+      "unasId": "111374968",
+      "sku": "VARG01",
+      "verifiedName": "Argán olaj 50 ml",
+      "productType": "cosmetic_oil",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
     }
   ]
 }
