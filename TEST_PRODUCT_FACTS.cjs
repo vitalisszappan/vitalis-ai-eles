@@ -174,15 +174,18 @@ const mappedIngredientFacts = realMapping.mappings.filter((item) => item.mapping
   ingredients: realResolver.getFact(item.canonicalId, 'ingredients'),
   inci: realResolver.getFact(item.canonicalId, 'inci')
 }));
-assert.equal(mappedIngredientFacts.length, 18);
-assert.equal(mappedIngredientFacts.filter((item) => item.ingredients.status === 'grounded').length, 8);
-assert.equal(mappedIngredientFacts.filter((item) => item.inci.status === 'grounded').length, 10);
-assert.equal(mappedIngredientFacts.filter((item) => item.ingredients.status === 'grounded' && item.inci.status === 'grounded').length, 7);
-assert.equal(mappedIngredientFacts.filter((item) => item.ingredients.status === 'grounded' || item.inci.status === 'grounded').length, 11);
+assert.equal(mappedIngredientFacts.length, 37);
+assert.equal(mappedIngredientFacts.filter((item) => item.ingredients.status === 'grounded').length, 16);
+assert.equal(mappedIngredientFacts.filter((item) => item.inci.status === 'grounded').length, 20);
+assert.equal(mappedIngredientFacts.filter((item) => item.ingredients.status === 'grounded' && item.inci.status === 'grounded').length, 15);
+assert.equal(mappedIngredientFacts.filter((item) => item.ingredients.status === 'grounded' || item.inci.status === 'grounded').length, 21);
 assert.deepEqual(mappedIngredientFacts.filter((item) => item.ingredients.status !== 'grounded' && item.inci.status !== 'grounded')
   .map((item) => item.productId).sort(), [
-  'dermavital_sampon', 'dermavital_szappan', 'holt_tengeri_so_balzsam', 'natur_kecsketejes_szappan',
-  'parajdi_sotomb', 'psorivital_csomag', 'solid_shampoo_oily_rosemary_caffeine'
+  'barack_tusfurdo', 'chilis_etcsokis_szappan', 'csipkebogyo_szappan', 'dermavital_sampon',
+  'dermavital_szappan', 'hevizi_gyogyiszapos_termal_szappan', 'holt_tengeri_so_balzsam',
+  'levendula_szappan', 'levendula_tusfurdo', 'mentas_citrom_tusfurdo',
+  'natur_kecsketejes_szappan', 'parajdi_sotomb', 'psorivital_csomag',
+  'rozsa_tusfurdo', 'solid_shampoo_oily_rosemary_caffeine', 'teafa_levendula_tusfurdo'
 ]);
 for (const item of mappedIngredientFacts) {
   const benefits = realResolver.getFact(item.productId, 'ingredientBenefits');
@@ -289,11 +292,38 @@ assert.equal(fixtureUsage('Használati javaslat Összetevők: Aqua').status, 'un
 assert.equal(fixtureUsage('Használati javaslat Kend fel. Következő rész: bizonytalan tartalom.').status, 'unavailable');
 
 const mappedIds = realMapping.mappings.filter((item) => item.mappingStatus === 'approved').map((item) => item.canonicalId);
+for (const productId of [
+  'mentas_kave_szappan',
+  'mentas_citrom_tusfurdo',
+  'aloe_vera_szappan',
+  'dioliget_szappan',
+  'kecsketejes_mezes_szappan'
+]) {
+  const mapping = realMapping.mappings.find((item) => item.canonicalId === productId);
+  const facts = realResolver.getProductFacts(productId);
+  assert.ok(mapping, productId);
+  assert.equal(mapping.mappingStatus, 'approved', productId);
+  assert.equal(facts.canonicalProductId, productId);
+  assert.deepEqual(facts.identityProvenance.map((item) => item.sourceId),
+    [`mapping:${productId}:${mapping.unasId}:${mapping.sku}`], productId);
+  assert.equal(facts.facts.name.status, 'grounded', productId);
+  assert.equal(facts.facts.name.value, mapping.verifiedName, productId);
+  assert.equal(facts.facts.name.provenance[0].sourceType, 'unas_snapshot', productId);
+  assert.equal(facts.facts.name.provenance[0].sourceId, `unas:${mapping.unasId}`, productId);
+  assert.equal(facts.facts.price.status, 'grounded', productId);
+  assert.equal(facts.facts.url.status, 'grounded', productId);
+}
 const groundedUsageIds = mappedIds.filter((productId) => realResolver.getFact(productId, 'usageInstructions').status === 'grounded');
 const trueUsageGaps = mappedIds.filter((productId) => realResolver.getFact(productId, 'usageInstructions').status !== 'grounded');
-assert.equal(mappedIds.length, 18);
-assert.equal(groundedUsageIds.length, 15);
-assert.deepEqual(trueUsageGaps.sort(), ['oliva_szappan', 'teafa_szappan', 'tengeri_soszappan']);
+assert.equal(mappedIds.length, 37);
+assert.equal(groundedUsageIds.length, 20);
+assert.deepEqual(trueUsageGaps.sort(), [
+  'barack_tusfurdo', 'chilis_etcsokis_szappan', 'csalan_szappan', 'dioliget_szappan',
+  'gyogynoveny_szappan', 'hevizi_gyogyiszapos_termal_szappan',
+  'kecsketejes_etcsokis_kremvarazs_szappan', 'koromvirag_szappan', 'levendula_szappan',
+  'levendula_tusfurdo', 'mentas_citrom_tusfurdo', 'oliva_szappan', 'rozsa_tusfurdo',
+  'sargarepa_shea_vajas_szappan', 'teafa_levendula_tusfurdo', 'teafa_szappan', 'tengeri_soszappan'
+]);
 for (const productId of groundedUsageIds) {
   assert.doesNotMatch(realResolver.getFact(productId, 'usageInstructions').value,
     /(?:használat mellett[?:]|Miért működik együtt|Miért választják sokan|Fedezd fel további|További száraz bőrre|\bINCI\b|Összetevők)/i,
@@ -302,8 +332,12 @@ for (const productId of groundedUsageIds) {
 
 const groundedDescriptionIds = mappedIds.filter((productId) => realResolver.getFact(productId, 'productDescription').status === 'grounded');
 const unavailableDescriptionIds = mappedIds.filter((productId) => realResolver.getFact(productId, 'productDescription').status !== 'grounded');
-assert.equal(groundedDescriptionIds.length, 14);
-assert.deepEqual(unavailableDescriptionIds.sort(), ['katrany_szappan', 'oliva_szappan', 'teafa_szappan', 'tengeri_soszappan']);
+assert.equal(groundedDescriptionIds.length, 29);
+assert.deepEqual(unavailableDescriptionIds.sort(), [
+  'chilis_etcsokis_szappan', 'hevizi_gyogyiszapos_termal_szappan',
+  'katrany_szappan', 'kecsketejes_etcsokis_kremvarazs_szappan', 'mentas_citrom_tusfurdo',
+  'oliva_szappan', 'teafa_szappan', 'tengeri_soszappan'
+]);
 
 const directDescriptionCases = {
   rozmaringos_samponszappan: /hajmosó szappan/i,
@@ -395,4 +429,4 @@ const ownerDescription = fixtureDescription({
 assert.equal(ownerDescription.value, 'Tulajdonos által jóváhagyott leírás.');
 assert.equal(ownerDescription.provenance[0].sourceType, 'owner_approved');
 
-console.log('Product Facts regressions: PASS (15/18 safe usage, boundaries, provenance, fail-closed negatives)');
+console.log('Product Facts regressions: PASS (20/37 safe usage, boundaries, provenance, fail-closed negatives)');

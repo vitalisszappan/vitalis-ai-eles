@@ -156,6 +156,177 @@
       "verifiedName": "Parajdi sószappan – természetes sótömb érzékeny és irritált bőrre",
       "mappingStatus": "approved",
       "approvedAt": "2026-07-21T13:50:52+02:00"
+    },
+    {
+      "canonicalId": "mentas_kave_szappan",
+      "unasId": "1511229416",
+      "sku": "Vsz023",
+      "verifiedName": "Mentás kávé szappan – Frissítő radírozás koffeinnel és borsmentával – 110 g",
+      "productType": "soap",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "mentas_citrom_tusfurdo",
+      "unasId": "1423192981",
+      "sku": "VTUS07",
+      "verifiedName": "Természetes tusfürdő – Mentás citrom 250 ml Frissítő, élénkítő illatú tusfürdő",
+      "productType": "shower_gel",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "rozsa_tusfurdo",
+      "unasId": "1423189211",
+      "sku": "VTUS05",
+      "verifiedName": "Természetes tusfürdő – Rózsa 250 ml Finom, elegáns illat",
+      "productType": "shower_gel",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "levendula_tusfurdo",
+      "unasId": "1423186461",
+      "sku": "VTUS04",
+      "verifiedName": "Természetes tusfürdő – Levendula 250 ml Nyugtató, mindennapi használatra",
+      "productType": "shower_gel",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "teafa_levendula_tusfurdo",
+      "unasId": "1423171731",
+      "sku": "VTUS03",
+      "verifiedName": "Természetes tusfürdő – Teafa & Levendula 250 ml Frissítő tisztaság",
+      "productType": "shower_gel",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "barack_tusfurdo",
+      "unasId": "1423140766",
+      "sku": "VTUS02",
+      "verifiedName": "Természetes tusfürdő – Barack 250 ml",
+      "productType": "shower_gel",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "citromfuves_szappan",
+      "unasId": "679258019",
+      "sku": "Vcfsz101",
+      "verifiedName": "Citromfüves szappan – Frissítő, kiegyensúlyozó tisztítás normál bőrre – 100 g",
+      "productType": "soap",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "aloe_vera_szappan",
+      "unasId": "423469634",
+      "sku": "VSZ026",
+      "verifiedName": "Aloe vera szappan – Nyugtató, hidratáló bőrápolás természetes aloe géllel – 100 g",
+      "productType": "soap",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "csipkebogyo_szappan",
+      "unasId": "423468118",
+      "sku": "VSZ025",
+      "verifiedName": "Csipkebogyó szappan – Regeneráló, frissítő szappan normál bőrre gyógynövényes illattal – 100 g",
+      "productType": "soap",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "hevizi_gyogyiszapos_termal_szappan",
+      "unasId": "116883769",
+      "sku": "Vsz23",
+      "verifiedName": "Hévízi Gyógyiszapos Termál Szappan",
+      "productType": "soap",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "dioliget_szappan",
+      "unasId": "111375002",
+      "sku": "VSZ024",
+      "verifiedName": "Dióliget szappan – Tisztító, nyugtató gyógynövényes bőrápolás diólevéllel és fűszeres illattal – 100 g",
+      "productType": "soap",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "csalan_szappan",
+      "unasId": "111375001",
+      "sku": "VSZ022",
+      "verifiedName": "Csalán szappan",
+      "productType": "soap",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "sargarepa_shea_vajas_szappan",
+      "unasId": "111374999",
+      "sku": "Vsz018",
+      "verifiedName": "Sárgarépa szappan shea vajjal",
+      "productType": "soap",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "gyogynoveny_szappan",
+      "unasId": "111374998",
+      "sku": "Vsz017",
+      "verifiedName": "Gyógynövény szappan",
+      "productType": "soap",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "koromvirag_szappan",
+      "unasId": "111374995",
+      "sku": "Vsz014",
+      "verifiedName": "Körömvirág szappan – Nyugtató, regeneráló gyógynövényes ápolás érzékeny, kipirosodásra hajlamos bőrre – 100 g",
+      "productType": "soap",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "kecsketejes_etcsokis_kremvarazs_szappan",
+      "unasId": "111374994",
+      "sku": "Vsz013",
+      "verifiedName": "Kecsketejes Étcsokis Krémvarázs szappan",
+      "productType": "soap",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "levendula_szappan",
+      "unasId": "111374988",
+      "sku": "Vsz006",
+      "verifiedName": "Levendula Szappan 110 g",
+      "productType": "soap",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "chilis_etcsokis_szappan",
+      "unasId": "111374985",
+      "sku": "Vsz003",
+      "verifiedName": "Chilis Étcsokis Szappan - Érzéki Kombináció a Bőrápolás és Élvezet Végett",
+      "productType": "soap",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "kecsketejes_mezes_szappan",
+      "unasId": "111374983",
+      "sku": "Vsz001",
+      "verifiedName": "Kecsketejes mézes szappan száraz, vízhiányos bőrre – Hidratáló 110 g",
+      "productType": "soap",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
     }
   ]
 }

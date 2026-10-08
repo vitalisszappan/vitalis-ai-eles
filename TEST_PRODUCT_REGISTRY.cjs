@@ -182,10 +182,12 @@ assert.deepEqual(ids(ask('az elsőt', history)), ['psorivital_csomag']);
 
 const approvedMappings = require('./data/canonical-unas-mapping.json').mappings
   .filter((item) => item.mappingStatus === 'approved');
-assert.equal(approvedMappings.length, 18);
+assert.equal(approvedMappings.length, 37);
+const approvedCardMappings = approvedMappings.filter((item) => PRODUCTS[item.canonicalId]);
+assert.equal(approvedCardMappings.length, 18);
 const approvedProductRegistry = registry(
-  approvedMappings,
-  approvedMappings.map((item, index) => snapshotProduct({
+  approvedCardMappings,
+  approvedCardMappings.map((item, index) => snapshotProduct({
     unasId: item.unasId,
     sku: item.sku,
     name: item.verifiedName,
@@ -193,16 +195,16 @@ const approvedProductRegistry = registry(
   }))
 );
 const approvedCards = productCards(
-  approvedMappings.map((item) => item.canonicalId),
+  approvedCardMappings.map((item) => item.canonicalId),
   { registry: approvedProductRegistry }
 );
 assert.deepEqual(
   approvedCards.map((card) => card.id),
-  approvedMappings.map((item) => item.canonicalId)
+  approvedCardMappings.map((item) => item.canonicalId)
 );
 for (let index = 0; index < approvedCards.length; index += 1) {
   const card = approvedCards[index];
-  const mappingItem = approvedMappings[index];
+  const mappingItem = approvedCardMappings[index];
   assert.equal(card.commerce.unasId, mappingItem.unasId);
   assert.equal(card.commerce.sku, mappingItem.sku);
   assert.equal(card.description, PRODUCTS[mappingItem.canonicalId].description);
@@ -212,9 +214,9 @@ const liveSnapshotPath = path.join(__dirname, 'data', 'unas-catalog-snapshot.jso
 if (fs.existsSync(liveSnapshotPath)) {
   const liveSnapshot = JSON.parse(fs.readFileSync(liveSnapshotPath, 'utf8'));
   const productsById = new Map(liveSnapshot.products.map((item) => [item.unasId, item]));
-  const liveCards = productCards(approvedMappings.map((item) => item.canonicalId));
-  for (let index = 0; index < approvedMappings.length; index += 1) {
-    const mappingItem = approvedMappings[index];
+  const liveCards = productCards(approvedCardMappings.map((item) => item.canonicalId));
+  for (let index = 0; index < approvedCardMappings.length; index += 1) {
+    const mappingItem = approvedCardMappings[index];
     const snapshotItem = productsById.get(mappingItem.unasId);
     const card = liveCards[index];
     assert(snapshotItem, mappingItem.canonicalId);
