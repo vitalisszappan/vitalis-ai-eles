@@ -8,6 +8,9 @@ const BLISTERING = /\bfelholyagosodott\s+(?:a\s+)?bor(?:om|od|e)?\b|\bbor(?:om|o
 const NON_ACTUAL_CONTEXT = /\b(?:lehet\s+hogy|mi\s+van\s+ha|okozhat|eloidezhat|hallottam|azt\s+olvastam|azt\s+mondtak)\b|\b(?:bedagadhat|feldagadhat|megdagadhat|holyagosodhat|felholyagosodhat)\w*\b/;
 const EXPLICIT_NEGATIVE = /\bnem\s+(?:nehez\s+levegot\s+venn\w*|dagadt\s+be|holyagos|holyagosodott|felholyagosodott)\b/;
 const PAST_RESOLVED = /\b(?:tegnap|multkor|korabban|regen)\b.*\b(?:most|mar)\b.*\b(?:jol\s+vagyok|nincs\s+baj|elmult|rendben\s+vagyok)\b/;
+const MEDICAL_DIAGNOSIS_QUESTION = /\b(?:mi\s+okozza|mitol)\b.*\b(?:gyulladas|gyulladt|dagadt|duzzadt)\w*|\b(?:ez\s+)?fertozes\w*\s+(?:lehet|e)|\bkeringesi\s+problema\w*\s+(?:lehet|e)/;
+const BROKEN_SKIN = /\b(?:sebes|verzik|verzo|nedvezo|nyilt\s+seb|(?:ki)?reped(?:t|ezett)?|(?:ki)?repedezett)\w*/;
+const TOPICAL_USE_QUESTION = /\b(?:csip|hasznal|ken|raken|felken|alkalmaz)\w*/;
 
 function severeAdverseReaction(text) {
   if (NON_ACTUAL_CONTEXT.test(text) || EXPLICIT_NEGATIVE.test(text) || PAST_RESOLVED.test(text)) return null;
@@ -30,6 +33,9 @@ function evaluateSafety(question, problem = null) {
   if (/\b(diagnosztiz|gyogyszer|antibiotikum|tabletta|orvosi kezeles)\w*/.test(text)) {
     return { safetyClass: 'medical_escalation', evidence: ['safety:diagnosis_or_medicine'] };
   }
+  if (MEDICAL_DIAGNOSIS_QUESTION.test(text)) {
+    return { safetyClass: 'medical_escalation', evidence: ['safety:diagnosis_question'] };
+  }
   if (problem?.domain === 'edema_medical_boundary' || /\b(odema|visszergyulladas|viszergyulladas)\w*/.test(text)) {
     evidence.push('safety:edema_or_inflammation');
     return { safetyClass: 'caution_with_boundary', evidence };
@@ -43,6 +49,9 @@ function evaluateSafety(question, problem = null) {
   }
   if (problem?.domain === 'child_usage' || /\b(gyerek|gyermek|baba|[0-9]{1,2} eves)\b/.test(text)) {
     return { safetyClass: 'safe_cosmetic_answer', evidence: ['safety:child_usage'] };
+  }
+  if (BROKEN_SKIN.test(text) && TOPICAL_USE_QUESTION.test(text)) {
+    return { safetyClass: 'caution_with_boundary', evidence: ['safety:broken_skin_product_use'] };
   }
   if (/\b(gyulladt|gyulladas|sebes|verzik)\w*/.test(text)) {
     return { safetyClass: 'caution_with_boundary', evidence: ['safety:inflamed_or_broken_skin'] };

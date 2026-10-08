@@ -448,7 +448,7 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
     }
     return draft;
   }
-  const planned = materializePlannedAnswer(answerPlan, routing);
+  const planned = routing.route === 'safety' ? null : materializePlannedAnswer(answerPlan, routing);
   if (planned) return attachDecision(planned, routing);
   if (routing.responseSource === 'meta-intent') return attachDecision(resolveMetaIntent(question), routing);
   if(routing.route==='hair_type_knowledge')return attachDecision(comparisonAnswer(),routing);
@@ -458,8 +458,29 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
   if (routing.route === 'safety') {
     const urgent = routing.safetyClass === 'medical_escalation';
     const vascular = routing.domain === 'varicose_cosmetic';
+    const brokenSkinProductUse = routing.evidence.includes('safety:broken_skin_product_use');
+    let brokenSkinAnswer = '';
+    if (brokenSkinProductUse) {
+      const safetyContext = buildConversationContext(history, normalize);
+      const explicitProductId = findProductInText(normalize(question));
+      const contextualProductId = safetyContext.productContextStatus === 'ambiguous' ? null : safetyContext.lastFocusProduct;
+      const safetyProductId = explicitProductId || contextualProductId || null;
+      const warning = safetyProductId ? require('./product-facts.cjs').getFact(safetyProductId, 'warnings') : null;
+      const warningSentences = warning?.status === 'grounded' ? String(warning.value).split(/(?<=[.!?])\s+/) : [];
+      const relevantWarning = safetyProductId === 'parajdi_sotomb'
+        ? warningSentences.filter((sentence) => /csip|kisebb\s+feluleten/.test(normalize(sentence))).join(' ')
+        : safetyProductId === 'holt_tengeri_so_balzsam'
+          ? warningSentences.filter((sentence) => /irritacio\s+eseten/.test(normalize(sentence))).join(' ')
+          : warningSentences.join(' ');
+      const authorityGap = 'Nyílt, vérző vagy nedvező sebre nincs jóváhagyott használati útmutatásunk, ezért ne használd rajta.';
+      brokenSkinAnswer = relevantWarning
+        ? `${relevantWarning} ${authorityGap}`
+        : `${authorityGap.replace(/\.$/, '')}; a pontosabb válaszhoz írd meg, melyik sót tartalmazó Vitalis termékre gondolsz.`;
+    }
     const answer = urgent
       ? 'Ezt a tünetet nem biztonságos kozmetikai kérdésként kezelni. Kérj mielőbb orvosi segítséget; hirtelen rosszabbodás, nehézlégzés, mellkasi fájdalom vagy erős fájdalom esetén sürgős ellátás szükséges.'
+      : brokenSkinProductUse
+        ? brokenSkinAnswer
       : vascular
         ? 'Visszeres, fáradt láb bőrének kozmetikai ápolására található Vitalis balzsam, de visszérgyulladást, ödémát vagy keringési betegséget kozmetikum nem kezel. Fájdalom, melegség, pirosság vagy egyoldali duzzanat esetén kérj orvosi tanácsot.'
         : 'Ödéma, gyulladás vagy keringési panasz okát nem lehet kozmetikai tanácsadással megállapítani. Ilyen tünetnél kérj orvosi tanácsot; kozmetikum legfeljebb az ép bőr komfortápolására használható.';
