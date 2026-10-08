@@ -327,6 +327,87 @@
       "productType": "soap",
       "mappingStatus": "approved",
       "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "hortobagyi_mester_balzsam",
+      "unasId": "1080620650",
+      "sku": "VHB01",
+      "verifiedName": "Hortobágyi Mester Balzsam – Ízületi és Izomfájdalmakra 250 ml",
+      "productType": "balm",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "hyaluron_feszesito_arckrem",
+      "unasId": "864855961",
+      "sku": "VHi01",
+      "verifiedName": "Hyaluron feszesítő arckrém 75 ml",
+      "productType": "facial_cream",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "csiga_kivonatos_regeneralo_arckrem",
+      "unasId": "449056663",
+      "sku": "VCS60",
+      "verifiedName": "Csiga kivonatos regeneráló arckrém 75 ml",
+      "productType": "facial_cream",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "kecsketejes_levendulas_testapolo_krem",
+      "unasId": "163834530",
+      "sku": "VEM05",
+      "verifiedName": "Kecsketejes testápoló krém levendula 250 ml",
+      "productType": "body_lotion",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "vadgesztenyes_balzsam",
+      "unasId": "163834320",
+      "sku": "VEM04",
+      "verifiedName": "Vadgesztenyés balzsam 200 ml",
+      "productType": "balm",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "shea_vajas_hidratalo_krem",
+      "unasId": "163833777",
+      "sku": "VEM03",
+      "verifiedName": "Shea vajas hidratáló krém 250 ml",
+      "productType": "cream",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "yin_yang_izuleti_balzsam",
+      "unasId": "163833576",
+      "sku": "VEM01",
+      "verifiedName": "Yin Yang ízületi balzsam 250 ml",
+      "productType": "balm",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "shea_vajas_mandulaolajos_testapolo_habkrem_citromfu_geranium",
+      "unasId": "111374982",
+      "sku": "VSVH01",
+      "verifiedName": "Shea vajas testápoló habkrém mandula olajjal - Citromfű, Geránium 75 ml",
+      "productType": "body_lotion",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
+    },
+    {
+      "canonicalId": "kokuszvajas_testapolo_habkrem_kakaovajjal",
+      "unasId": "111374972",
+      "sku": "VHK01",
+      "verifiedName": "Kókuszvajas testápoló habkrém kakaóvajjal 75ml",
+      "productType": "body_lotion",
+      "mappingStatus": "approved",
+      "approvedAt": "2026-10-08T00:00:00+02:00"
     }
   ]
 }
