@@ -34,7 +34,11 @@ const PRODUCT_ALIASES = [
   ['aktiv_szenes_szappan', ['aktiv szenes szappan']],
   ['shea_vajas_szappan', ['shea vajas szappan']],
   ['psorivital_csomag', ['psorivital csomag', 'psorivital']],
-  ['holt_tengeri_so_balzsam', ['holt tengeri so balzsam', 'holt tengeri balzsam']],
+  ['holt_tengeri_so_balzsam', [
+    'holt tengeri so balzsam',
+    'holt tengeri sobalzsam',
+    'holt tengeri balzsam'
+  ]],
   ['holt_tengeri_iszapos_szappan', [
     'holt tengeri iszapos szappan',
     'holt tengeri iszap szappan',
