@@ -21,6 +21,21 @@ const { extractSubtypeRequest, compatibleSubtypeExpert, subtypeCardIdentity } = 
 
 const catalog = createCatalogSearch();
 
+const PRODUCT_TYPE_WORD = /^(?:szappan|sampon|krem|balzsam|dezodor|termek)\w*$/;
+const NON_NAME_WORDS = new Set([
+  'a', 'az', 'egy', 'es', 'ez', 'ezt', 'kerlek', 'legyszi', 'pls', 'van', 'vannak',
+  'milyen', 'melyik', 'mutass', 'keresek', 'szeretnek', 'erdekel', 'ajanlj', 'ajanlasz'
+]);
+
+function hasUnresolvedNamedProduct(question, category, productQuestionIntent, goal) {
+  if (!category || goal === 'solve_problem' || ['recommendation', 'availability'].includes(productQuestionIntent)) return false;
+  if (['description', 'benefits', 'usage', 'price', 'ingredients', 'ingredient_existence', 'suitability'].includes(productQuestionIntent)) return true;
+  const tokens = normalize(question).split(/\s+/).filter(Boolean);
+  const typeIndex = tokens.findIndex((token) => PRODUCT_TYPE_WORD.test(token));
+  if (typeIndex < 0) return false;
+  return tokens.slice(0, typeIndex).some((token) => token.length >= 3 && !NON_NAME_WORDS.has(token));
+}
+
 function decision(overrides = {}) {
   return {
     route: 'hard_fallback', intent: null, goal: 'unknown', domain: null, safetyClass: 'safe',
@@ -304,6 +319,11 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
   const exactCatalogProduct = category ? null : catalog.findExactProduct(question);
   if (exactCatalogProduct) {
     return decision({ ...base, route: 'exact_product', goal: 'find_product', intent: 'product_detail', domain: 'product', matchedProductIds: [exactCatalogProduct.id], evidence: [...base.evidence, `catalog-product:${exactCatalogProduct.sku}`], confidence: 1, threshold: 1, responseSource: 'unas-catalog' });
+  }
+
+  if (hasUnresolvedNamedProduct(question, category, productQuestionIntent, goal.goal)) {
+    return decision({ ...base, route: 'clarification', intent: 'product_identity_clarification', goal: 'find_product', domain: 'product',
+      contextTarget: 'product', confidence: 1, threshold: 1, rejectionReasons: ['unsupported_product_identity'], responseSource: 'conversation-context' });
   }
 
   if (category && goal.goal !== 'solve_problem') {
