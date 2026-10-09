@@ -8,7 +8,7 @@ const { evaluateSafety } = require('./safety-gate.cjs');
 const { createCatalogSearch } = require('./catalog-search.cjs');
 const { evaluateKnowledgeConfidence } = require('./routing-confidence.cjs');
 const { buildConversationContext, resolveProductReference } = require('./conversation-context.cjs');
-const { findProductInText, findProductsInText } = require('./product-faq.cjs');
+const { findProductInText, findProductsInText, findAmbiguousProductFamily } = require('./product-faq.cjs');
 const { resolveMetaIntent } = require('./meta-intents.cjs');
 const { searchKnowledge } = require('./knowledge-fallback.cjs');
 const {detectExcludedProductTypes,detectProductTypeConstraint,inferredHairType,HAIR_WASH_TYPES}=require('./product-type-constraint.cjs');
@@ -134,6 +134,13 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
 
   const directCanonical = findProductInText(normalize(question));
   const directCanonicalIds = findProductsInText(normalize(question));
+  const ambiguousFamilyIds = directCanonical ? [] : findAmbiguousProductFamily(normalizedCurrent);
+  if (ambiguousFamilyIds.length > 1) {
+    return decision({ ...base, route: 'clarification', intent: base.intent || 'product_detail', goal: base.goal === 'unknown' ? 'find_product' : base.goal,
+      domain: 'product', contextUsed: false, contextTarget: 'product', matchedCanonicalIds: ambiguousFamilyIds,
+      matchedProductIds: ambiguousFamilyIds, confidence: 1, threshold: 1,
+      rejectionReasons: ['ambiguous_product_family'], responseSource: 'conversation-context' });
+  }
   const contextualComparisonIds = productQuestionIntent === 'comparison' && directCanonicalIds.length < 2 && /\b(koztuk|kettejuk|mindketto)\b/.test(normalizedCurrent)
     ? [...new Set(context.lastRecommendedProducts || [])].filter((id) => require('./product-catalog.cjs').PRODUCTS[id]).slice(0, 2)
     : [];

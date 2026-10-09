@@ -27,10 +27,11 @@ const PRODUCT_ALIASES = [
     'dermavital nyugtato borapolo krem',
     'dermavital nyugtato krem',
     'dermavital krem',
+    'derma vital krem',
     'dermavital balzsam'
   ]],
-  ['dermavital_szappan', ['dermavital szappan']],
-  ['dermavital_sampon', ['dermavital sampon']],
+  ['dermavital_szappan', ['dermavital szappan', 'derma vital szappan']],
+  ['dermavital_sampon', ['dermavital sampon', 'derma vital sampon']],
   ['aktiv_szenes_szappan', ['aktiv szenes szappan']],
   ['shea_vajas_szappan', ['shea vajas szappan']],
   ['psorivital_csomag', ['psorivital csomag', 'psorivital']],
@@ -126,6 +127,12 @@ function findProductInText(normalizedText, preferFirst = true) {
   return best;
 }
 
+function findAmbiguousProductFamily(normalizedText) {
+  const text = String(normalizedText || '').replace(/-/g, ' ');
+  if (!/^(?:dermavital|derma vital)$/.test(text)) return [];
+  return ['dermavital_sampon', 'dermavital_krem', 'dermavital_szappan'];
+}
+
 function findRecentProductFromHistory(history, normalize) {
   // A felhasználó konkrét termékmegnevezése mindig elsőbbséget élvez.
   for (const message of [...history].reverse()) {
@@ -146,4 +153,4 @@ function childAnswer(productId) {
   return PRODUCT_FAQ[productId]?.child || null;
 }
 
-module.exports = { PRODUCT_FAQ, PRODUCT_ALIASES, findProductInText, findProductsInText, findRecentProductFromHistory, childAnswer };
+module.exports = { PRODUCT_FAQ, PRODUCT_ALIASES, findProductInText, findProductsInText, findAmbiguousProductFamily, findRecentProductFromHistory, childAnswer };
