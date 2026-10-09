@@ -70,10 +70,34 @@ function section(text, labels) {
 
 function recommendedForSection(text) {
   const value = section(text, [/^kinek ajanljuk/, /^mire ajanljuk/]);
-  if (!value) return '';
+  if (!value) return extendedRecommendedForSection(text);
   const sentences = value.split(/(?<=[.!?])\s+/);
   const metaIndex = sentences.findIndex((sentence) => /^(?:nem\s+(?:szeretnenk|akarunk)\s+csodat\s+igerni|azt\s+viszont\s+tudjuk\b|(?:nagyon\s+sok\s+)?(?:visszatero\s+)?vasarlonk\s+szamolt\s+be\b)/.test(fold(sentence)));
   return clean(sentences.slice(0, metaIndex < 0 ? sentences.length : metaIndex).join(' '));
+}
+
+const EXTENDED_RECOMMENDED_HEADING = /(?:Kinek aj[aá]nljuk\s+[^?]{1,80}\?|Kinek aj[aá]nlott\?|(?:A|Az)\s+[A-ZÁÉÍÓÖŐÚÜŰ][^.!?]{1,100}\s+azoknak\s+aj[aá]nlott,?\s+akik\s*:)/i;
+const EXTENDED_RECOMMENDED_BOUNDARY = /(?:Mi[eé]rt j[oó] v[aá]laszt[aá]s[^?]{0,80}\?|Haszn[aá]lati\s+(?:[uú]tmutat[oó]|javaslat|utas[ií]t[aá]s)|Hogyan haszn[aá]ld[^?]{0,80}\?|Fontos tudnival[oó]k|[ÖO]sszetev[őo]k(?:\s*\(INCI\))?\s*:|Ingredients\s*:|\bINCI\s*:|Sokan v[aá]lasztj[aá]k\b|V[aá]s[aá]rl[oó](?:ink|i visszajelz[eé]sek)\b|Nem helyettes[ií]ti\b|Mer[uü]lj el\b|Engedd meg\b|Tapasztald meg\b|Fontos\s*:)/i;
+const UNSAFE_RECOMMENDED = /\b(?:gyogyit|meggyogyit|kezeli|kezeles|fajdalomcsillapito|gyulladascsokkento|keringes\s+(?:helyreallitas|javitas)|visszer|verzescsillapito)\w*\b/;
+const SUITABILITY_SEMANTICS = /\b(?:annak|azoknak|akik|szeretn|keres|kedvel|borre|bortipusra|hajra|hajtipusra|ferfi|nok|gyermek|csalad|mindennapi\s+(?:bor|haj|ajak)apolas)\w*\b/;
+
+function extendedRecommendedForSection(text) {
+  const source = String(text || '');
+  const heading = EXTENDED_RECOMMENDED_HEADING.exec(source);
+  if (heading) {
+    const tail = source.slice(heading.index + heading[0].length);
+    const boundary = EXTENDED_RECOMMENDED_BOUNDARY.exec(tail);
+    const candidate = clean(tail.slice(0, boundary?.index ?? tail.length));
+    const normalized = fold(candidate);
+    if (candidate.length >= 20 && candidate.length <= 1000
+      && SUITABILITY_SEMANTICS.test(normalized) && !UNSAFE_RECOMMENDED.test(normalized)) return candidate;
+  }
+  return clean(source.split(/(?<=[.!?])\s+/).find((sentence) => {
+    const normalized = fold(sentence);
+    return sentence.length >= 30 && sentence.length <= 250
+      && /\balkalmas\s+(?:minden|valamennyi|normal|szaraz|zsiros|erzekeny)[^.!?]{0,80}\b(?:bor|haj)tipusra\b/.test(normalized)
+      && !UNSAFE_RECOMMENDED.test(normalized);
+  }) || '');
 }
 
 function scanFold(value) {

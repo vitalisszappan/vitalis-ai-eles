@@ -264,6 +264,51 @@ assert.equal(shampooSuitability.provenance[0].sourceId, 'unas:1553769891');
 assert.match(shampooSuitability.value, /mindennapi ápolásához keresnek kíméletes kozmetikumot\.$/);
 assert.doesNotMatch(shampooSuitability.value, /csodát ígérni|Azt viszont tudjuk|visszatérő vásárló/i);
 
+const groundedRecommendedIds = realMapping.mappings
+  .filter((item) => item.mappingStatus === 'approved')
+  .map((item) => item.canonicalId)
+  .filter((productId) => realResolver.getFact(productId, 'recommendedFor').status === 'grounded');
+assert.equal(groundedRecommendedIds.length, 38);
+const newlyRecoveredRecommendedCases = {
+  holt_tengeri_iszapos_szappan: [/zsíros bőrre/i, /Sokan választják|Fontos:|Hogyan használd/i],
+  parajdi_sotomb: [/Azoknak, akik/i, /Nem helyettesíti|Fontos tudnivalók/i],
+  mentas_kave_szappan: [/Annak, aki/i, /Fontos tudnivalók|Összetevők/i],
+  kecsketejes_etcsokis_kremvarazs_szappan: [/Szeretnék/i, /Merülj el|Ingredients/i],
+  levendula_szappan: [/normál bőrre/i, /Miért jó választás|Használati útmutató/i],
+  chilis_etcsokis_szappan: [/Keresik az érzéki élményt/i, /Engedd meg|Tapasztald meg|Ingredients/i],
+  csiga_kivonatos_regeneralo_arckrem: [/alkalmas minden bőrtípusra/i, /sebgyógyulás|allergiás reakció/i]
+};
+for (const [productId, [included, excluded]] of Object.entries(newlyRecoveredRecommendedCases)) {
+  const fact = realResolver.getFact(productId, 'recommendedFor');
+  assert.equal(fact.status, 'grounded', productId);
+  assert.equal(fact.provenance[0].sourceType, 'unas_snapshot', productId);
+  assert.match(fact.value, included, productId);
+  assert.doesNotMatch(fact.value, excluded, productId);
+}
+assert.equal(realResolver.getFact('vadgesztenyes_balzsam', 'recommendedFor').status, 'unavailable');
+
+function fixtureRecommendedFor(longDescription) {
+  const fixture = createProductFactsResolver({
+    mappingData: { mappings: [{ canonicalId: 'fixture', unasId: 'fixture-1', sku: 'FIXTURE', mappingStatus: 'approved' }] },
+    snapshotData: { generatedAt: '2026-10-06T00:00:00Z', products: [{
+      unasId: 'fixture-1', sku: 'FIXTURE', name: 'Fixture', longDescription,
+      actualPriceGross: 1, currency: 'HUF', url: 'https://www.vitalis-szappan.hu/fixture'
+    }] },
+    deterministicProducts: {}
+  });
+  return fixture.getFact('fixture', 'recommendedFor');
+}
+
+assert.equal(fixtureRecommendedFor('A krém használata ajánlott a mindennapi rutinban.').status, 'unavailable');
+assert.equal(fixtureRecommendedFor('Kinek ajánlott?').status, 'unavailable');
+assert.equal(fixtureRecommendedFor('Kinek ajánlott? Hidratálja és puhítja a bőrt.').status, 'unavailable');
+assert.equal(fixtureRecommendedFor('Kinek ajánlott? Azoknak, akiknek kezeli és meggyógyítja az ekcémáját.').status, 'unavailable');
+assert.match(fixtureRecommendedFor('Kinek ajánlott? Érzékeny bőrre keresőknek. Használati útmutató: kend fel.').value, /Érzékeny bőrre keresőknek\.$/);
+assert.doesNotMatch(fixtureRecommendedFor('Kinek ajánlott? Érzékeny bőrre keresőknek. Összetevők: Aqua, Urea.').value, /Összetevők|Aqua/);
+assert.doesNotMatch(fixtureRecommendedFor('Kinek ajánlott? Érzékeny bőrre keresőknek. Fontos: szembe ne kerüljön.').value, /Fontos|szembe/);
+assert.doesNotMatch(fixtureRecommendedFor('Kinek ajánlott? Érzékeny bőrre keresőknek. Vásárlóink szerint csodálatos.').value, /Vásárlóink|csodálatos/);
+assert.match(fixtureRecommendedFor('A Fixture azoknak ajánlott, akik: érzékeny bőrre keresnek kíméletes kozmetikumot. Ingredients: Aqua.').value, /érzékeny bőrre/);
+
 function fixtureUsage(longDescription) {
   const fixture = createProductFactsResolver({
     mappingData: { mappings: [{ canonicalId: 'fixture', unasId: 'fixture-1', sku: 'FIXTURE', mappingStatus: 'approved' }] },
