@@ -2,7 +2,7 @@
 
 const { normalize } = require('./normalizer.cjs');
 const { detectCustomerGoal } = require('./customer-goal.cjs');
-const { detectCommerceIntent, hasCommerceDomainEvidence } = require('./commerce-intents.cjs');
+const { hasCommerceDomainEvidence } = require('./commerce-intents.cjs');
 const { detectProblemIntent } = require('./problem-intents.cjs');
 const { evaluateSafety } = require('./safety-gate.cjs');
 const { createCatalogSearch } = require('./catalog-search.cjs');
@@ -14,13 +14,10 @@ const { searchKnowledge } = require('./knowledge-fallback.cjs');
 const {detectExcludedProductTypes,detectProductTypeConstraint,inferredHairType,HAIR_WASH_TYPES}=require('./product-type-constraint.cjs');
 const {isTypeComparison}=require('./hair-wash-products.cjs');
 const {determineAnswerMode}=require('./answer-mode.cjs');
-const {detectProductQuestionIntent}=require('./product-question-intent.cjs');
-const { detectBusinessInfo } = require('./business-info.cjs');
 const { resolveGuidedDiscovery } = require('./guided-discovery.cjs');
 const { resolveAcneDecision } = require('./acne-decision.cjs');
 const { buildProblemDomainDecision } = require('./problem-domain-decision.cjs');
 const { extractSubtypeRequest, compatibleSubtypeExpert, subtypeCardIdentity } = require('./product-type-constraint.cjs');
-const { detectCouponIntent } = require('./coupon-policy.cjs');
 
 const catalog = createCatalogSearch();
 
@@ -34,8 +31,9 @@ function decision(overrides = {}) {
 }
 
 function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, conversationState = null }) {
-  const goal = detectCustomerGoal(question);
-  const productQuestionIntent = detectProductQuestionIntent(question);
+  const goal = detectCustomerGoal(question, history);
+  const turnIntent = goal.turnIntent;
+  const productQuestionIntent = turnIntent.productQuestionIntent;
   const problem = detectProblemIntent(question);
   const normalizedCurrent = normalize(question);
   const currentExplicitNeed = Boolean(problem)
@@ -52,7 +50,7 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
     const allowedRememberedTypes=rememberedTypes.filter((type)=>!excludedProductTypes.includes(type)&&!excludedProductTypes.includes('shampoo'));
     if (allowedRememberedTypes.length === 1 && HAIR_WASH_TYPES.includes(allowedRememberedTypes[0])) productTypeConstraint = allowedRememberedTypes[0];
   }
-  const base = { goal: goal.goal, intent: goal.intent, domain: goal.domain || problem?.domain || null, safetyClass: safety.safetyClass, evidence: [...goal.evidence, ...(problem?.evidence || []), ...safety.evidence], excludedProductTypes, productTypeConstraint, productQuestionIntent };
+  const base = { goal: goal.goal, intent: goal.intent, domain: goal.domain || problem?.domain || null, safetyClass: safety.safetyClass, evidence: [...goal.evidence, ...(problem?.evidence || []), ...safety.evidence], excludedProductTypes, productTypeConstraint, productQuestionIntent, answerIntent: turnIntent.answerIntent, turnIntent };
   const guided = resolveGuidedDiscovery({ question, conversationState });
 
   const meta = resolveMetaIntent(question);
@@ -66,7 +64,7 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
     return decision({ ...base, route: 'safety', goal: 'medical_boundary', intent: 'cosmetic_boundary', confidence: 1, threshold: 1, responseSource: 'safety-gate' });
   }
 
-  const couponIntent = detectCouponIntent(question, history);
+  const couponIntent = turnIntent.category === 'coupon' ? turnIntent.intent : null;
   if (couponIntent) {
     return decision({ ...base, route: 'coupon_policy', intent: couponIntent, goal: 'coupon_information',
       domain: 'coupon', contextUsed: !/\b(kupon\w*|kedvezmeny\w*)\b/.test(normalizedCurrent),
@@ -127,7 +125,7 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
     return decision({ ...base, route: 'business_info', intent: 'general_catalog', goal: 'browse_catalog', domain: 'business_info', guidedDiscovery: guided.dimensions, confidence: 1, threshold: 1, responseSource: 'guided-discovery' });
   }
 
-  const businessInfo = detectBusinessInfo(question);
+  const businessInfo = turnIntent.source === 'business-info' ? turnIntent : null;
   if (businessInfo) {
     return decision({ ...base, route: 'business_info', intent: businessInfo.intent, goal: 'business_information', domain: 'business_info', contextUsed: false, contextTarget: null, matchedCanonicalIds: [], matchedProductIds: [], primaryProductId: null, confidence: 1, threshold: 1, responseSource: 'business-info' });
   }
@@ -149,7 +147,7 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
     if (comparisonIds.length === 2) return decision({ ...base, route: 'product_comparison', intent: 'compare_products', goal: 'compare_products', domain: 'product', contextUsed: directCanonicalIds.length < 2, contextTarget: null, matchedCanonicalIds: comparisonIds, matchedProductIds: comparisonIds, confidence: 1, threshold: 1, responseSource: 'product-facts' });
     if (directCanonicalIds.length !== 1) return decision({ ...base, route: 'clarification', intent: 'compare_products', goal: 'compare_products', contextTarget: 'products', confidence: 1, threshold: 1, rejectionReasons: ['missing_comparison_products'], responseSource: 'conversation-context' });
   }
-  const commerce = detectCommerceIntent(question);
+  const commerce = turnIntent.source === 'commerce-intents' ? turnIntent : null;
   if (commerce) {
     const guardedCommerceIntent = ['order_start', 'checkout_problem'].includes(commerce.intent);
     if (guardedCommerceIntent && !hasCommerceDomainEvidence(question, {

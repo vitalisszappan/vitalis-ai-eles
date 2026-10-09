@@ -49,6 +49,9 @@ function detectCouponIntent(question, history = []) {
   const protectedMention = defaultResolver.isProtectedValueMention(question);
   const couponWord = /\b(kupon\w*|kedvezmeny\w*)\b/.test(q) || protectedMention;
   if (protectedMention) return 'protected_code_probe';
+  if (/\bhirlevel\w*\b.*\b(kedvezmeny|kupon)\w*|\b(kedvezmeny|kupon)\w*.*\bhirlevel\w*\b/.test(q)) {
+    return /\b(hogyan|hogy|hol|jutok|kapom|kaphatom)\b/.test(q) ? 'acquisition' : 'coupon_exists';
+  }
   if (/\b(mi a|mondd meg|ird meg|add meg)\b.*\b(kuponkod\w*|kod\w*)\b/.test(q)
     || (contextual && /^(mi|es mi) a kod$/.test(q))) return 'code_request';
   if (/\b(osszevonhato|egyutt)\b.*\b(kupon|kedvezmeny)\b|\bmas kuponnal\b/.test(q)) return 'stacking';

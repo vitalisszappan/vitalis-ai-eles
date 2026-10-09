@@ -6,20 +6,19 @@ const { normalize } = require('./normalizer.cjs');
 const SUPPORTED_INTENTS = Object.freeze(['product_recommendation', 'product_description', 'product_suitability', 'product_benefits', 'ingredients', 'ingredient_benefit', 'usage', 'price_query', 'order_start', 'comparison']);
 
 function detectAnswerIntent(question, routing) {
-  const text = normalize(question);
   if (routing?.route === 'expert_rule' && routing.intent === 'product_companion') return null;
+  if (routing?.answerIntent === 'product_recommendation'
+    && (routing?.route !== 'expert_rule' || routing?.productTypeConstraint)) return null;
+  if (routing?.answerIntent) return routing.answerIntent;
   if (routing?.route === 'product_comparison' || routing?.intent === 'compare_products') return 'comparison';
   if (routing?.route === 'commerce' && routing.intent === 'order_start') return 'order_start';
-  if (/\b(mire jo benne|mit csinal benne|miert van benne)\b/.test(text)) return 'ingredient_benefit';
-  if (routing?.productQuestionIntent === 'description' || /\b(mi ez(?: a termek)?|mire valo(?: ez| a)?|mit tud (?:ez|a)\b)\b/.test(text)) return 'product_description';
-  if (routing?.productQuestionIntent === 'suitability' || /\b(kinek ajanlott|kinek valo|milyen (?:borre|hajra|fejborre) valo)\b/.test(text)) return 'product_suitability';
-  if (/\b(miert ezt ajanlod|miert ajanlod|miert jo ez|mire jo|miben segit)\b/.test(text)) return 'product_benefits';
-  if (routing?.route === 'expert_rule' && /\b(mit ajanl|mit javasol|melyiket ajanl|milyen termeket ajanl|mit hasznaljak)\w*/.test(text)) return 'product_recommendation';
-  if (['ingredients', 'ingredient_existence'].includes(routing?.productQuestionIntent)) return 'ingredients';
-  if (routing?.productQuestionIntent === 'benefits') return 'product_benefits';
-  if (/\b(mi van benne|mi van\b.*\b\w+(?:ban|ben)|mik az?\b.*\bosszetevoi|mi az inci|milyen az incije|milyen osszetevoket tartalmaz|mit tartalmaz|van benne|van\b.*\b\w+(?:ban|ben)|tartalmaz)\b/.test(text)) return 'ingredients';
-  if (routing?.productQuestionIntent === 'usage' || /\b(hogyan hasznaljam|hogy kell hasznalni|milyen gyakran hasznaljam)\b/.test(text)) return 'usage';
-  if (/\b(mennyibe kerul|mi az ara)\b/.test(text)) return 'price_query';
+  const productIntent = {
+    description: 'product_description', suitability: 'product_suitability', benefits: 'product_benefits',
+    ingredients: 'ingredients', ingredient_existence: 'ingredients', usage: 'usage', price: 'price_query',
+    comparison: 'comparison', recommendation: 'product_recommendation'
+  }[routing?.productQuestionIntent];
+  if (productIntent) return productIntent;
+  if (routing?.route === 'expert_rule' && routing?.goal === 'find_product') return 'product_recommendation';
   return null;
 }
 
