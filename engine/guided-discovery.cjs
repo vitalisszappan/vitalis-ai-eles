@@ -50,7 +50,9 @@ function mergeDimensions(current, inherited = {}) {
   return {
     browseIntent: current.browseIntent || null,
     needState: current.needState || inherited.needState || null,
-    productType: current.productType || inherited.productType || null,
+    // An explicit new need owns the topic. Do not carry a product type from an
+    // older product-focused turn into the new recommendation flow.
+    productType: current.productType || (currentHasNeed ? null : inherited.productType) || null,
     bodyArea: current.bodyArea || (currentHasNeed ? null : inherited.bodyArea) || null,
     goal: current.goal || inherited.goal || null
   };

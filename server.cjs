@@ -1438,7 +1438,7 @@ function validateConversationHistoryEvent(value) {
   if(new Set(value.products.map(p=>p.id)).size!==value.products.length)return null;
   if(value.targetProductId!==null && (!validId(value.targetProductId)||!value.products.some(p=>p.id===value.targetProductId)))return null;
   if(value.kind==='selection'){
-    if(!value.products.length||!['subtype_catalog','expert_rule','context_followup','commerce'].includes(value.route))return null;
+    if(!value.products.length||!['subtype_catalog','expert_rule','context_followup','commerce','exact_product'].includes(value.route))return null;
     if(value.route==='subtype_catalog'&&!value.productTypeConstraint)return null;
     if(value.route==='expert_rule'&&!value.productTypeConstraint&&value.targetProductId===null)return null;
   }else{
@@ -1466,8 +1466,14 @@ function buildConversationHistoryEvent(result, turnId) {
   const type=['body_lotion','facial_cream'].includes(result.productTypeConstraint)?result.productTypeConstraint:null;
   const route=result.route,links=Array.isArray(result.links)?result.links:[];
   const scoped=type && ['subtype_catalog','expert_rule'].includes(route);
-  const explicitPrimary=result.targetProductId||result.primaryProductId||null;
+  const routedCanonicalIds=Array.isArray(result.routing?.matchedCanonicalIds)?result.routing.matchedCanonicalIds:[];
   const matchedIds=Array.isArray(result.routing?.matchedProductIds)?result.routing.matchedProductIds:[];
+  const routedContextTarget=result.routing?.route==='context_followup'&&result.routing?.contextUsed===true
+    &&typeof result.routing?.contextTarget==='string'&&routedCanonicalIds.length===1&&matchedIds.length===1
+    &&routedCanonicalIds[0]===result.routing.contextTarget&&matchedIds[0]===result.routing.contextTarget
+    ?result.routing.contextTarget:null;
+  const explicitPrimary=result.targetProductId||result.primaryProductId
+    ||routedContextTarget||(result.route==='exact_product'&&routedCanonicalIds.length===1?routedCanonicalIds[0]:null);
   const catalogFocus=['context_followup','commerce'].includes(route) && links.some(p=>typeof p.id==='string'&&p.id.startsWith('catalog:'));
   const canonicalFocus=route==='context_followup' && typeof explicitPrimary==='string'
     && /^[a-z0-9_]{1,80}$/.test(explicitPrimary) && links.length===1 && links[0]?.id===explicitPrimary
@@ -1476,7 +1482,11 @@ function buildConversationHistoryEvent(result, turnId) {
     && Array.isArray(result.routing?.matchedCanonicalIds) && result.routing.matchedCanonicalIds.length===1
     && result.routing.matchedCanonicalIds[0]===explicitPrimary
     && matchedIds.length===1 && matchedIds[0]===explicitPrimary;
-  const focused=catalogFocus||canonicalFocus;
+  const exactProductFocus=route==='exact_product' && typeof explicitPrimary==='string'
+    && /^[a-z0-9_]{1,80}$/.test(explicitPrimary) && links.length===1 && links[0]?.id===explicitPrimary
+    && result.routing?.route==='exact_product' && routedCanonicalIds.length===1
+    && routedCanonicalIds[0]===explicitPrimary && matchedIds.length===1 && matchedIds[0]===explicitPrimary;
+  const focused=catalogFocus||canonicalFocus||exactProductFocus;
   const primaryExpert=route==='expert_rule' && !type && typeof explicitPrimary==='string'
     && links.some(p=>p?.id===explicitPrimary) && matchedIds.includes(explicitPrimary);
   if (!scoped && !focused && !primaryExpert && links.length) return null; // Legacy, non-constrained selection contract.

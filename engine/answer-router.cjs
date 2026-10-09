@@ -40,8 +40,18 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
     || /\b\w+\s+(?:borre|fejborre|hajra|kezre|sarokra)\b/.test(normalizedCurrent)
     || /\b(?:bor|fejbor|haj|kez|sarok)\w*\b.*\b(?:keres\w*|erdekel\w*|ajanl\w*|van\s+valami)\b/.test(normalizedCurrent);
   const safety = evaluateSafety(question, problem);
-  const derivedContext = buildConversationContext(history, normalize);
-  const context = conversationState ? {...derivedContext,lastRecommendedProducts:conversationState.lastOrdinalProductList||conversationState.lastRecommendedProducts||[],lastSelectedProduct:conversationState.selectedProductId??derivedContext.lastSelectedProduct,lastFocusProduct:Object.hasOwn(conversationState,'focusedProductId')?conversationState.focusedProductId:conversationState.lastMentionedProduct,lastProduct:Object.hasOwn(conversationState,'focusedProductId')?conversationState.focusedProductId:conversationState.lastMentionedProduct,purchaseProductId:Object.hasOwn(conversationState,'purchaseProductId')?conversationState.purchaseProductId:derivedContext.lastFocusProduct,productContextStatus:conversationState.productContextStatus||derivedContext.productContextStatus,lastProblemDomain:conversationState.activeProblemDomains?.at(-1)||derivedContext.lastProblemDomain} : {...derivedContext,purchaseProductId:derivedContext.productContextStatus==='ambiguous'?null:derivedContext.lastFocusProduct};
+  const context = conversationState ? {
+    lastRecommendedProducts: conversationState.lastOrdinalProductList || conversationState.lastRecommendedProducts || [],
+    lastSelectedProduct: conversationState.selectedProductId || null,
+    lastUserProduct: conversationState.focusedProductId || null,
+    lastFocusProduct: conversationState.focusedProductId || null,
+    lastProduct: conversationState.focusedProductId || null,
+    primaryRecommendedProduct: conversationState.focusedProductId || null,
+    purchaseProductId: conversationState.purchaseProductId || null,
+    productContextStatus: conversationState.productContextStatus || 'unresolved',
+    lastProblemDomain: conversationState.activeProblemDomains?.at(-1) || null,
+    mentionedProducts: conversationState.activeProductIds || []
+  } : (()=>{const derived=buildConversationContext(history,normalize);return{...derived,purchaseProductId:derived.productContextStatus==='ambiguous'?null:derived.lastFocusProduct};})();
   const excludedProductTypes=detectExcludedProductTypes(question);
   let productTypeConstraint=detectProductTypeConstraint(question);
   if (!productTypeConstraint && productQuestionIntent === 'recommendation' && /\b(zsiros\w* haj\w*|gyorsan zsiros\w*)\b/.test(normalize(question))) productTypeConstraint = 'solid_shampoo';

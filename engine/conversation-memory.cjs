@@ -127,9 +127,60 @@ function mergeHistory(serverHistory=[],clientHistory=[],limit=MAX_HISTORY_MESSAG
 }
 function renderedProductList(message){if(!message||message.historyEventInvalid||message.historyEventUncorrelated)return[];if(Array.isArray(message.links)&&message.links.length)return message.links.map(item=>canonicalByUnasId[String(item.id)]||String(item.id)).filter(Boolean);const evidence=resolvePersistedProductEvidence(message.content||'');if(evidence.status==='resolved'||evidence.orderedProductIds.length>1)return evidence.orderedProductIds;return[];}
 function trustedPendingClarification(history=[]){let pending=null;for(const item of history){if(item?.role!=='assistant')continue;const meta=serverEvents.get(item);if(!meta)continue;pending=meta.kind==='pending_clarification'&&meta.pendingClarification?meta.pendingClarification:null;}return pending;}
-function structuredStateBase(history=[]){const authoritativeHistory=history.flatMap(item=>item?.historyEventInvalid||item?.historyEventUncorrelated?[]:[item]),context=buildConversationContext(authoritativeHistory,normalize),last=[...authoritativeHistory].reverse(),lastUser=last.find(x=>x.role==='user'),lastAssistantIndex=[...authoritativeHistory].map((x,index)=>({x,index})).reverse().find(entry=>entry.x.role==='assistant')?.index,lastAssistant=lastAssistantIndex==null?null:authoritativeHistory[lastAssistantIndex],precedingUser=lastAssistantIndex==null?null:[...authoritativeHistory.slice(0,lastAssistantIndex)].reverse().find(x=>x.role==='user'),rendered=renderedProductList(lastAssistant),ordinal=rendered.length?rendered:context.lastRecommendedProducts||[],authoritativeTarget=lastAssistant?.targetProductId||null,assistantFocus=authoritativeTarget||lastAssistant?.focusedProduct||(rendered.length?rendered[0]:null),productContextStatus=authoritativeTarget?'resolved':context.productContextStatus==='ambiguous'?'ambiguous':ordinal.length>1&&context.productContextStatus!=='resolved'?'ambiguous':assistantFocus||context.lastFocusProduct?'resolved':context.productContextStatus||'unresolved',focusedProductId=assistantFocus||context.lastFocusProduct||null,purchaseProductId=productContextStatus==='resolved'&&!authoritativeTarget?focusedProductId:null,lastMentionedProduct=focusedProductId,activeProductIds=[...new Set([...(context.mentionedProducts||[]),...ordinal])],activeSkus=[...new Set(activeProductIds.map(id=>skuByProductId[id]||PRODUCTS[id]?.sku).filter(Boolean))],pendingClarification=trustedPendingClarification(authoritativeHistory),activeProblemDomains=[...new Set([context.lastProblemDomain,pendingClarification?.domain].filter(Boolean))],guidedDiscovery=reconstructGuidedDiscovery(authoritativeHistory),lastAcne=[...authoritativeHistory].reverse().find(x=>x?.role==='assistant'&&x?.routing?.acneDecision),acneDecision=pendingClarification?.domain==='acne'?{active:true,trusted:true,clarificationType:pendingClarification.clarificationType,factors:{...pendingClarification.factors},requestedDimensions:[...pendingClarification.requestedDimensions]}:lastAcne?.routing?.acneDecision?{active:true,factors:{...lastAcne.routing.acneDecision.factors}}:null;return{activeProductIds,activeSkus,activeProblemDomains,lastRecommendedProducts:[...ordinal],lastOrdinalProductList:[...ordinal],selectedProductId:context.lastSelectedProduct||null,focusedProductId,purchaseProductId,productContextStatus,lastMentionedProduct,guidedDiscovery,pendingClarification,acneDecision,lastUserIntent:lastUser?.intent||detectCustomerGoal(lastUser?.content||'').intent||null,lastAssistantIntent:lastAssistant?.intent||detectCustomerGoal(precedingUser?.content||'').intent||null,lastCommerceFocus:context.lastCommerceIntent||null};}
+function authoritativeProductFocus(history=[]){
+  let observed=false,focusedProductId=null,selectedProductId=null,productContextStatus='unresolved',candidates=[];
+  for(const item of history){
+    if(item?.role!=='assistant')continue;
+    const meta=serverEvents.get(item);if(!meta)continue;observed=true;
+    if(meta.kind==='pending_clarification'){
+      focusedProductId=null;selectedProductId=null;productContextStatus='unresolved';candidates=[];continue;
+    }
+    if(meta.kind==='empty'){candidates=[];continue;}
+    if(meta.kind!=='selection')continue;
+    const products=renderedProductList(item);
+    candidates=[...products];
+    if(item.targetProductId){
+      focusedProductId=item.targetProductId;selectedProductId=item.targetProductId;productContextStatus='resolved';
+    }else if(products.length===1){
+      focusedProductId=products[0];selectedProductId=null;productContextStatus='resolved';
+    }else{
+      focusedProductId=null;selectedProductId=null;productContextStatus=products.length>1?'ambiguous':'unresolved';
+    }
+  }
+  return {observed,focusedProductId,selectedProductId,productContextStatus,candidates};
+}
+function structuredStateBase(history=[]){
+  const authoritativeHistory=history.filter(item=>!item?.historyEventInvalid&&!item?.historyEventUncorrelated);
+  const context=buildConversationContext(authoritativeHistory,normalize);
+  const focus=authoritativeProductFocus(authoritativeHistory);
+  const last=[...authoritativeHistory].reverse(),lastUser=last.find(x=>x.role==='user');
+  const lastAssistantIndex=[...authoritativeHistory].map((x,index)=>({x,index})).reverse().find(entry=>entry.x.role==='assistant')?.index;
+  const lastAssistant=lastAssistantIndex==null?null:authoritativeHistory[lastAssistantIndex];
+  const precedingUser=lastAssistantIndex==null?null:[...authoritativeHistory.slice(0,lastAssistantIndex)].reverse().find(x=>x.role==='user');
+  const rendered=renderedProductList(lastAssistant);
+  const legacyOrdinal=rendered.length?rendered:context.lastRecommendedProducts||[];
+  const ordinal=focus.observed?focus.candidates:legacyOrdinal;
+  const legacyTarget=lastAssistant?.targetProductId||lastAssistant?.focusedProduct||(rendered.length===1?rendered[0]:null)||context.lastFocusProduct||null;
+  // Compatibility for older server rows whose trusted selection event carried
+  // candidates but no target. Only a server-history selection of one of those
+  // candidates may complete the focus; browser-only rows were filtered above.
+  const legacyServerSelection=focus.observed&&!focus.focusedProductId&&context.lastSelectedProduct
+    &&ordinal.includes(context.lastSelectedProduct)?context.lastSelectedProduct:null;
+  const focusedProductId=focus.observed?focus.focusedProductId||legacyServerSelection:legacyTarget;
+  const productContextStatus=focus.observed?(focusedProductId?'resolved':focus.productContextStatus):context.productContextStatus==='ambiguous'?'ambiguous':focusedProductId?'resolved':context.productContextStatus||'unresolved';
+  const selectedProductId=focus.observed?focus.selectedProductId||legacyServerSelection:context.lastSelectedProduct||null;
+  const purchaseProductId=productContextStatus==='resolved'?focusedProductId:null;
+  const activeProductIds=[...new Set([...(context.mentionedProducts||[]),...ordinal,focusedProductId].filter(Boolean))];
+  const activeSkus=[...new Set(activeProductIds.map(id=>skuByProductId[id]||PRODUCTS[id]?.sku).filter(Boolean))];
+  const pendingClarification=trustedPendingClarification(authoritativeHistory);
+  const activeProblemDomains=[...new Set([context.lastProblemDomain,pendingClarification?.domain].filter(Boolean))];
+  const guidedDiscovery=reconstructGuidedDiscovery(authoritativeHistory);
+  const lastAcne=[...authoritativeHistory].reverse().find(x=>x?.role==='assistant'&&x?.routing?.acneDecision);
+  const acneDecision=pendingClarification?.domain==='acne'?{active:true,trusted:true,clarificationType:pendingClarification.clarificationType,factors:{...pendingClarification.factors},requestedDimensions:[...pendingClarification.requestedDimensions]}:lastAcne?.routing?.acneDecision?{active:true,factors:{...lastAcne.routing.acneDecision.factors}}:null;
+  return{activeProductIds,activeSkus,activeProblemDomains,lastRecommendedProducts:[...ordinal],lastOrdinalProductList:[...ordinal],selectedProductId,focusedProductId,purchaseProductId,productContextStatus,lastMentionedProduct:focusedProductId,guidedDiscovery,pendingClarification,acneDecision,lastUserIntent:lastUser?.intent||detectCustomerGoal(lastUser?.content||'').intent||null,lastAssistantIntent:lastAssistant?.intent||detectCustomerGoal(precedingUser?.content||'').intent||null,lastCommerceFocus:context.lastCommerceIntent||null};
+}
 function latestIsolationBoundary(history=[]){return[...history].map((item,index)=>({item,index})).reverse().find(({item})=>!item?.historyEventInvalid&&!item?.historyEventUncorrelated&&item?.role==='assistant'&&(item.route==='safety'||item.intent==='medical_escalation'||item.route==='complaint'||item.routing?.semanticGuard?.ownershipClass==='complaint'||item.routing?.semanticGuard?.ownershipClass==='resolved_complaint'||item.routing?.semanticGuard?.enforcementApplied===true))||null;}
 function historyAfterIsolationBoundary(history=[]){const boundary=latestIsolationBoundary(history);return boundary?history.slice(boundary.index+1):history;}
 function structuredState(history=[]){return structuredStateBase(historyAfterIsolationBoundary(history));}
 async function rehydrateSessionHistory({sessionId,clientHistory=[],loadRows,limit=10}={}){if(!validSessionId(sessionId)){const history=mergeHistory([],clientHistory,MAX_HISTORY_MESSAGES,true);return{history,state:structuredState(history),technicalFailure:false};}let rows=[];try{rows=await loadRows(sessionId,Math.max(1,Math.min(Number(limit)||10,10)));}catch{const history=mergeHistory([],clientHistory,MAX_HISTORY_MESSAGES,true);return{history,state:structuredState(history),technicalFailure:true};}const serverHistory=rowsToHistory(rows),history=mergeHistory(serverHistory,clientHistory,MAX_HISTORY_MESSAGES,true);return{history,state:structuredState(history),technicalFailure:false};}
-module.exports={MAX_HISTORY_MESSAGES,validSessionId,normalizeMessage,rowsToHistory,mergeHistory,renderedProductList,latestIsolationBoundary,historyAfterIsolationBoundary,structuredState,rehydrateSessionHistory};
+module.exports={MAX_HISTORY_MESSAGES,validSessionId,normalizeMessage,rowsToHistory,mergeHistory,renderedProductList,authoritativeProductFocus,latestIsolationBoundary,historyAfterIsolationBoundary,structuredState,rehydrateSessionHistory};
