@@ -388,7 +388,7 @@ function authoritativeProductDescription(product) {
     || '';
 }
 
-function createProductFactsResolver(options = {}) {
+function buildProductFactsResolver(options = {}) {
   const mappingData = options.mappingData ?? readJson(options.mappingPath || DEFAULT_MAPPING_PATH);
   const snapshotData = options.snapshotData ?? readJson(options.snapshotPath || DEFAULT_SNAPSHOT_PATH);
   const deterministicProducts = options.deterministicProducts || require('./product-catalog.cjs').PRODUCTS;
@@ -503,5 +503,38 @@ function createProductFactsResolver(options = {}) {
   return { getProductFacts, getFact, hasIngredient, normalizeIngredient, getGrounding };
 }
 
-const defaultResolver = createProductFactsResolver();
+function fileSignature(filePath) {
+  try {
+    const stat = fs.statSync(filePath);
+    return `${stat.size}:${stat.mtimeMs}`;
+  } catch {
+    return 'missing';
+  }
+}
+
+function createProductFactsResolver(options = {}) {
+  if (options.reloadOnFileChange !== true) return buildProductFactsResolver(options);
+  const mappingPath = options.mappingPath || DEFAULT_MAPPING_PATH;
+  const snapshotPath = options.snapshotPath || DEFAULT_SNAPSHOT_PATH;
+  const approvedFactsPath = options.approvedFactsPath || DEFAULT_APPROVED_FACTS_PATH;
+  let signature = null;
+  let resolver = null;
+  function current() {
+    const next = `${fileSignature(mappingPath)}|${fileSignature(snapshotPath)}|${fileSignature(approvedFactsPath)}`;
+    if (next !== signature) {
+      resolver = buildProductFactsResolver({ ...options, mappingPath, snapshotPath, approvedFactsPath, reloadOnFileChange: false });
+      signature = next;
+    }
+    return resolver;
+  }
+  return {
+    getProductFacts: (...args) => current().getProductFacts(...args),
+    getFact: (...args) => current().getFact(...args),
+    hasIngredient: (...args) => current().hasIngredient(...args),
+    normalizeIngredient,
+    getGrounding: (...args) => current().getGrounding(...args)
+  };
+}
+
+const defaultResolver = createProductFactsResolver({ reloadOnFileChange: true });
 module.exports = { FACT_TYPES, SOURCE_PRIORITY, INGREDIENT_ALIASES, createProductFactsResolver, ...defaultResolver };
