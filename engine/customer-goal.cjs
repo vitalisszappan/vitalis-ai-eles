@@ -22,12 +22,12 @@ const PRODUCT_ANSWER_INTENTS = Object.freeze({
   comparison: 'comparison', recommendation: 'product_recommendation'
 });
 
-function detectTurnIntent(question, history = []) {
+function detectTurnIntent(question, history = [], conversationState = null) {
   const couponIntent = detectCouponIntent(question, history);
   if (couponIntent) return { category: 'coupon', intent: couponIntent, answerIntent: 'coupon_information', productQuestionIntent: null, source: 'coupon-policy' };
   const business = detectBusinessInfo(question);
   if (business) return { category: 'commerce', intent: business.intent, answerIntent: null, productQuestionIntent: null, source: 'business-info' };
-  const commerce = detectCommerceIntent(question, history);
+  const commerce = detectCommerceIntent(question, history, conversationState);
   if (commerce) {
     const intent = ['cash_on_delivery', 'card_payment'].includes(commerce.intent) ? 'payment' : commerce.intent;
     return { category: 'commerce', intent, detail: commerce.intent, answerIntent: intent === 'price_query' ? 'price_query' : intent === 'order_start' ? 'order_start' : null, productQuestionIntent: null, source: 'commerce-intents' };
@@ -40,9 +40,9 @@ function detectTurnIntent(question, history = []) {
   return { category: 'unknown', intent: null, answerIntent: null, productQuestionIntent: null, source: 'none' };
 }
 
-function detectCustomerGoal(question, history = []) {
+function detectCustomerGoal(question, history = [], conversationState = null) {
   const text = normalize(question);
-  const turnIntent = detectTurnIntent(question, history);
+  const turnIntent = detectTurnIntent(question, history, conversationState);
   const result = (value) => ({ ...value, turnIntent });
   if (turnIntent.category === 'coupon') return { goal: 'coupon_information', intent: turnIntent.intent, domain: 'coupon', evidence: [`coupon:${turnIntent.intent}`], turnIntent };
   if (turnIntent.category === 'commerce') return { goal: COMMERCE_GOALS[turnIntent.intent] || 'business_information', intent: turnIntent.intent, domain: 'commerce', evidence: [`commerce:${turnIntent.intent}`], turnIntent };

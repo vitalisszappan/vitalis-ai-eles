@@ -2,6 +2,7 @@
 
 const { productCards } = require('./product-catalog.cjs');
 const { createCatalogSearch, validUrl } = require('./catalog-search.cjs');
+const { resolveApprovedBusinessFact } = require('./business-info.cjs');
 
 const CHECKOUT_HELP = 'Sajnálom, hogy elakadtál; írd meg, hogy a kosárnál, az adatok megadásánál vagy a fizetésnél nem enged tovább, és látsz-e konkrét hibaüzenetet. Kérlek, bankkártyaadatot, jelszót vagy más érzékeny fizetési adatot ne küldj.';
 const ORDERING_HELP = 'Válaszd ki a terméket, nyisd meg a termékkártyán a webshopos termékoldalt, majd a webshopban tedd kosárba, és kövesd a pénztár lépéseit.';
@@ -9,12 +10,6 @@ const CONFIRMATION_HELP = 'A rendelés meglétét vagy állapotát ebből a besz
 
 const WEBSHOP_TERMS_URL = 'https://www.vitalis-szappan.hu/shop_help.php';
 const BUSINESS_ANSWERS = Object.freeze({
-  shipping_cheapest: 'A legolcsóbb szállítási mód megnevezéséhez és díjához még nincs jóváhagyott, aktuális adatunk.',
-  parcel_locker: 'A csomagautomatás átvétel aktuális elérhetőségéről még nincs jóváhagyott adatunk.',
-  shipping_carrier: 'A Foxpost és a többi futárszolgálat aktuális elérhetőségéről még nincs jóváhagyott adatunk.',
-  personal_pickup: 'A személyes átvétel aktuális feltételeiről még nincs jóváhagyott adatunk.',
-  registration_phone_format: 'A regisztrációnál elfogadott telefonszám-formátumról még nincs jóváhagyott adatunk.',
-  cash_on_delivery: 'Igen. Utánvétnél a termékek árát, a szállítási díjat és a készpénz-kezelési díjat átvételkor, a futárnak lehet kifizetni készpénzben.',
   card_payment: 'Igen, bankkártyával lehet fizetni: az online bankkártyás fizetés a Barion rendszerén keresztül történik.'
 });
 
@@ -61,6 +56,10 @@ function createCommerceAssistance({ catalog = createCatalogSearch() } = {}) {
     if (routing.intent === 'order_confirmation_problem') return { source: 'commerce-assistance', answer: CONFIRMATION_HELP, links: [], suggestions: [], confidence: 100, intent: routing.intent };
     const detail = routing.turnIntent?.detail;
     const businessIntent = ['cash_on_delivery', 'card_payment'].includes(detail) ? detail : routing.intent;
+    const approved = resolveApprovedBusinessFact(businessIntent);
+    if (approved) return {
+      source: 'commerce-assistance', ...approved, links: [], suggestions: [], confidence: 100, intent: routing.intent
+    };
     if (BUSINESS_ANSWERS[businessIntent]) return {
       source: 'commerce-assistance', answer: BUSINESS_ANSWERS[businessIntent], links: [], suggestions: [], confidence: 100,
       intent: routing.intent,

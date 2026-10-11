@@ -8,15 +8,17 @@ const { ExpertRuleEngine } = require('./engine/rule-engine.cjs');
 const { structuredState } = require('./engine/conversation-memory.cjs');
 
 const ruleEngine = new ExpertRuleEngine(path.join(__dirname, 'data', 'rules', 'expert-rules.json'));
-const ask = (question, history = []) => createAnswer({
-  question, history, knowledge, ruleEngine, conversationState: structuredState(history), logGap() {}
+const ask = (question, history = [], conversationState = structuredState(history)) => createAnswer({
+  question, history, knowledge, ruleEngine, conversationState, logGap() {}
 });
 
 const shipping = ask('Mennyi a szállítás?');
 assert.equal(shipping.route, 'business_info');
 assert.equal(shipping.intent, 'shipping_cost');
-assert.match(shipping.answer, /nincs jóváhagyott adatunk/i);
-assert.doesNotMatch(shipping.answer, /\b\d[\d .]*\s*(?:Ft|forint)\b/i);
+for (const expected of ['GLS házhozszállítás: 1 850 Ft', 'GLS CsomagPont: 1 390 Ft', 'Csomagautomata: 1 500 Ft', 'MPL: 4 500 Ft']) {
+  assert.match(shipping.answer, new RegExp(expected), expected);
+}
+assert.equal(shipping.businessFactStatus, 'OWNER_APPROVED');
 
 const history = [
   { role: 'user', content: 'Mennyi a szállítás?' },
@@ -25,22 +27,31 @@ const history = [
 const cheapest = ask('melyik a legolcsóbb?', history);
 assert.equal(cheapest.route, 'commerce');
 assert.equal(cheapest.intent, 'shipping_cheapest');
-assert.equal(cheapest.businessFactStatus, 'BUSINESS_CONTENT_NEEDED');
-assert.match(cheapest.answer, /nincs jóváhagyott, aktuális adatunk/i);
+assert.equal(cheapest.businessFactStatus, 'OWNER_APPROVED');
+assert.match(cheapest.answer, /GLS CsomagPont.*1 390 Ft/i);
+
+const directCheapest = ask('Mi a legolcsóbb szállítás?');
+assert.equal(directCheapest.intent, 'shipping_cheapest');
+assert.match(directCheapest.answer, /GLS CsomagPont.*1 390 Ft/i);
+
+const persistedCheapest = ask('Melyik a legolcsóbb?', [], { ...structuredState([]), lastUserIntent: 'shipping_cost' });
+assert.equal(persistedCheapest.route, 'commerce');
+assert.equal(persistedCheapest.intent, 'shipping_cheapest');
+assert.match(persistedCheapest.answer, /GLS CsomagPont.*1 390 Ft/i);
 
 for (const [question, intent, phrase] of [
-  ['Csomagautomatába lehet kérni?', 'parcel_locker', 'csomagautomatás'],
-  ['automatába?', 'parcel_locker', 'csomagautomatás'],
-  ['Foxpost van?', 'shipping_carrier', 'Foxpost'],
-  ['foxpost?', 'shipping_carrier', 'Foxpost'],
-  ['Személyesen átvehetem?', 'personal_pickup', 'személyes átvétel'],
-  ['személyes átvétel van?', 'personal_pickup', 'személyes átvétel'],
-  ['Regisztrációnál milyen formátumban adjam meg a telefonszámot?', 'registration_phone_format', 'telefonszám-formátum']
+  ['Csomagautomatába lehet kérni?', 'parcel_locker', '1 500 Ft'],
+  ['Automatába mennyi?', 'parcel_locker', '1 500 Ft'],
+  ['Foxpost van?', 'shipping_carrier', 'Nem, Foxpost'],
+  ['foxpost?', 'shipping_carrier', 'Nem, Foxpost'],
+  ['Személyesen átvehetem?', 'personal_pickup', 'Nem, személyes átvétel'],
+  ['személyes átvétel van?', 'personal_pickup', 'Nem, személyes átvétel'],
+  ['Regisztrációnál milyen formátumban adjam meg a telefonszámot?', 'registration_phone_format', '06301234567']
 ]) {
   const result = ask(question);
   assert.equal(result.route, 'commerce', question);
   assert.equal(result.intent, intent, question);
-  assert.equal(result.businessFactStatus, 'BUSINESS_CONTENT_NEEDED', question);
+  assert.equal(result.businessFactStatus, 'OWNER_APPROVED', question);
   assert.match(result.answer, new RegExp(phrase, 'i'), question);
 }
 
@@ -48,9 +59,9 @@ for (const question of ['Utánvéttel lehet fizetni?', 'utánvét?']) {
   const result = ask(question);
   assert.equal(result.route, 'commerce', question);
   assert.equal(result.intent, 'payment', question);
-  assert.equal(result.businessFactStatus, 'CURRENT_VERIFIED', question);
-  assert.match(result.answer, /futárnak.*készpénzben/i, question);
-  assert.match(result.provenance[0].url, /vitalis-szappan\.hu\/shop_help\.php/);
+  assert.match(result.answer, /450 Ft/i, question);
+  assert.equal(result.businessFactStatus, 'OWNER_APPROVED', question);
+  assert.equal(result.provenance[0].sourceType, 'owner_approved_business_info');
 }
 
 for (const question of ['Bankkártyával lehet fizetni?', 'kártyával fizethetek?']) {

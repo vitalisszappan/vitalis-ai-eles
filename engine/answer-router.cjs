@@ -74,7 +74,7 @@ function decision(overrides = {}) {
 }
 
 function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, conversationState = null }) {
-  const goal = detectCustomerGoal(question, history);
+  const goal = detectCustomerGoal(question, history, conversationState);
   const turnIntent = goal.turnIntent;
   const productQuestionIntent = turnIntent.productQuestionIntent;
   const problem = detectProblemIntent(question);

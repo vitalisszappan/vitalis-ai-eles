@@ -35,16 +35,18 @@ function hasCommerceDomainEvidence(question, { hasProductContext = false, direct
   return false;
 }
 
-function hasRecentShippingContext(history = []) {
+function hasRecentShippingContext(history = [], conversationState = null) {
+  if (['shipping_cost', 'shipping_cheapest', 'shipping_general', 'parcel_locker', 'shipping_carrier', 'personal_pickup']
+    .some((intent) => [conversationState?.lastCommerceFocus, conversationState?.lastAssistantIntent, conversationState?.lastUserIntent].includes(intent))) return true;
   const lastAssistant = [...history].reverse().find((item) => item?.role === 'assistant');
   const intent = lastAssistant?.intent || lastAssistant?.routing?.intent;
   return ['business_info', 'commerce'].includes(lastAssistant?.route)
     && ['shipping_cost', 'shipping_cheapest', 'shipping_general', 'parcel_locker', 'shipping_carrier', 'personal_pickup'].includes(intent);
 }
 
-function detectCommerceIntent(question, history = []) {
+function detectCommerceIntent(question, history = [], conversationState = null) {
   const text = normalize(question);
-  if (hasRecentShippingContext(history) && /^(?:es )?(?:melyik|mi) (?:a )?(?:legolcsobb|legkedvezobb)(?: szallitas)?[?!.]*$/.test(text)) {
+  if (hasRecentShippingContext(history, conversationState) && /^(?:es )?(?:melyik|mi) (?:a )?(?:legolcsobb|legkedvezobb)(?: szallitas)?[?!.]*$/.test(text)) {
     return { intent: 'shipping_cheapest', evidence: ['commerce:shipping_cheapest', 'context:shipping'] };
   }
   for (const [intent, pattern] of PATTERNS) {

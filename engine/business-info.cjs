@@ -10,6 +10,43 @@ const SHIPPING_COST = /\bhol latom\b.*\b(szallit\w*|kiszallit\w*)\b.*\b(dij|kolt
 const FREE_SHIPPING = /\b(ingyenes|dijmentes)\b.*\b(szallit\w*|kiszallit\w*|posta\w*)\b|\b(szallit\w*|kiszallit\w*)\b.*\b(ingyenes|dijmentes)\b/;
 const CARRIER = /\b(gls|mpl|dpd|futarszolgalat\w*|melyik futar\w*)\b/;
 
+const OWNER_APPROVED_BUSINESS_FACTS = Object.freeze({
+  shippingMethods: Object.freeze([
+    Object.freeze({ id: 'gls_home', name: 'GLS házhozszállítás', price: 1850, currency: 'HUF' }),
+    Object.freeze({ id: 'gls_parcel_point', name: 'GLS CsomagPont', price: 1390, currency: 'HUF' }),
+    Object.freeze({ id: 'parcel_locker', name: 'Csomagautomata', price: 1500, currency: 'HUF' }),
+    Object.freeze({ id: 'mpl', name: 'MPL', price: 4500, currency: 'HUF' })
+  ]),
+  foxpostAvailable: false,
+  personalPickupAvailable: false,
+  cashOnDeliveryHandlingFee: Object.freeze({ amount: 450, currency: 'HUF' }),
+  registrationPhoneExample: '06301234567'
+});
+
+const OWNER_APPROVED_PROVENANCE = Object.freeze([{ sourceType: 'owner_approved_business_info', approvalStatus: 'OWNER_APPROVED' }]);
+
+function forints(value) {
+  return `${String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} Ft`;
+}
+
+function resolveApprovedBusinessFact(intent) {
+  const facts = OWNER_APPROVED_BUSINESS_FACTS;
+  const shipping = facts.shippingMethods.map((method) => `${method.name}: ${forints(method.price)}`).join('; ');
+  const cheapest = facts.shippingMethods.reduce((best, method) => method.price < best.price ? method : best);
+  const locker = facts.shippingMethods.find((method) => method.id === 'parcel_locker');
+  const answers = {
+    shipping_cost: `Az elérhető szállítási díjak: ${shipping}.`,
+    shipping_cheapest: `A legolcsóbb szállítási mód a ${cheapest.name}: ${forints(cheapest.price)}.`,
+    parcel_locker: `Igen, csomagautomatába is kérheted. A díja ${forints(locker.price)}.`,
+    shipping_carrier: facts.foxpostAvailable ? 'Igen, a Foxpost elérhető.' : 'Nem, Foxpost jelenleg nem érhető el.',
+    personal_pickup: facts.personalPickupAvailable ? 'Igen, személyes átvétel elérhető.' : 'Nem, személyes átvétel jelenleg nem elérhető.',
+    cash_on_delivery: `Igen, utánvéttel lehet fizetni. Az utánvét kezelési díja ${forints(facts.cashOnDeliveryHandlingFee.amount)}.`,
+    registration_phone_format: `A telefonszámot ilyen formátumban add meg: ${facts.registrationPhoneExample}.`
+  };
+  if (!answers[intent]) return null;
+  return { answer: answers[intent], businessFactStatus: 'OWNER_APPROVED', provenance: OWNER_APPROVED_PROVENANCE };
+}
+
 function detectBusinessInfo(question) {
   const text = normalize(question);
   if (!text) return null;
@@ -32,15 +69,17 @@ function resolveBusinessInfo(intent, catalog) {
     general_catalog: categories.length
       ? `A jelenlegi kínálat fő kategóriái: ${categories.join(', ')}.`
       : 'A jelenlegi termékkategóriákat most nem tudom biztosan felsorolni.',
-    shipping_cost: 'A pontos, aktuális szállítási díjakról még nincs jóváhagyott adatunk, ezért nem mondok bizonytalan összeget.',
+    shipping_cost: resolveApprovedBusinessFact('shipping_cost').answer,
     shipping_time: 'A kiszállítás általában körülbelül 2 munkanap, a pontos idő a választott szállítási módtól függ.',
     shipping_carrier_unknown: 'A jelenlegi jóváhagyott adatainkból nem tudom biztosan megmondani, melyik futárszolgálat érhető el. Az aktuális szállítási módokat a pénztárban látod.',
     shipping_free_unknown: 'A jelenlegi jóváhagyott adatainkból nem tudom biztosan megmondani, van-e ingyenes kiszállítás. Az aktuális feltételeket a pénztárban tudod ellenőrizni.'
   };
+  const approved = resolveApprovedBusinessFact(intent);
   return {
     source: 'business-info', answer: answers[intent] || '', confidence: 100,
-    links: [], suggestions: [], ruleId: null, intent, matchedKnowledgeIds: []
+    links: [], suggestions: [], ruleId: null, intent, matchedKnowledgeIds: [],
+    ...(approved ? { businessFactStatus: approved.businessFactStatus, provenance: approved.provenance } : {})
   };
 }
 
-module.exports = { detectBusinessInfo, resolveBusinessInfo };
+module.exports = { OWNER_APPROVED_BUSINESS_FACTS, detectBusinessInfo, resolveApprovedBusinessFact, resolveBusinessInfo };
