@@ -571,6 +571,20 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
     return attachDecision(buildProductReferenceAnswer(target, knowledge), routing);
   }
 
+  if (routing.route === 'recommendation_alternative') {
+    const target = routing.contextTarget;
+    if (!target) {
+      const answer = routing.cheaperAlternative
+        ? 'A mostani ajánlási lehetőségek között nem találtam igazoltan olcsóbb terméket.'
+        : 'Ehhez az ajánláshoz most nem találtam másik, biztosan megfelelő terméket.';
+      return attachDecision({ source: 'conversation-context', answer, confidence: 100, links: [], suggestions: [], ruleId: 'recommendation-alternative-none', intent: routing.intent, matchedKnowledgeIds: [] }, routing);
+    }
+    const card = productCards([target])[0];
+    const priceText = routing.cheaperAlternative && card?.price != null ? ` Jelenlegi ára ${formatWholeForint(card.price)} Ft.` : '';
+    const answer = `Másik releváns lehetőség: ${PRODUCTS[target]?.name || card?.name || 'a következő termék'}.${priceText}`;
+    return attachDecision({ source: 'conversation-context', answer, confidence: 100, links: card ? [card] : [], suggestions: [], ruleId: 'recommendation-alternative', intent: routing.intent, matchedKnowledgeIds: [] }, routing);
+  }
+
   if (routing.route === 'expert_rule') {const expert=ruleEngine.resolve(question, history);if(expert&&routing.productTypeConstraint){const constrained=(expert.links||[]).filter(item=>matchesProductType(item,routing.productTypeConstraint)||(routing.productTypeConstraint==='szappan'&&item.id==='tengeri_soszappan'));if(constrained.length)return attachDecision({...expert,links:constrained,answer:`A k\u00e9rt ${routing.productTypeConstraint} kateg\u00f3ri\u00e1ban els\u0151k\u00e9nt a ${constrained[0].name} term\u00e9ket javaslom.`},routing);}return attachDecision(expert,routing);}
 
   if (routing.route === 'exact_product') {

@@ -6,6 +6,7 @@ const { normalize } = require('./normalizer.cjs');
 const SUPPORTED_INTENTS = Object.freeze(['product_recommendation', 'product_description', 'product_suitability', 'product_benefits', 'ingredients', 'ingredient_benefit', 'usage', 'price_query', 'order_start', 'comparison']);
 
 function detectAnswerIntent(question, routing) {
+  if (routing?.route === 'recommendation_alternative') return null;
   if (routing?.route === 'expert_rule' && routing.intent === 'product_companion') return null;
   if (routing?.answerIntent === 'product_recommendation'
     && (routing?.route !== 'expert_rule' || routing?.productTypeConstraint)) return null;

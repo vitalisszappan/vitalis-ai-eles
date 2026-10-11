@@ -18,6 +18,7 @@ const { resolveGuidedDiscovery } = require('./guided-discovery.cjs');
 const { resolveAcneDecision } = require('./acne-decision.cjs');
 const { buildProblemDomainDecision } = require('./problem-domain-decision.cjs');
 const { extractSubtypeRequest, compatibleSubtypeExpert, subtypeCardIdentity } = require('./product-type-constraint.cjs');
+const productFacts = require('./product-facts.cjs');
 
 const catalog = createCatalogSearch();
 
@@ -34,6 +35,33 @@ function hasUnresolvedNamedProduct(question, category, productQuestionIntent, go
   const typeIndex = tokens.findIndex((token) => PRODUCT_TYPE_WORD.test(token));
   if (typeIndex < 0) return false;
   return tokens.slice(0, typeIndex).some((token) => token.length >= 3 && !NON_NAME_WORDS.has(token));
+}
+
+function activeRecommendationContext(history, context) {
+  const lastAssistant = [...history].reverse().find((item) => item?.role === 'assistant');
+  const products = [...new Set(context.lastRecommendedProducts || [])];
+  const recommendationRoute = ['expert_rule', 'product_category', 'problem_domain', 'hair_product_type'].includes(lastAssistant?.route);
+  return recommendationRoute && products.length ? { products, primary: context.lastFocusProduct || products[0] } : null;
+}
+
+function recommendationAlternative(question, history, context) {
+  const text = normalize(question);
+  const asksCheaper = /\bolcsobb(?:\s+is)?\s+van\b|\bvan\s+(?:is\s+)?olcsobb\b/.test(text);
+  const asksAnother = /\bvan\s+masik(?:\s+lehetoseg)?\b|\bmutass\w*\s+masikat\b/.test(text);
+  if (!asksCheaper && !asksAnother) return null;
+  const active = activeRecommendationContext(history, context);
+  if (!active) return null;
+  const alternatives = active.products.filter((id) => id !== active.primary);
+  if (!asksCheaper) return { cheaper: false, primary: active.primary, productId: alternatives[0] || null };
+  const price = (id) => {
+    const fact = productFacts.getFact(id, 'price');
+    return fact.status === 'grounded' && Number.isFinite(fact.value) ? fact.value : null;
+  };
+  const primaryPrice = price(active.primary);
+  const priced = alternatives.map((id) => ({ id, price: price(id) })).filter((item) => item.price !== null)
+    .sort((left, right) => left.price - right.price);
+  const productId = primaryPrice === null ? null : priced.find((item) => item.price < primaryPrice)?.id || null;
+  return { cheaper: true, primary: active.primary, productId };
 }
 
 function decision(overrides = {}) {
@@ -163,6 +191,14 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
       domain: 'product', contextUsed: false, contextTarget: 'product', matchedCanonicalIds: ambiguousFamilyIds,
       matchedProductIds: ambiguousFamilyIds, confidence: 1, threshold: 1,
       rejectionReasons: ['ambiguous_product_family'], responseSource: 'conversation-context' });
+  }
+  const alternative = recommendationAlternative(question, history, context);
+  if (alternative) {
+    return decision({ ...base, route: 'recommendation_alternative', intent: alternative.cheaper ? 'cheaper_recommendation' : 'alternative_reference',
+      goal: 'select_recommendation', domain: 'product', contextUsed: true, contextTarget: alternative.productId,
+      matchedCanonicalIds: alternative.productId ? [alternative.productId] : [], matchedProductIds: alternative.productId ? [alternative.productId] : [],
+      primaryProductId: alternative.productId, alternativeToProductId: alternative.primary, cheaperAlternative: alternative.cheaper,
+      confidence: 1, threshold: 1, rejectionReasons: alternative.productId ? [] : ['no_valid_recommendation_alternative'], responseSource: 'conversation-context' });
   }
   const contextualComparisonIds = productQuestionIntent === 'comparison' && directCanonicalIds.length < 2 && /\b(koztuk|kettejuk|mindketto)\b/.test(normalizedCurrent)
     ? [...new Set(context.lastRecommendedProducts || [])].filter((id) => require('./product-catalog.cjs').PRODUCTS[id]).slice(0, 2)
