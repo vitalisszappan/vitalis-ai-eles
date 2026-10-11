@@ -70,6 +70,30 @@ async function runConversation(name, productId, questions) {
   await runConversation('cream', 'dermavital_krem', [
     'Dermavital krém', 'Mit csinál?', 'Hogy kenjem?', 'Hány forint?'
   ]);
+  await runConversation('teafa', 'teafa_szappan', [
+    'Teafa szappan', 'Mire jó?', 'Hogy használjam?', 'Mennyi az ára?'
+  ]);
+  await runConversation('oliva', 'oliva_szappan', [
+    'Olíva szappan', 'Mire jó?', 'Hogy használjam?', 'Mennyi az ára?'
+  ]);
+  await runConversation('charcoal', 'aktiv_szenes_szappan', [
+    'Aktív szenes szappan', 'Mire jó?', 'Hogy használjam?', 'Mennyi az ára?'
+  ]);
+  await runConversation('psori', 'psorivital_csomag', [
+    'PsoriVital csomag', 'Mire jó?', 'Hogy használjam?', 'Mennyi az ára?'
+  ]);
+
+  const shippingSession = 'product-focus-continuity-shipping';
+  const shippingRows = [];
+  const shippingQuestions = ['Olíva szappan', 'Mennyibe kerül?', 'És a szállítás?', 'És ezt hogy kell használni?'];
+  for (const [index, question] of shippingQuestions.entries()) {
+    const memory = await rehydrateSessionHistory({ sessionId: shippingSession, clientHistory: [], loadRows: async () => validateConversationHistoryRows(shippingRows) });
+    const result = ask(question, memory.history, memory.state);
+    if (index === 1 || index === 3) assert.equal(result.targetProductId, 'oliva_szappan', question);
+    shippingRows.push(row(shippingSession, question, result, index));
+  }
+  const shippingMemory = await rehydrateSessionHistory({ sessionId: shippingSession, clientHistory: [], loadRows: async () => validateConversationHistoryRows(shippingRows) });
+  assert.equal(shippingMemory.state.focusedProductId, 'oliva_szappan');
 
   console.log('PRODUCT_FOCUS_CONTINUITY_OK');
 })().catch((error) => {
