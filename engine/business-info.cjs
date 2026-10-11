@@ -32,7 +32,7 @@ function resolveBusinessInfo(intent, catalog) {
     general_catalog: categories.length
       ? `A jelenlegi kínálat fő kategóriái: ${categories.join(', ')}.`
       : 'A jelenlegi termékkategóriákat most nem tudom biztosan felsorolni.',
-    shipping_cost: 'A szállítás díja a választott szállítási és fizetési módtól függ; az aktuális összeget a pénztár mutatja.',
+    shipping_cost: 'A pontos, aktuális szállítási díjakról még nincs jóváhagyott adatunk, ezért nem mondok bizonytalan összeget.',
     shipping_time: 'A kiszállítás általában körülbelül 2 munkanap, a pontos idő a választott szállítási módtól függ.',
     shipping_carrier_unknown: 'A jelenlegi jóváhagyott adatainkból nem tudom biztosan megmondani, melyik futárszolgálat érhető el. Az aktuális szállítási módokat a pénztárban látod.',
     shipping_free_unknown: 'A jelenlegi jóváhagyott adatainkból nem tudom biztosan megmondani, van-e ingyenes kiszállítás. Az aktuális feltételeket a pénztárban tudod ellenőrizni.'

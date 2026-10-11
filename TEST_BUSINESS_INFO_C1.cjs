@@ -49,7 +49,8 @@ for (const question of [
   'Mekkora a szállítási költség?', 'A szállítás mennyibe kerül?', 'Mennyit fizetek a postázásért?',
   'Mennyi a szállítás?', 'Hol látom a szállítási díjat?'
 ]) check(question, 'shipping_cost', ({ answer }) => {
-  assert.match(answer, /pénztár/i);
+  assert.match(answer, /nincs jóváhagyott adatunk/i);
+  assert.doesNotMatch(answer, /\b\d[\d .]*\s*(?:Ft|forint)\b/i);
   assert.doesNotMatch(answer, /melyik termékre/i);
 });
 

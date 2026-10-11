@@ -13,7 +13,7 @@ const COMMERCE_GOALS = Object.freeze({
   shipping_cost: 'ask_shipping', shipping_time: 'ask_shipping', payment: 'ask_payment', order_status: 'start_order',
   ordering_help: 'start_order', order_confirmation_problem: 'start_order', checkout_problem: 'start_order',
   shipping_cheapest: 'ask_shipping', parcel_locker: 'ask_shipping', shipping_carrier: 'ask_shipping',
-  personal_pickup: 'ask_shipping', cash_on_delivery: 'ask_payment'
+  personal_pickup: 'ask_shipping', cash_on_delivery: 'ask_payment', registration_phone_format: 'business_information'
 });
 
 const PRODUCT_ANSWER_INTENTS = Object.freeze({
@@ -27,9 +27,9 @@ function detectTurnIntent(question, history = []) {
   if (couponIntent) return { category: 'coupon', intent: couponIntent, answerIntent: 'coupon_information', productQuestionIntent: null, source: 'coupon-policy' };
   const business = detectBusinessInfo(question);
   if (business) return { category: 'commerce', intent: business.intent, answerIntent: null, productQuestionIntent: null, source: 'business-info' };
-  const commerce = detectCommerceIntent(question);
+  const commerce = detectCommerceIntent(question, history);
   if (commerce) {
-    const intent = commerce.intent === 'cash_on_delivery' ? 'payment' : commerce.intent;
+    const intent = ['cash_on_delivery', 'card_payment'].includes(commerce.intent) ? 'payment' : commerce.intent;
     return { category: 'commerce', intent, detail: commerce.intent, answerIntent: intent === 'price_query' ? 'price_query' : intent === 'order_start' ? 'order_start' : null, productQuestionIntent: null, source: 'commerce-intents' };
   }
   const productQuestionIntent = detectProductQuestionIntent(question);

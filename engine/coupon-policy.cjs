@@ -66,7 +66,7 @@ function detectCouponIntent(question, history = []) {
   if (/\b(mekkora|mennyi|hany szazalek)\b.*\b(kedvezmeny|kupon)\b/.test(q)) return 'discount_value';
   if (/\b(van)\b.*\b(kupon|kedvezmeny)\w*|\b(hogyan|hogy)\b.*\bkaphat\w*\b.*\bkupont\b/.test(q)
     || (couponWord && /\b(jar|keres)\w*\b/.test(q))) return 'coupon_exists';
-  if (/\b(regisztral\w*|regisztracio\w*)\b/.test(q)) return 'registration';
+  if (/\b(regisztral\w*|regisztracio\w*)\b/.test(q) && !/\btelefonszam\w*\b/.test(q)) return 'registration';
   if (/\b(bejelentkez\w*|jelentkez\w*|belep\w*)\b/.test(q)) return 'login';
   if (/\b(csak hirlevel|barki|ki hasznalhat)\b/.test(q)) return 'business_eligibility';
   if (/\b(nem mukodik|ervenytelen\w*|lejart\w*|felhasznalt\w*)\b/.test(q)) {

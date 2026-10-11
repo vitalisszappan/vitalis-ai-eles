@@ -7,6 +7,17 @@ const CHECKOUT_HELP = 'Sajnálom, hogy elakadtál; írd meg, hogy a kosárnál, 
 const ORDERING_HELP = 'Válaszd ki a terméket, nyisd meg a termékkártyán a webshopos termékoldalt, majd a webshopban tedd kosárba, és kövesd a pénztár lépéseit.';
 const CONFIRMATION_HELP = 'A rendelés meglétét vagy állapotát ebből a beszélgetésből nem tudom ellenőrizni. Rendelésspecifikus ellenőrzéshez írj az ugyfelszolgalat@vitalis-szappan.hu címre. Bankkártyaadatot, jelszót vagy más érzékeny fizetési adatot ne küldj.';
 
+const WEBSHOP_TERMS_URL = 'https://www.vitalis-szappan.hu/shop_help.php';
+const BUSINESS_ANSWERS = Object.freeze({
+  shipping_cheapest: 'A legolcsóbb szállítási mód megnevezéséhez és díjához még nincs jóváhagyott, aktuális adatunk.',
+  parcel_locker: 'A csomagautomatás átvétel aktuális elérhetőségéről még nincs jóváhagyott adatunk.',
+  shipping_carrier: 'A Foxpost és a többi futárszolgálat aktuális elérhetőségéről még nincs jóváhagyott adatunk.',
+  personal_pickup: 'A személyes átvétel aktuális feltételeiről még nincs jóváhagyott adatunk.',
+  registration_phone_format: 'A regisztrációnál elfogadott telefonszám-formátumról még nincs jóváhagyott adatunk.',
+  cash_on_delivery: 'Igen. Utánvétnél a termékek árát, a szállítási díjat és a készpénz-kezelési díjat átvételkor, a futárnak lehet kifizetni készpénzben.',
+  card_payment: 'Igen, bankkártyával lehet fizetni: az online bankkártyás fizetés a Barion rendszerén keresztül történik.'
+});
+
 function safeCatalogCard(target, catalog) {
   const canonical = productCards([target])[0];
   if (canonical?.url && canonical.availability?.public !== false && canonical.availability?.active !== false && canonical.availability?.orderable !== false) return canonical;
@@ -48,6 +59,14 @@ function createCommerceAssistance({ catalog = createCatalogSearch() } = {}) {
       return { source: 'commerce-assistance', answer: CHECKOUT_HELP, links: card ? [card] : [], suggestions: [], confidence: 100, intent: routing.intent, targetProductId: card ? target : null };
     }
     if (routing.intent === 'order_confirmation_problem') return { source: 'commerce-assistance', answer: CONFIRMATION_HELP, links: [], suggestions: [], confidence: 100, intent: routing.intent };
+    const detail = routing.turnIntent?.detail;
+    const businessIntent = ['cash_on_delivery', 'card_payment'].includes(detail) ? detail : routing.intent;
+    if (BUSINESS_ANSWERS[businessIntent]) return {
+      source: 'commerce-assistance', answer: BUSINESS_ANSWERS[businessIntent], links: [], suggestions: [], confidence: 100,
+      intent: routing.intent,
+      businessFactStatus: ['cash_on_delivery', 'card_payment'].includes(businessIntent) ? 'CURRENT_VERIFIED' : 'BUSINESS_CONTENT_NEEDED',
+      provenance: ['cash_on_delivery', 'card_payment'].includes(businessIntent) ? [{ sourceType: 'current_webshop_terms', url: WEBSHOP_TERMS_URL }] : []
+    };
     return null;
   }
   return { resolve };

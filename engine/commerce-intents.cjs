@@ -12,8 +12,10 @@ const PATTERNS = [
   ['cash_on_delivery', /\b(utanvet|utanvetel)\w*|\b(futarnal|kezbesitonel)\b.*\b(fizet|atvetel)\w*/],
   ['shipping_carrier', /\b(foxpost|gls|mpl|dpd|futarszolgalat)\w*\b|\bmelyik futar\w*/],
   ['personal_pickup', /\b(szemelyes\w*\s+atvet|szemelyesen\s+atve|bemehetek erte|elmehetek erte)\w*/],
+  ['registration_phone_format', /\b(regisztracio\w*|regisztral\w*)\b.*\btelefonszam\w*\b|\btelefonszam\w*\b.*\b(regisztracio\w*|regisztral\w*)\b/],
   ['shipping_time', /\b(mikor erkezik|mennyi ido|hany nap|szallitasi ido)\b/],
   ['shipping_general', /\b(hogy|hogyan|mivel)?\s*szallit|szallitas\w*|kiszallitas\w*/],
+  ['card_payment', /\b(bankkartya|kartyaval|bankkartyas)\w*/],
   ['payment', /\b(fizetes|fizetni|fizethetek|bankkartya|kartyaval|paypal)\w*/],
   ['availability_query', /\b(keszleten|elerheto|rendelheto)\b/],
   ['price_query', /\b(mennyibe kerul|mennyi az ara|mennyiert|mennyiert adjatok|ara mennyi|mi az ara|hany forint\w*|ez mennyi|mennyi most|jelenlegi ar|ara erdekel)\b/],
@@ -33,8 +35,18 @@ function hasCommerceDomainEvidence(question, { hasProductContext = false, direct
   return false;
 }
 
-function detectCommerceIntent(question) {
+function hasRecentShippingContext(history = []) {
+  const lastAssistant = [...history].reverse().find((item) => item?.role === 'assistant');
+  const intent = lastAssistant?.intent || lastAssistant?.routing?.intent;
+  return ['business_info', 'commerce'].includes(lastAssistant?.route)
+    && ['shipping_cost', 'shipping_cheapest', 'shipping_general', 'parcel_locker', 'shipping_carrier', 'personal_pickup'].includes(intent);
+}
+
+function detectCommerceIntent(question, history = []) {
   const text = normalize(question);
+  if (hasRecentShippingContext(history) && /^(?:es )?(?:melyik|mi) (?:a )?(?:legolcsobb|legkedvezobb)(?: szallitas)?[?!.]*$/.test(text)) {
+    return { intent: 'shipping_cheapest', evidence: ['commerce:shipping_cheapest', 'context:shipping'] };
+  }
   for (const [intent, pattern] of PATTERNS) {
     if (pattern.test(text)) return { intent, evidence: [`commerce:${intent}`] };
   }
