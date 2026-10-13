@@ -24,6 +24,7 @@ const cases = [
   ['Automatába lehet kérni?', 'commerce', 'parcel_locker', null],
   ['Utánvéttel fizethetek?', 'commerce', 'payment', null],
   ['Hogyan jutok hozzá a hírleveles kedvezményhez?', 'coupon', 'acquisition', 'coupon_information'],
+  ['Megadtam az adataimat, de nem kaptam meg az első vásárlási kupont.', 'coupon', 'delivery_missing', 'coupon_information'],
   ['Személyesen átvehető?', 'commerce', 'personal_pickup', null],
   ['Van Foxpost?', 'commerce', 'shipping_carrier', null]
 ];

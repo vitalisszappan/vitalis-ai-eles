@@ -214,7 +214,7 @@ function materializePlannedAnswer(plan, routing) {
     }
     return { ...base, answer, links: cards };
   }
-  if (plan.responseStrategy === 'clarify_product') return { ...base, answer: 'Melyik termékre gondolsz?', links: [] };
+  if (plan.responseStrategy === 'clarify_product') return { ...base, answer: 'Melyik termékre gondolsz?', links: [], ...(routing?.rejectionReasons?.some((reason) => ['missing_product_context', 'ambiguous_product_reference'].includes(reason)) ? { fallbackRootCause: 'context_missing' } : {}) };
   const byType = Object.fromEntries(plan.factsUsed.map((fact) => [fact.factType, fact]));
   const firstClaim = (fact) => fact?.status === 'grounded' && Array.isArray(fact.value) ? fact.value[0]?.claim : null;
   if (plan.answerIntent === 'product_recommendation') {

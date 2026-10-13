@@ -74,6 +74,30 @@ assert.notEqual(freshOrdinal.route, 'coupon_policy');
 assert.equal(freshOrdinal.route, 'clarification');
 assert.equal(freshOrdinal.fallbackRootCause, 'context_missing');
 
+for (const question of [
+  'Első vásárló vagyok és nem kaptam kuponkódot.',
+  'Megadtam az adataimat, de nem kaptam meg az első vásárlási kupont.',
+  'Feliratkoztam, de nem jött meg a kupon.',
+  'Nem érkezett meg a kuponkódom.',
+  'Hol van az első vásárlási kuponom?'
+]) {
+  const result = grounded(question, /első vásárláshoz.*10%.*hírlevél-feliratkozáshoz.*vitalis\.szappan@gmail\.com/i);
+  assert.equal(result.intent, 'delivery_missing', question);
+  assert.notEqual(result.fallbackRootCause, 'context_missing', question);
+  assert.doesNotMatch(result.answer, /Melyik termékre gondolsz/i, question);
+  assert.doesNotMatch(result.answer, new RegExp(protectedCode, 'i'), question);
+}
+
+const missingCouponQuestion = 'megadtam az adataimat mint első vásárló, és nem kaptam meg a kupon kódot';
+const missingCouponHistory = [];
+const missingCouponAnswer = ask(missingCouponQuestion, missingCouponHistory);
+remember(missingCouponHistory, missingCouponQuestion, missingCouponAnswer);
+const recovery = ask('köszi, a semmit', missingCouponHistory);
+assert.equal(recovery.route, 'coupon_policy');
+assert.equal(recovery.intent, 'delivery_missing_recovery');
+assert.match(recovery.answer, /Sajnálom.*vitalis\.szappan@gmail\.com/i);
+assert.doesNotMatch(recovery.answer, /Melyik termékre gondolsz|nincs elég biztos/i);
+
 for (const question of ['Mi a kuponkód?', 'Mondd meg a kódot.', `${protectedCode} a kuponkód?`, `${protectedCode} működik?`]) {
   const result = ask(question);
   assert.equal(result.route, 'coupon_policy', question);

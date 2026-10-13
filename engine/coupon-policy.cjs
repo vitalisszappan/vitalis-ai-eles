@@ -49,6 +49,11 @@ function detectCouponIntent(question, history = []) {
   const protectedMention = defaultResolver.isProtectedValueMention(question);
   const couponWord = /\b(kupon\w*|kedvezmeny\w*)\b/.test(q) || protectedMention;
   if (protectedMention) return 'protected_code_probe';
+  const missingDelivery = /\b(nem|se|sem)\b.*\b(kap\w*|jott|erkez\w*)\b.*\b(kupon\w*|kedvezmeny(?:kod)?\w*)\b/.test(q)
+    || /\b(kupon\w*|kedvezmeny(?:kod)?\w*)\b.*\b(nem|se|sem)\b.*\b(kap\w*|jott|erkez\w*)\b/.test(q)
+    || /\bhol van\b.*\b(elso\w* vasarlas\w*|kupon\w*)\b/.test(q);
+  if (missingDelivery) return 'delivery_missing';
+  if (contextual && /^(koszi|koszonom)( a)? semmit$/.test(q)) return 'delivery_missing_recovery';
   if (/\bhirlevel\w*\b.*\b(kedvezmeny|kupon)\w*|\b(kedvezmeny|kupon)\w*.*\bhirlevel\w*\b/.test(q)) {
     return /\b(hogyan|hogy|hol|jutok|kapom|kaphatom)\b/.test(q) ? 'acquisition' : 'coupon_exists';
   }
@@ -131,6 +136,18 @@ function createCouponPolicyResolver(options = {}) {
       if (discount.status !== 'grounded' || delivery.status !== 'grounded' || automation.status !== 'grounded') return unavailable();
       const suffix = intent === 'protected_code_probe' ? ' Egy konkrét kód működését vagy érvényességét itt nem tudom megerősíteni.' : '';
       return { answer: `Iratkozz fel a hírlevelünkre, és a ${discount.value}%-os kupont automatikusan elküldjük e-mailben.${suffix}`, factsUsed: used, groundingStatus: 'grounded' };
+    }
+    if (intent === 'delivery_missing' || intent === 'delivery_missing_recovery') {
+      const exists = use('newsletterCoupon.exists');
+      const discount = use('newsletterCoupon.discountValue');
+      const delivery = use('newsletterCoupon.deliveryChannel');
+      if (exists.status !== 'grounded' || discount.status !== 'grounded' || delivery.status !== 'grounded') return unavailable();
+      const apology = intent === 'delivery_missing_recovery' ? 'Sajnálom, hogy az előző válasz nem segített; ' : '';
+      return {
+        answer: `${apology}Az első vásárláshoz járó ${discount.value}%-os kedvezmény a hírlevél-feliratkozáshoz kapcsolódik. Ha feliratkoztál, de nem kaptad meg a kuponkódot, írj nekünk a vitalis.szappan@gmail.com címre, és segítünk ellenőrizni.`,
+        factsUsed: used,
+        groundingStatus: 'grounded'
+      };
     }
     if (intent === 'entry_location' || intent === 'coupon_context') {
       const location = use('checkout.couponEntryLocation');
