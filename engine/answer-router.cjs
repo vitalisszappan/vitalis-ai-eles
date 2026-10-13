@@ -231,10 +231,17 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
       primaryProductId: alternative.productId, alternativeToProductId: alternative.primary, cheaperAlternative: alternative.cheaper,
       confidence: 1, threshold: 1, rejectionReasons: alternative.productId ? [] : ['no_valid_recommendation_alternative'], responseSource: 'conversation-context' });
   }
-  const contextualComparisonIds = productQuestionIntent === 'comparison' && directCanonicalIds.length < 2 && /\b(koztuk|kettejuk|mindketto)\b/.test(normalizedCurrent)
+  const contextualPairReference = /\b(koztuk|kettejuk|mindketto|a ketto|ketto)\b/.test(normalizedCurrent);
+  const contextualPairPrice = productQuestionIntent === 'price' || turnIntent.intent === 'price_query';
+  const contextualComparisonIds = (productQuestionIntent === 'comparison' || contextualPairPrice) && directCanonicalIds.length < 2 && contextualPairReference
     ? [...new Set(context.lastRecommendedProducts || [])].filter((id) => require('./product-catalog.cjs').PRODUCTS[id]).slice(0, 2)
     : [];
   const comparisonIds = directCanonicalIds.length === 2 ? directCanonicalIds : contextualComparisonIds.length === 2 ? contextualComparisonIds : [];
+  if (contextualPairPrice && comparisonIds.length === 2) {
+    return decision({ ...base, route: 'product_comparison', intent: 'compare_products', goal: 'compare_products', domain: 'product',
+      productQuestionIntent: 'comparison', answerIntent: 'comparison', contextUsed: true, contextTarget: null,
+      matchedCanonicalIds: comparisonIds, matchedProductIds: comparisonIds, confidence: 1, threshold: 1, responseSource: 'product-facts' });
+  }
   if (productQuestionIntent === 'comparison') {
     if (comparisonIds.length === 2) return decision({ ...base, route: 'product_comparison', intent: 'compare_products', goal: 'compare_products', domain: 'product', contextUsed: directCanonicalIds.length < 2, contextTarget: null, matchedCanonicalIds: comparisonIds, matchedProductIds: comparisonIds, confidence: 1, threshold: 1, responseSource: 'product-facts' });
     if (directCanonicalIds.length !== 1) return decision({ ...base, route: 'clarification', intent: 'compare_products', goal: 'compare_products', contextTarget: 'products', confidence: 1, threshold: 1, rejectionReasons: ['missing_comparison_products'], responseSource: 'conversation-context' });

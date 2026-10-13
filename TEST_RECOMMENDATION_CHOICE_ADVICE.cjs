@@ -14,7 +14,7 @@ const ruleEngine = new ExpertRuleEngine('data/rules/expert-rules.json');
 function row(sessionId, question, result, index) {
   return {
     id: crypto.randomUUID(), created_at: new Date(Date.UTC(2026, 9, 13, 14, 0, index)).toISOString(), session_id: sessionId,
-    question, answer: result.answer, source: result.source, routing_trace: result.routing,
+    question, answer: result.answer, source: result.source,
     history_event: buildConversationHistoryEvent(result, crypto.randomUUID())
   };
 }
@@ -23,11 +23,16 @@ async function conversation(questions) {
   const sessionId = crypto.randomUUID();
   const rows = [];
   const results = [];
+  results.states = [];
+  results.events = [];
   for (const [index, question] of questions.entries()) {
     const memory = await rehydrateSessionHistory({ sessionId, clientHistory: [], loadRows: async () => validateConversationHistoryRows(rows) });
+    results.states.push(memory.state);
     const result = createAnswer({ question, history: memory.history, conversationState: memory.state, knowledge, ruleEngine, logGap() {}, logDiagnostic() {} });
     results.push(result);
-    rows.push(row(sessionId, question, result, index));
+    const persistedRow = row(sessionId, question, result, index);
+    results.events.push(persistedRow.history_event);
+    rows.push(persistedRow);
   }
   return results;
 }
@@ -46,6 +51,31 @@ function groundedChoice(result, chosenId, alternativeId) {
   const eczema = await conversation(['Ekcémás, nagyon száraz a bőröm. Mit ajánlasz?', 'Van másik?', 'Melyiket választanád?']);
   groundedChoice(eczema[2], 'dermavital_krem', 'dermavital_szappan');
   assert.match(eczema[2].answer, /Dermavital krémet.*száraz.*ekcémára hajlamos.*Dermavital szappan.*tisztálkodás/i);
+
+  const persistedJourney = await conversation([
+    'Ekcémás, nagyon száraz a bőröm. Mit ajánlasz?',
+    'Van másik?',
+    'Melyiket választanád a kettő közül?',
+    'Mennyibe kerül a kettő?'
+  ]);
+  assert.deepEqual(persistedJourney.events[0], {
+    version: 1, turnId: persistedJourney.events[0].turnId, kind: 'selection', route: 'expert_rule', productTypeConstraint: null,
+    products: [
+      { id: 'dermavital_krem', name: persistedJourney.events[0].products[0].name },
+      { id: 'dermavital_szappan', name: persistedJourney.events[0].products[1].name }
+    ],
+    targetProductId: 'dermavital_krem'
+  });
+  assert.equal(persistedJourney.events[1].kind, 'none');
+  assert.equal(persistedJourney.events[1].route, 'recommendation_alternative');
+  assert.deepEqual(persistedJourney.states[2].activeProblemDomains, ['eczema']);
+  assert.deepEqual(persistedJourney.states[2].lastRecommendedProducts, ['dermavital_krem', 'dermavital_szappan']);
+  assert.equal(persistedJourney.states[2].focusedProductId, 'dermavital_krem');
+  groundedChoice(persistedJourney[2], 'dermavital_krem', 'dermavital_szappan');
+  assert.equal(persistedJourney[3].route, 'product_comparison');
+  assert.deepEqual(persistedJourney[3].links.map((link) => link.id), ['dermavital_krem', 'dermavital_szappan']);
+  assert.match(persistedJourney[3].answer, /Dermavital.*krém.*3 700 Ft.*Dermavital szappan.*2 700 Ft/i);
+  assert.equal(persistedJourney[3].factsUsed.filter((fact) => fact.factType === 'price').length, 2);
 
   const scalp = await conversation(['Pikkelysömörös a fejbőröm.', 'Van másik?', 'Melyiket ajánlod inkább?']);
   groundedChoice(scalp[2], 'dermavital_sampon', 'rozmaringos_samponszappan');

@@ -1444,7 +1444,7 @@ function validateConversationHistoryEvent(value) {
   }else{
     if(value.products.length||value.targetProductId!==null)return null;
     if(value.kind==='empty' && (value.route!=='subtype_catalog'||!value.productTypeConstraint))return null;
-    if(value.kind==='none' && (![null,'safety','complaint','coupon_policy'].includes(value.route)||value.productTypeConstraint!==null))return null;
+    if(value.kind==='none' && (![null,'safety','complaint','coupon_policy','recommendation_alternative'].includes(value.route)||value.productTypeConstraint!==null))return null;
   }
   return {version:1,turnId:value.turnId,kind:value.kind,route:value.route,productTypeConstraint:value.productTypeConstraint,products:value.products.map(p=>({id:p.id,name:p.name})),targetProductId:value.targetProductId};
 }
@@ -1489,12 +1489,14 @@ function buildConversationHistoryEvent(result, turnId) {
   const focused=catalogFocus||canonicalFocus||exactProductFocus;
   const primaryExpert=route==='expert_rule' && !type && typeof explicitPrimary==='string'
     && links.some(p=>p?.id===explicitPrimary) && matchedIds.includes(explicitPrimary);
-  if (!scoped && !focused && !primaryExpert && links.length) return null; // Legacy, non-constrained selection contract.
+  const recommendationContinuation=route==='recommendation_alternative' && result.routing?.contextUsed===true
+    && ['alternative_reference','cheaper_recommendation','recommendation_choice'].includes(result.intent);
+  if (!scoped && !focused && !primaryExpert && !recommendationContinuation && links.length) return null; // Legacy, non-constrained selection contract.
   const empty=route==='subtype_catalog' && type && result.catalogStatus==='CATALOG_AVAILABLE_NO_MATCH'
     && result.routing?.catalogStatus==='CATALOG_AVAILABLE_NO_MATCH' && links.length===0;
   const selection=(scoped||focused||primaryExpert) && links.length>0;
   const event={version:1,turnId:typeof turnId==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(turnId)?turnId:null,
-    kind:empty?'empty':selection?'selection':'none',route:empty||selection?route:['safety','complaint','coupon_policy'].includes(route)?route:null,
+    kind:empty?'empty':selection?'selection':'none',route:empty||selection?route:['safety','complaint','coupon_policy','recommendation_alternative'].includes(route)?route:null,
     productTypeConstraint:empty||selection?type:null,products:selection?links.map(p=>({id:p.id,name:p.name||p.title})):[],targetProductId:selection?explicitPrimary:null};
   // Only service-validated emitted identities may enter the persistence event.
   if(selection && (links.length>6 || !Array.isArray(result.routing?.matchedProductIds)
