@@ -67,7 +67,7 @@ const child = spawn(process.execPath, ['server.cjs'], { cwd, env: {...process.en
 function post(message, history=[]) { return new Promise((resolve,reject)=>{ const data=JSON.stringify({message,history}); const req=http.request({hostname:'127.0.0.1',port:3299,path:'/api/chat',method:'POST',headers:{'Content-Type':'application/json','Content-Length':Buffer.byteLength(data)}},res=>{let b='';res.on('data',c=>b+=c);res.on('end',()=>resolve(JSON.parse(b)));});req.on('error',reject);req.end(data);}); }
 (async()=>{await new Promise(r=>setTimeout(r,500)); const tests=[
  ['Viszket a fejbőröm',[],assertScalp],
- ['Mennyi a szállítási idő?',[],/2 munkanap/i],
+ ['Mennyi a szállítási idő?',[],/nincs jóváhagyott.*fix kiszállítási idő/i],
  ['Viszket a fejbőröm',[{role:'user',content:'Mennyi a szállítási idő?'}],out=>{assertScalp(out);assert.equal(out.routing.contextUsed,false);}],
  ['Mire javaslod a Dermavital krémet?',[],/száraz, érzékeny|ekcémára hajlamos/i],
  ['És milyen gyakran használjam?',[{role:'user',content:'Mire javaslod a Dermavital krémet?'}],assertUsageGrounding],

@@ -502,7 +502,7 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
       availability_query: cards[0]?.availability?.orderable === false ? 'Ez a termék a jelenlegi katalógusadat szerint nem rendelhető.' : 'A termék aktuális rendelhetőségét a termékoldalon tudod ellenőrizni.',
       shipping_general: 'A rendelés szállítási módjait és aktuális díját a pénztárban tudod kiválasztani és ellenőrizni.',
       shipping_cost: 'A szállítás díja a választott szállítási és fizetési módtól függ; az aktuális összeget a pénztár mutatja.',
-      shipping_time: 'A kiszállítás általában körülbelül 2 munkanap, a pontos idő a választott szállítási módtól függ.',
+      shipping_time: 'A pontos kiszállítási idő a választott szállítási módtól és az aktuális teljesítéstől függ. Jelenleg nincs jóváhagyott, általános fix kiszállítási idő; az aktuális tájékoztatást a pénztárban és a rendelési visszaigazolásban látod.',
       payment: 'Az elérhető fizetési módokat a pénztárban tudod kiválasztani.',
       order_status: 'A rendelés állapotáról a rendelési visszaigazolás és az ügyfélszolgálat tud pontos tájékoztatást adni.'
     };

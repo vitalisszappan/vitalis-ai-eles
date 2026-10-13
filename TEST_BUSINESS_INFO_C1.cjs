@@ -59,7 +59,10 @@ for (const question of [
 for (const question of [
   'Mennyi idő a kiszállítás?', 'Hány nap a szállítás?',
   'Mikor érkezik meg?', 'Hány nap alatt ér ide?', 'Mi a szállítási idő?', 'Mennyire gyorsan szállítotok?'
-]) check(question, 'shipping_time', ({ answer }) => assert.match(answer, /körülbelül 2 munkanap/i));
+]) check(question, 'shipping_time', ({ answer }) => {
+  assert.match(answer, /nincs jóváhagyott.*fix kiszállítási idő/i);
+  assert.doesNotMatch(answer, /2 munkanap|48 óra/i);
+});
 
 for (const question of ['GLS-sel szállítotok?', 'MPL-lel külditek?', 'DPD hozza ki?', 'Melyik futárszolgálat szállít?']) {
   check(question, 'shipping_carrier_unknown', ({ answer }) => {
@@ -68,9 +71,8 @@ for (const question of ['GLS-sel szállítotok?', 'MPL-lel külditek?', 'DPD hoz
   });
 }
 for (const question of ['Van ingyenes kiszállítás?', 'Mikortól díjmentes a szállítás?', 'Ingyenes a szállítás?']) {
-  check(question, 'shipping_free_unknown', ({ answer }) => {
-    assert.match(answer, /nem tudom biztosan/i);
-    assert.doesNotMatch(answer, /\b\d{4,}\s*(?:Ft|forint)/i);
+  check(question, 'shipping_free', ({ answer }) => {
+    assert.match(answer, /20 000 Ft feletti.*ingyenes a szállítás/i);
   });
 }
 

@@ -37,7 +37,7 @@ function resolveAdministrativeIntent(question) {
       source: 'admin-intent',
       ruleId: 'shipping_time',
       intent: 'shipping_time',
-      answer: 'A kiszállítás általában körülbelül 2 munkanap. A pontos érkezés a rendelés időpontjától és a választott szállítási módtól függ.',
+      answer: 'A pontos kiszállítási idő a választott szállítási módtól és az aktuális teljesítéstől függ. Jelenleg nincs jóváhagyott, általános fix kiszállítási idő; az aktuális tájékoztatást a pénztárban és a rendelési visszaigazolásban látod.',
       confidence: 100,
       links: [],
       suggestions: [

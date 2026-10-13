@@ -39,6 +39,22 @@ assert.equal(persistedCheapest.route, 'commerce');
 assert.equal(persistedCheapest.intent, 'shipping_cheapest');
 assert.match(persistedCheapest.answer, /GLS CsomagPont.*1 390 Ft/i);
 
+for (const question of ['Mennyi idő?', 'Mennyi idő a szállítás?', 'Mikor érkezik meg?', 'Hány nap a kiszállítás?']) {
+  const result = ask(question);
+  assert.equal(result.intent, 'shipping_time', question);
+  assert.match(result.answer, /pontos kiszállítási idő.*szállítási módtól.*aktuális teljesítéstől/i, question);
+  assert.match(result.answer, /nincs jóváhagyott.*fix kiszállítási idő/i, question);
+  assert.doesNotMatch(result.answer, /2 munkanap|48 óra/i, question);
+}
+
+for (const question of ['Mikortól ingyenes a szállítás?', 'Van ingyenes szállítás?']) {
+  const result = ask(question);
+  assert.equal(result.route, 'business_info', question);
+  assert.equal(result.intent, 'shipping_free', question);
+  assert.equal(result.businessFactStatus, 'OWNER_APPROVED', question);
+  assert.match(result.answer, /20 000 Ft feletti.*ingyenes a szállítás/i, question);
+}
+
 for (const [question, intent, phrase] of [
   ['Csomagautomatába lehet kérni?', 'parcel_locker', '1 500 Ft'],
   ['Automatába mennyi?', 'parcel_locker', '1 500 Ft'],

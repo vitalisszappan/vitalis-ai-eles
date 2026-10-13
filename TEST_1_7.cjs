@@ -22,7 +22,8 @@ assert(!/Dermavital|ekcéma/i.test(r.answer));
 
 r = ask('Mennyi a szállítási idő?');
 assert.strictEqual(r.intent, 'shipping_time');
-assert(/2 munkanap/i.test(r.answer));
+assert(/nincs jóváhagyott.*fix kiszállítási idő/i.test(r.answer));
+assert(!/2 munkanap|48 óra/i.test(r.answer));
 
 r = ask('Szállítás érdekelne.');
 assert.strictEqual(r.intent, 'shipping_general');

@@ -19,6 +19,7 @@ const OWNER_APPROVED_BUSINESS_FACTS = Object.freeze({
   ]),
   foxpostAvailable: false,
   personalPickupAvailable: false,
+  freeShippingThreshold: Object.freeze({ amount: 20000, currency: 'HUF' }),
   cashOnDeliveryHandlingFee: Object.freeze({ amount: 450, currency: 'HUF' }),
   registrationPhoneExample: '06301234567'
 });
@@ -40,6 +41,7 @@ function resolveApprovedBusinessFact(intent) {
     parcel_locker: `Igen, csomagautomatába is kérheted. A díja ${forints(locker.price)}.`,
     shipping_carrier: facts.foxpostAvailable ? 'Igen, a Foxpost elérhető.' : 'Nem, Foxpost jelenleg nem érhető el.',
     personal_pickup: facts.personalPickupAvailable ? 'Igen, személyes átvétel elérhető.' : 'Nem, személyes átvétel jelenleg nem elérhető.',
+    shipping_free: `${forints(facts.freeShippingThreshold.amount)} feletti rendelésnél ingyenes a szállítás.`,
     cash_on_delivery: `Igen, utánvéttel lehet fizetni. Az utánvét kezelési díja ${forints(facts.cashOnDeliveryHandlingFee.amount)}.`,
     registration_phone_format: `A telefonszámot ilyen formátumban add meg: ${facts.registrationPhoneExample}.`
   };
@@ -52,7 +54,7 @@ function detectBusinessInfo(question) {
   if (!text) return null;
   const complaint = detectComplaintIntent(question);
   if (complaint?.polarity === 'positive') return null;
-  if (FREE_SHIPPING.test(text)) return { intent: 'shipping_free_unknown' };
+  if (FREE_SHIPPING.test(text)) return { intent: 'shipping_free' };
   if (CARRIER.test(text)) return { intent: 'shipping_carrier_unknown' };
   if (SHIPPING_TIME.test(text)) return { intent: 'shipping_time' };
   if (SHIPPING_COST.test(text)) return { intent: 'shipping_cost' };
@@ -70,7 +72,8 @@ function resolveBusinessInfo(intent, catalog) {
       ? `A jelenlegi kínálat fő kategóriái: ${categories.join(', ')}.`
       : 'A jelenlegi termékkategóriákat most nem tudom biztosan felsorolni.',
     shipping_cost: resolveApprovedBusinessFact('shipping_cost').answer,
-    shipping_time: 'A kiszállítás általában körülbelül 2 munkanap, a pontos idő a választott szállítási módtól függ.',
+    shipping_time: 'A pontos kiszállítási idő a választott szállítási módtól és az aktuális teljesítéstől függ. Jelenleg nincs jóváhagyott, általános fix kiszállítási idő; az aktuális tájékoztatást a pénztárban és a rendelési visszaigazolásban látod.',
+    shipping_free: resolveApprovedBusinessFact('shipping_free').answer,
     shipping_carrier_unknown: 'A jelenlegi jóváhagyott adatainkból nem tudom biztosan megmondani, melyik futárszolgálat érhető el. Az aktuális szállítási módokat a pénztárban látod.',
     shipping_free_unknown: 'A jelenlegi jóváhagyott adatainkból nem tudom biztosan megmondani, van-e ingyenes kiszállítás. Az aktuális feltételeket a pénztárban tudod ellenőrizni.'
   };

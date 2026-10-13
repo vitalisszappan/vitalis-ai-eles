@@ -14,7 +14,7 @@ const tests = [
   ['Hajhullásra mit ajánlasz?','hair_loss','rozmaringos samponszappant'],
   ['Mit ajánlasz ekcémára?','eczema','Dermavital krémet'],
   ['Mit ajánlasz pikkelysömörre?','psoriasis_body','PsoriVital csomagot'],
-  ['Mennyi a szállítási idő?','shipping_time','2 munkanap'],
+  ['Mennyi a szállítási idő?','shipping_time','nincs jóváhagyott, általános fix kiszállítási idő'],
   ['Hogyan kapom meg a kuponkódot?','coupon','fel kell iratkozni']
 ];
 let failed=0;
