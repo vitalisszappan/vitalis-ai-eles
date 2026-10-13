@@ -38,19 +38,38 @@ function hasUnresolvedNamedProduct(question, category, productQuestionIntent, go
 }
 
 function activeRecommendationContext(history, context) {
-  const lastAssistant = [...history].reverse().find((item) => item?.role === 'assistant');
+  const assistants = [...history].reverse().filter((item) => item?.role === 'assistant');
+  const recommendationRoutes = ['expert_rule', 'product_category', 'problem_domain', 'hair_product_type'];
+  const latestAssistant = assistants[0];
+  const lastAssistant = recommendationRoutes.includes(latestAssistant?.route)
+    ? latestAssistant
+    : latestAssistant?.route === 'recommendation_alternative'
+      ? assistants.find((item) => recommendationRoutes.includes(item?.route))
+      : null;
   const products = [...new Set(context.lastRecommendedProducts || [])];
-  const recommendationRoute = ['expert_rule', 'product_category', 'problem_domain', 'hair_product_type'].includes(lastAssistant?.route);
-  return recommendationRoute && products.length ? { products, primary: context.lastFocusProduct || products[0] } : null;
+  if (!lastAssistant || !products.length) return null;
+  const primary = lastAssistant.targetProductId || lastAssistant.routing?.primaryProductId || context.lastFocusProduct || products[0];
+  return { products, primary, sourceRoute: lastAssistant.route };
+}
+
+function recommendationChoiceRequest(text) {
+  const asksChoice = /\b(melyiket valasztanad|melyik(?: lenne)? jobb(?: nekem)?|(?:a )?ketto kozul melyiket|te melyiket venned|melyiket ajanlod inkabb)\b/.test(text);
+  return asksChoice ? { priceAware: /\bolcsobb\b/.test(text) } : null;
 }
 
 function recommendationAlternative(question, history, context) {
   const text = normalize(question);
+  const choice = recommendationChoiceRequest(text);
   const asksCheaper = /\bolcsobb(?:\s+is)?\s+van\b|\bvan\s+(?:is\s+)?olcsobb\b/.test(text);
   const asksAnother = /\bvan\s+masik(?:\s+lehetoseg)?\b|\bmutass\w*\s+masikat\b/.test(text);
-  if (!asksCheaper && !asksAnother) return null;
+  if (!choice && !asksCheaper && !asksAnother) return null;
   const active = activeRecommendationContext(history, context);
-  if (!active) return null;
+  if (!active) return choice ? { choice: true, priceAware: choice.priceAware, products: [...new Set(context.lastRecommendedProducts || [])], primary: null, justified: false } : null;
+  if (choice) {
+    const products = active.products.slice(0, 2);
+    const groundedRoles = products.length === 2 && products.every((id) => productFacts.getFact(id, 'productBenefits').status === 'grounded');
+    return { choice: true, priceAware: choice.priceAware, products, primary: active.primary, justified: active.sourceRoute === 'expert_rule' && groundedRoles };
+  }
   const alternatives = active.products.filter((id) => id !== active.primary);
   if (!asksCheaper) return { cheaper: false, primary: active.primary, productId: alternatives[0] || null };
   const price = (id) => {
@@ -194,6 +213,18 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
   }
   const alternative = recommendationAlternative(question, history, context);
   if (alternative) {
+    if (alternative.choice && (!alternative.justified || alternative.products.length !== 2 || !alternative.products.includes(alternative.primary))) {
+      return decision({ ...base, route: 'clarification', intent: 'recommendation_choice', goal: 'select_recommendation', domain: context.lastProblemDomain || 'product',
+        contextUsed: alternative.products.length > 0, contextTarget: 'products', matchedCanonicalIds: [],
+        matchedProductIds: alternative.products, confidence: 1, threshold: 1,
+        rejectionReasons: [alternative.products.length < 2 ? 'missing_recommendation_choice_products' : 'recommendation_choice_priority_unclear'], responseSource: 'conversation-context' });
+    }
+    if (alternative.choice) {
+      return decision({ ...base, route: 'recommendation_alternative', intent: 'recommendation_choice', goal: 'select_recommendation', domain: context.lastProblemDomain || 'product',
+        contextUsed: true, contextTarget: alternative.primary, matchedCanonicalIds: alternative.products, matchedProductIds: alternative.products,
+        primaryProductId: alternative.primary, choiceProductIds: alternative.products, priceAwareChoice: alternative.priceAware,
+        confidence: 1, threshold: 1, responseSource: 'product-facts' });
+    }
     return decision({ ...base, route: 'recommendation_alternative', intent: alternative.cheaper ? 'cheaper_recommendation' : 'alternative_reference',
       goal: 'select_recommendation', domain: 'product', contextUsed: true, contextTarget: alternative.productId,
       matchedCanonicalIds: alternative.productId ? [alternative.productId] : [], matchedProductIds: alternative.productId ? [alternative.productId] : [],
