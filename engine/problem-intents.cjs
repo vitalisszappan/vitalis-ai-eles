@@ -24,8 +24,15 @@ const EXPERT_DOMAIN_MAP = Object.freeze({
   acne: 'acne', dry_skin: 'dry_skin'
 });
 
-function detectProblemIntent(question) {
+function normalizeScalpNeed(question) {
   const text = normalize(question);
+  const scalpSymptom = /\b(?:viszket\w*|korpa|korpas\w*|hamlik\w*|hamlo\w*)\b/.test(text);
+  const colloquialScalpArea = /\b(?:hajam|fejem|fejbor\w*)\b/.test(text);
+  return scalpSymptom && colloquialScalpArea && !/\bfejbor\b/.test(text) ? `${text} fejbor` : text;
+}
+
+function detectProblemIntent(question) {
+  const text = normalizeScalpNeed(question);
   for (const [domain, pattern] of DOMAIN_PATTERNS) {
     if (pattern.test(text)) {
       if (domain === 'acne' && !hasLiteralAcneSignal(text)) continue;
@@ -35,4 +42,4 @@ function detectProblemIntent(question) {
   return null;
 }
 
-module.exports = { detectProblemIntent, EXPERT_DOMAIN_MAP };
+module.exports = { detectProblemIntent, normalizeScalpNeed, EXPERT_DOMAIN_MAP };

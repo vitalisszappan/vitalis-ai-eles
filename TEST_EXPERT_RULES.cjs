@@ -40,6 +40,31 @@ const itchy=ask('Viszket a fejbőröm. Melyik sampont ajánlod?');
 assert.equal(itchy.intent,'scalp_itchy');
 assert.deepEqual(itchy.links.map(item=>item.id),['dermavital_sampon','rozmaringos_samponszappan']);
 
+for (const question of [
+  'Viszket a hajam arra lenne valami?',
+  'viszket a hajam',
+  'nagyon viszket a fejem',
+  'korpás és viszket',
+  'hámlik és viszket a fejbőröm',
+  'Mit ajánlasz viszkető fejbőrre?',
+  'Korpás és viszket a fejbőröm.',
+  'Hámlik a fejbőröm, van rá samponotok?',
+  'Valami kéne viszkető fejbőrre.',
+  'a fejem viszket és korpás'
+]) {
+  const result = ask(question);
+  assert.equal(result.route, 'expert_rule', question);
+  assert.ok(['scalp_itchy', 'scalp_problem'].includes(result.intent), question);
+  assert.equal(result.links[0]?.id, 'dermavital_sampon', question);
+  assert.match(result.answer, /Dermavital.*viszkető|viszkető.*Dermavital/i, question);
+  assert.doesNotMatch(result.answer, /gyógyít|kezeli|meggyógyít/i, question);
+  assert.equal(result.fallbackRootCause, undefined, question);
+}
+
+const unrelatedItch = ask('viszket a karom');
+assert.notEqual(unrelatedItch.route, 'expert_rule');
+assert.equal(unrelatedItch.links.some((item) => item.id === 'dermavital_sampon'), false);
+
 const genericMedicineDisclaimer = /kozmetikumok?,? (?:de )?nem gyógyszerek?|nem helyettesítik? az orvosi kezelést/i;
 const eczema=ask('Melyik terméket ajánlod ekcémára?');
 assert.equal(eczema.route,'expert_rule');

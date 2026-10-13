@@ -6,6 +6,7 @@ const { findRecentProductFromHistory, childAnswer } = require('./product-faq.cjs
 const { buildConversationContext } = require('./conversation-context.cjs');
 const { isRelationQuestion, resolveRelation } = require('./product-relations.cjs');
 const { resolveAdministrativeIntent } = require('./admin-intents.cjs');
+const { normalizeScalpNeed } = require('./problem-intents.cjs');
 
 function requiresMedicalBoundary(question) {
   const text = normalize(question);
@@ -32,7 +33,7 @@ class ExpertRuleEngine {
     this.loadedAt = new Date().toISOString();
   }
   matches(rule, text) {
-    const n = normalize(text);
+    const n = normalizeScalpNeed(text);
     const matchAll = (rule.matchAll || []).map(normalize);
     const matchAny = (rule.matchAny || []).map(normalize);
     const excludeAny = (rule.excludeAny || []).map(normalize);
@@ -47,7 +48,7 @@ class ExpertRuleEngine {
     const administrative = resolveAdministrativeIntent(question);
     if (administrative) return administrative;
 
-    const current = normalize(question);
+    const current = normalizeScalpNeed(question);
     const currentDomainBarrier = /\b\w+\s+(?:borre|fejborre|hajra|kezre|sarokra)\b/.test(current)
       || /\b(?:bor|fejbor|haj|kez|sarok)\w*\b.*\b(?:keres\w*|erdekel\w*|ajanl\w*|van\s+valami)\b/.test(current);
     const combined = normalize([
