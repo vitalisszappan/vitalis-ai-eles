@@ -44,7 +44,7 @@ function activeRecommendationContext(history, context) {
   const latestAssistant = assistants[0];
   const lastAssistant = recommendationRoutes.includes(latestAssistant?.route)
     ? latestAssistant
-    : latestAssistant?.route === 'recommendation_alternative'
+    : ['recommendation_alternative', 'product_comparison'].includes(latestAssistant?.route)
       ? assistants.find((item) => recommendationRoutes.includes(item?.route))
       : null;
   const products = [...new Set(context.lastRecommendedProducts || [])];

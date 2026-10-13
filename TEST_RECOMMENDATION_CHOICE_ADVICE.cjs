@@ -77,6 +77,31 @@ function groundedChoice(result, chosenId, alternativeId) {
   assert.match(persistedJourney[3].answer, /Dermavital.*krém.*3 700 Ft.*Dermavital szappan.*2 700 Ft/i);
   assert.equal(persistedJourney[3].factsUsed.filter((fact) => fact.factType === 'price').length, 2);
 
+  const postPriceJourney = await conversation([
+    'Ekcémás, nagyon száraz a bőröm. Mit ajánlasz?',
+    'Van másik?',
+    'Melyiket választanád?',
+    'Mennyibe kerül a kettő?',
+    'Te melyiket vennéd?'
+  ]);
+  assert.equal(postPriceJourney.events[3].kind, 'none');
+  assert.equal(postPriceJourney.events[3].route, 'product_comparison');
+  assert.deepEqual(postPriceJourney.states[4].activeProblemDomains, ['eczema']);
+  assert.deepEqual(postPriceJourney.states[4].lastRecommendedProducts, ['dermavital_krem', 'dermavital_szappan']);
+  assert.equal(postPriceJourney.states[4].focusedProductId, 'dermavital_krem');
+  groundedChoice(postPriceJourney[4], 'dermavital_krem', 'dermavital_szappan');
+
+  const pricePreferenceThenChoice = await conversation([
+    'Ekcémás, nagyon száraz a bőröm. Mit ajánlasz?',
+    'Van másik?',
+    'Nekem az ár is számít.',
+    'Melyiket választanád?'
+  ]);
+  assert.equal(pricePreferenceThenChoice[2].intent, 'recommendation_refinement_price');
+  assert.equal(pricePreferenceThenChoice[2].factsUsed.filter((fact) => fact.factType === 'price').length, 2);
+  assert.match(pricePreferenceThenChoice[2].answer, /2 700 Ft.*3 700 Ft.*továbbra is.*Dermavital krémet/i);
+  groundedChoice(pricePreferenceThenChoice[3], 'dermavital_krem', 'dermavital_szappan');
+
   const scalp = await conversation(['Pikkelysömörös a fejbőröm.', 'Van másik?', 'Melyiket ajánlod inkább?']);
   groundedChoice(scalp[2], 'dermavital_sampon', 'rozmaringos_samponszappan');
   assert.match(scalp[2].answer, /Dermavital sampont.*fejbőr.*Rozmaringos samponszappan.*kiegészítő/i);
