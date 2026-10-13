@@ -1490,7 +1490,8 @@ function buildConversationHistoryEvent(result, turnId) {
   const primaryExpert=route==='expert_rule' && !type && typeof explicitPrimary==='string'
     && links.some(p=>p?.id===explicitPrimary) && matchedIds.includes(explicitPrimary);
   const recommendationContinuation=route==='recommendation_alternative' && result.routing?.contextUsed===true
-    && ['alternative_reference','cheaper_recommendation','recommendation_choice'].includes(result.intent);
+    && (['alternative_reference','cheaper_recommendation','recommendation_choice'].includes(result.intent)
+      || /^recommendation_refinement_(?:one_product|price|exclude_soap|sensitive_skin)$/.test(result.intent));
   if (!scoped && !focused && !primaryExpert && !recommendationContinuation && links.length) return null; // Legacy, non-constrained selection contract.
   const empty=route==='subtype_catalog' && type && result.catalogStatus==='CATALOG_AVAILABLE_NO_MATCH'
     && result.routing?.catalogStatus==='CATALOG_AVAILABLE_NO_MATCH' && links.length===0;

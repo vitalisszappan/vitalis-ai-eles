@@ -530,7 +530,14 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
       : guidedNeed === 'wrinkles_or_mature_skin' ? 'Megmutathatom a krémek és balzsamok kínálatát, de ránccsökkentő hatást most nem tudok biztosan állítani.'
       : 'Megmutathatom a választott kategória kínálatát, de ehhez a bőrigényhez most nem tudok biztos termékalkalmasságot állítani.'
       : null;
-    const answer = guidedAnswer || (routing.intent === 'recommendation_choice'
+    const refinementAnswer = /^recommendation_refinement_/.test(routing.intent || '')
+      ? (routing.rejectionReasons?.includes('missing_recommendation_context')
+        ? 'Milyen problémára vagy igényre keresel egy terméket?'
+        : routing.intent === 'recommendation_refinement_price'
+          ? 'Az ár szerinti összevetéshez legalább két, az igényedhez már ajánlott termék szükséges.'
+          : 'A jelenlegi jóváhagyott termékadatok alapján ezt a szempontot nem tudom biztosan eldönteni. Melyik termékszerep a fontosabb neked?')
+      : null;
+    const answer = refinementAnswer || guidedAnswer || (routing.intent === 'recommendation_choice'
       ? (routing.matchedProductIds?.length >= 2
         ? 'Mi fontosabb neked a két termék szerepe közül? Írd meg, melyik használati cél alapján válasszak.'
         : 'Melyik másik termékkel hasonlítsam össze?')
@@ -578,6 +585,57 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
   }
 
   if (routing.route === 'recommendation_alternative') {
+    if (/^recommendation_refinement_/.test(routing.intent || '')) {
+      const refinement = routing.refinement || {};
+      const ids = refinement.products || routing.matchedProductIds || [];
+      const selectedId = refinement.selected || routing.primaryProductId;
+      const benefitFact = (productId) => {
+        const fact = productFacts.getFact(productId, 'productBenefits');
+        return { productId, factType: 'productBenefits', status: fact.status,
+          value: fact.status === 'grounded' ? fact.value : null, provenance: fact.provenance || [] };
+      };
+      const priceFact = (productId) => {
+        const fact = productFacts.getFact(productId, 'price');
+        return { productId, factType: 'price', status: fact.status,
+          value: fact.status === 'grounded' ? fact.value : null, provenance: fact.provenance || [] };
+      };
+      let answer;
+      let factsUsed = selectedId ? [benefitFact(selectedId)] : [];
+      let cardIds = selectedId ? [selectedId] : [];
+      if (refinement.type === 'one_product') {
+        const claim = factsUsed[0]?.value?.[0]?.claim?.replace(/[.]+$/, '');
+        answer = `Ha csak egy terméket szeretnél, a ${recommendationName(PRODUCTS[selectedId]?.name || selectedId)} választanám: ${lowerInitial(claim)}.`;
+      } else if (refinement.type === 'price') {
+        const prices = ids.map(priceFact);
+        factsUsed = [...prices, benefitFact(selectedId)];
+        cardIds = ids;
+        const cheaperId = refinement.cheaper;
+        const otherId = ids.find((id) => id !== cheaperId);
+        const cheaperPrice = prices.find((fact) => fact.productId === cheaperId)?.value;
+        const otherPrice = prices.find((fact) => fact.productId === otherId)?.value;
+        answer = `Ha az ár is fontos, a ${PRODUCTS[cheaperId]?.name || cheaperId} olcsóbb: ${formatWholeForint(cheaperPrice)} Ft, a ${PRODUCTS[otherId]?.name || otherId} ${formatWholeForint(otherPrice)} Ft. Ha viszont csak egyet választasz a leírt bőrigényedre, továbbra is a ${recommendationName(PRODUCTS[selectedId]?.name || selectedId)} választanám.`;
+      } else if (refinement.type === 'exclude_soap') {
+        if (!selectedId) {
+          answer = 'A jelenlegi ajánlási körben nincs másik, jóváhagyott nem szappan típusú megfelelő jelölt.';
+          factsUsed = [];
+          cardIds = [];
+        } else {
+          const claim = factsUsed[0]?.value?.[0]?.claim?.replace(/[.]+$/, '');
+          answer = `Ha inkább ne szappan legyen, a ${recommendationName(PRODUCTS[selectedId]?.name || selectedId)} választanám: ${lowerInitial(claim)}.`;
+        }
+      } else {
+        const sensitiveIds = refinement.sensitive || [];
+        factsUsed = sensitiveIds.map(benefitFact);
+        cardIds = sensitiveIds;
+        const otherId = sensitiveIds.find((id) => id !== selectedId);
+        answer = otherId
+          ? `Az érzékeny bőr szempontját mindkét termék leírása alátámasztja. A leírt nagyon száraz bőr ápolására továbbra is a ${recommendationName(PRODUCTS[selectedId]?.name || selectedId)} választanám; a ${PRODUCTS[otherId]?.name || otherId} tisztálkodási alternatíva.`
+          : `Az érzékeny bőrre vonatkozó jóváhagyott termékadat alapján a ${recommendationName(PRODUCTS[selectedId]?.name || selectedId)} marad a megfelelő jelölt.`;
+      }
+      return attachDecision({ source: 'product-facts', answer, confidence: 100, links: productCards(cardIds), suggestions: [],
+        ruleId: 'grounded-recommendation-refinement', intent: routing.intent, matchedKnowledgeIds: [], answerIntent: 'product_recommendation',
+        targetProductId: selectedId || null, factsUsed, groundingStatus: 'grounded', responseStrategy: 'grounded_recommendation_refinement', ctaStrategy: 'none' }, routing);
+    }
     if (routing.intent === 'recommendation_choice') {
       const ids = routing.choiceProductIds || routing.matchedProductIds || [];
       const chosenId = routing.primaryProductId;

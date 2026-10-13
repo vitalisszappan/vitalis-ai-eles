@@ -19,6 +19,7 @@ const { resolveAcneDecision } = require('./acne-decision.cjs');
 const { buildProblemDomainDecision } = require('./problem-domain-decision.cjs');
 const { extractSubtypeRequest, compatibleSubtypeExpert, subtypeCardIdentity } = require('./product-type-constraint.cjs');
 const productFacts = require('./product-facts.cjs');
+const { PRODUCTS } = require('./product-catalog.cjs');
 
 const catalog = createCatalogSearch();
 
@@ -55,6 +56,56 @@ function activeRecommendationContext(history, context) {
 function recommendationChoiceRequest(text) {
   const asksChoice = /\b(melyiket valasztanad|melyik(?: lenne)? jobb(?: nekem)?|(?:a )?ketto kozul melyiket|te melyiket venned|melyiket ajanlod inkabb)\b/.test(text);
   return asksChoice ? { priceAware: /\bolcsobb\b/.test(text) } : null;
+}
+
+function recommendationRefinementRequest(text) {
+  if (/\b(csak egy termeket szeretnek|csak egyet (?:szeretnek|vennek))\b/.test(text)) return 'one_product';
+  if (/\b(?:nekem )?(?:az )?ar is (?:szamit|fontos)\b|\bolcsobb megoldast szeretnek\b/.test(text)) return 'price';
+  if (/\binkabb ne szappan(?: legyen)?\b|\bszappant inkabb nem\b/.test(text)) return 'exclude_soap';
+  if (/\b(?:nagyon )?erzekeny (?:a )?borom\b/.test(text)) return 'sensitive_skin';
+  return null;
+}
+
+function productIsSoap(productId) {
+  const product = PRODUCTS[productId];
+  return /szappan/.test(normalize(`${productId} ${product?.name || ''} ${product?.productType || ''}`));
+}
+
+function groundedBenefit(productId) {
+  const fact = productFacts.getFact(productId, 'productBenefits');
+  return fact.status === 'grounded' ? fact : null;
+}
+
+function recommendationRefinement(question, history, context) {
+  const type = recommendationRefinementRequest(normalize(question));
+  if (!type) return null;
+  const active = activeRecommendationContext(history, context);
+  if (!active) return { type, products: [], primary: null, justified: false };
+  const products = active.products.filter((id) => PRODUCTS[id]);
+  const primary = products.includes(active.primary) ? active.primary : products[0] || null;
+  if (type === 'one_product') {
+    return { type, products, primary, selected: primary, justified: Boolean(primary && groundedBenefit(primary) && active.sourceRoute === 'expert_rule') };
+  }
+  if (type === 'price') {
+    const prices = products.map((id) => ({ id, fact: productFacts.getFact(id, 'price') }));
+    const grounded = prices.filter((item) => item.fact.status === 'grounded' && Number.isFinite(item.fact.value));
+    return { type, products, primary, selected: primary, prices, cheaper: grounded.length === products.length && grounded.length > 1
+      ? [...grounded].sort((left, right) => left.fact.value - right.fact.value)[0].id : null,
+      justified: Boolean(primary && groundedBenefit(primary) && grounded.length === products.length && products.length > 1) };
+  }
+  if (type === 'exclude_soap') {
+    const eligible = products.filter((id) => !productIsSoap(id));
+    const selected = eligible.includes(primary) ? primary : eligible[0] || null;
+    return { type, products, primary, eligible, selected, justified: Boolean(products.length && (!selected || groundedBenefit(selected))) };
+  }
+  const sensitive = products.filter((id) => {
+    const fact = groundedBenefit(id);
+    const claims = normalize(fact?.value?.map((item) => item.claim).join(' ') || '');
+    return fact && /\berzekeny\w*\b/.test(claims) && /\bbor\w*\b/.test(claims);
+  });
+  const selected = sensitive.includes(primary) ? primary : sensitive.length === 1 ? sensitive[0] : null;
+  return { type, products, primary, sensitive, selected,
+    justified: Boolean(selected && active.sourceRoute === 'expert_rule' && groundedBenefit(selected)) };
 }
 
 function recommendationAlternative(question, history, context) {
@@ -142,6 +193,20 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
       domain: 'coupon', contextUsed: !/\b(kupon\w*|kedvezmeny\w*)\b/.test(normalizedCurrent),
       contextTarget: 'approved_coupon_policy', confidence: 1, threshold: 1,
       responseSource: 'approved-coupon-policy' });
+  }
+
+  const refinement = recommendationRefinement(question, history, context);
+  if (refinement) {
+    const intent = `recommendation_refinement_${refinement.type}`;
+    if (!refinement.justified) {
+      return decision({ ...base, route: 'clarification', intent, goal: 'select_recommendation', domain: context.lastProblemDomain || 'product',
+        contextUsed: refinement.products.length > 0, contextTarget: refinement.products.length ? 'products' : 'product',
+        matchedProductIds: refinement.products, confidence: 1, threshold: 1,
+        rejectionReasons: [refinement.products.length ? 'recommendation_refinement_not_grounded' : 'missing_recommendation_context'], responseSource: 'conversation-context' });
+    }
+    return decision({ ...base, route: 'recommendation_alternative', intent, goal: 'select_recommendation', domain: context.lastProblemDomain || 'product',
+      contextUsed: true, contextTarget: refinement.selected, matchedCanonicalIds: refinement.products, matchedProductIds: refinement.products,
+      primaryProductId: refinement.selected, refinement, confidence: 1, threshold: 1, responseSource: 'product-facts' });
   }
 
   const subtypeRequest = extractSubtypeRequest(question);
