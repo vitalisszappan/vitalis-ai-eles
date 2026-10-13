@@ -12,7 +12,7 @@ const COMMERCE_GOALS = Object.freeze({
   availability_query: 'ask_availability', shipping_general: 'ask_shipping',
   shipping_cost: 'ask_shipping', shipping_time: 'ask_shipping', payment: 'ask_payment', order_status: 'start_order',
   ordering_help: 'start_order', order_confirmation_problem: 'start_order', checkout_problem: 'start_order',
-  shipping_cheapest: 'ask_shipping', parcel_locker: 'ask_shipping', shipping_carrier: 'ask_shipping',
+  shipping_cheapest: 'ask_shipping', gls_parcel_point: 'ask_shipping', parcel_locker: 'ask_shipping', shipping_carrier: 'ask_shipping',
   personal_pickup: 'ask_shipping', cash_on_delivery: 'ask_payment', registration_phone_format: 'business_information'
 });
 

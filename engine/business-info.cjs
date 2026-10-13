@@ -35,9 +35,11 @@ function resolveApprovedBusinessFact(intent) {
   const shipping = facts.shippingMethods.map((method) => `${method.name}: ${forints(method.price)}`).join('; ');
   const cheapest = facts.shippingMethods.reduce((best, method) => method.price < best.price ? method : best);
   const locker = facts.shippingMethods.find((method) => method.id === 'parcel_locker');
+  const glsParcelPoint = facts.shippingMethods.find((method) => method.id === 'gls_parcel_point');
   const answers = {
     shipping_cost: `Az elérhető szállítási díjak: ${shipping}.`,
     shipping_cheapest: `A legolcsóbb szállítási mód a ${cheapest.name}: ${forints(cheapest.price)}.`,
+    gls_parcel_point: `A GLS CsomagPont díja ${forints(glsParcelPoint.price)}.`,
     parcel_locker: `Igen, csomagautomatába is kérheted. A díja ${forints(locker.price)}.`,
     shipping_carrier: facts.foxpostAvailable ? 'Igen, a Foxpost elérhető.' : 'Nem, Foxpost jelenleg nem érhető el.',
     personal_pickup: facts.personalPickupAvailable ? 'Igen, személyes átvétel elérhető.' : 'Nem, személyes átvétel jelenleg nem elérhető.',
@@ -55,7 +57,7 @@ function detectBusinessInfo(question) {
   const complaint = detectComplaintIntent(question);
   if (complaint?.polarity === 'positive') return null;
   if (FREE_SHIPPING.test(text)) return { intent: 'shipping_free' };
-  if (CARRIER.test(text)) return { intent: 'shipping_carrier_unknown' };
+  if (CARRIER.test(text) && !/\bgls\b.*\b(?:pont|csomagpont)\w*/.test(text)) return { intent: 'shipping_carrier_unknown' };
   if (SHIPPING_TIME.test(text)) return { intent: 'shipping_time' };
   if (SHIPPING_COST.test(text)) return { intent: 'shipping_cost' };
   if (GENERAL_CATALOG.test(text)) return { intent: 'general_catalog' };
