@@ -692,6 +692,9 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
     const q = normalize(question);
     if (/normal\w* bor/.test(q)) products = products.filter((item) => /normal\w* bor/.test(normalize(item.name)));
     if (/erzekeny\w* bor/.test(q)) products = products.filter((item) => /erzekeny\w*.*bor|bor\w*.*erzekeny/.test(normalize(item.name)));
+    if (!products.length && !found.category) return attachDecision({ source: 'catalog-absent',
+      answer: 'Jelenleg nem tal\u00e1ltam ilyen term\u00e9ket a webshop k\u00edn\u00e1lat\u00e1ban.', confidence: 0,
+      links: [], suggestions: [], ruleId: null, intent: 'catalog_category_absent', matchedKnowledgeIds: [] }, routing);
     if (!products.length) return attachDecision({ source: 'catalog-absent', answer: `A jelenlegi kínálatban nem találok ${found.category?.label || 'ilyen terméket'}.`, confidence: 100, links: [], suggestions: [], ruleId: null, intent: 'catalog_category_absent', matchedKnowledgeIds: [] }, routing);
     const names = products.slice(0, 3).map((item) => shortProductName(item.name)).join(', ');
     const distinction = routing.domain === 'deodorant' ? ' Ezek dezodorok: a testszag kialakulását segítenek megelőzni, de nem állítjuk róluk, hogy az izzadást megszüntetik.' : '';

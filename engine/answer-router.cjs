@@ -460,6 +460,16 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
     return decision({ ...base, route: 'exact_product', goal: 'find_product', intent: 'product_detail', domain: 'product', matchedProductIds: [exactCatalogProduct.id], evidence: [...base.evidence, `catalog-product:${exactCatalogProduct.sku}`], confidence: 1, threshold: 1, responseSource: 'unas-catalog' });
   }
 
+  // Treat a bare, unknown product-type term as an authoritative catalog
+  // no-match. Do not let a later knowledge fallback substitute another type.
+  const genericCatalogTerm = !category && !directCanonical && !productQuestionIntent
+    && /^[a-z0-9]{4,}$/.test(current);
+  if (genericCatalogTerm) {
+    return decision({ ...base, route: 'product_category', intent: 'catalog_category_absent', goal: 'find_product',
+      domain: null, evidence: [...base.evidence, `catalog-generic-no-match:${current}`], confidence: 0, threshold: 1,
+      rejectionReasons: ['catalog_generic_term_absent'], responseSource: 'catalog-absent' });
+  }
+
   if (hasUnresolvedNamedProduct(question, category, productQuestionIntent, goal.goal)) {
     return decision({ ...base, route: 'clarification', intent: 'product_identity_clarification', goal: 'find_product', domain: 'product',
       contextTarget: 'product', confidence: 1, threshold: 1, rejectionReasons: ['unsupported_product_identity'], responseSource: 'conversation-context' });

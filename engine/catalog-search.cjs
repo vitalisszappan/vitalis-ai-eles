@@ -127,7 +127,11 @@ function createCatalogSearch(snapshotPath = DEFAULT_SNAPSHOT) {
       const name = product.normalizedName;
       const exact = text === name || text.includes(name);
       const queryTokens = text.split(' ').filter((x) => x.length >= 4);
-      const matched = queryTokens.filter((token) => name.includes(token));
+      // Require complete name words. A substring such as `illoolaj` inside
+      // `illoolajokkal` ("with essential oils") is a descriptor, not proof
+      // that the product itself is an essential-oil product.
+      const nameTokens = new Set(name.split(/\s+/).filter(Boolean));
+      const matched = queryTokens.filter((token) => queryTokens.length === 1 ? nameTokens.has(token) : name.includes(token));
       return { product, exact, coverage: queryTokens.length ? matched.length / queryTokens.length : 0 };
     }).filter((item) => item.exact || item.coverage === 1).sort((a, b) => Number(b.exact) - Number(a.exact) || b.product.normalizedName.length - a.product.normalizedName.length);
     return candidates[0]?.product || null;
