@@ -521,9 +521,13 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
     }
     const guidedNeed = routing.guidedDiscovery?.needState?.value;
     const guidedType = routing.guidedDiscovery?.productType?.value;
+    const guidedPreferenceAxis = routing.guidedDiscovery?.preferenceAxis?.value;
+    const guidedPreferenceValue = routing.guidedDiscovery?.preferenceValue?.value;
     const guidedCategoryLabel = guidedType === 'szappan' ? 'szappanunk' : guidedType === 'shampoo' ? 'samponunk'
       : guidedType === 'krem' ? 'krémünk' : guidedType === 'dezodor' ? 'dezodorunk' : guidedType === 'ajakbalzsam' ? 'ajakbalzsamunk' : 'termékünk';
-    const guidedAnswer = routing.categoryFollowup === 'more_available'
+    const guidedAnswer = guidedPreferenceAxis === 'scent' && !guidedPreferenceValue
+      ? 'Milyen illatot kedvelsz inkább: friss/citrusos, virágos, gyógynövényes, édes-fűszeres, vagy inkább illatmentes?'
+      : routing.categoryFollowup === 'more_available'
       ? `Nem, többféle ${guidedCategoryLabel} is van. Ha elmondod, milyen igényre vagy milyen változatot keresel, segítek szűkíteni.`
       : routing.contextTarget === 'guided_discovery'
       ? guidedNeed === 'sensitive_skin' && !guidedType ? 'Érzékeny bőrre szappant vagy krémet/balzsamot keresel?'
@@ -707,6 +711,16 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
     const q = normalize(question);
     if (routing.contextTarget === 'guided_discovery') {
       const guidedType=routing.guidedDiscovery?.productType?.value;
+      const scent=routing.guidedDiscovery?.preferenceValue?.value;
+      if(routing.guidedDiscovery?.preferenceAxis?.value==='scent'&&scent){
+        const scentPattern={unscented:/\b(?:illatmentes|natur)\w*/,lavender:/\blevendula\w*/,
+          citrus:/\b(?:citrus|citrom)\w*/,fresh:/\b(?:friss|menta|citrom)\w*/,
+          floral:/\b(?:virag|rozsa|levendula)\w*/,herbal:/\b(?:gyogynoveny|teafa|rozmaring|menta)\w*/,
+          sweet_spicy:/\b(?:edes|fuszeres|csoki|mezes)\w*/}[scent];
+        const scentMatches=scentPattern?products.filter(item=>scentPattern.test(normalize(item.name))):[];
+        if(!scentMatches.length)return attachDecision({source:'unas-catalog',answer:'Ehhez az illatirányhoz most nem találok biztosan azonosítható terméket a választott kategóriában.',confidence:100,links:[],suggestions:[],ruleId:null,intent:'product_recommendation',matchedKnowledgeIds:[]},routing);
+        products=scentMatches;
+      }
       if(guidedType==='ajakbalzsam'&&/\b(?:semleges|illatmentes|natur)\w*/.test(q)){
         const neutral=products.filter(item=>/\b(?:illatmentes|natur)\w*/.test(normalize(item.name)));
         if(neutral.length)products=neutral;

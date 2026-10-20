@@ -372,6 +372,10 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
     const resolved = guidedDecision();
     if (resolved) return resolved;
   }
+  if (!directCanonical && guided?.kind === 'clarify_preference' && broadCategory?.products.length) {
+    const resolved = guidedDecision();
+    if (resolved) return resolved;
+  }
 
   // Unsupported current needs and completion of an earlier discovery turn own
   // the turn before stale product references can be resolved.

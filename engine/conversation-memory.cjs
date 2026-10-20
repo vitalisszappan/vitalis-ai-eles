@@ -54,14 +54,16 @@ function rowsToHistory(rows) {
       assistant=normalizeMessage({role:'assistant',content:row.answer,responseType:row.source,turnId:event.turnId,
         route:event.route,productTypeConstraint:event.productTypeConstraint,links:event.products,targetProductId:event.targetProductId,
         ...(event.kind==='empty'?{catalogStatus:'CATALOG_AVAILABLE_NO_MATCH'}:{})});
-      if(event.version===3) assistant.routing={guidedDiscovery:{productType:{value:event.productType,source:'current-turn',explicit:true},needState:null,bodyArea:null,browseIntent:null,goal:{value:'guided_discovery',source:'current-turn',explicit:true}}};
+      if(event.version===3||event.version===4) assistant.routing={guidedDiscovery:{productType:{value:event.productType,source:'current-turn',explicit:true},needState:null,bodyArea:null,browseIntent:null,
+        preferenceAxis:event.version===4?{value:event.selectedAxis,source:'clarification-answer',explicit:true}:null,preferenceValue:null,
+        goal:{value:'guided_discovery',source:'current-turn',explicit:true}}};
     }
     if(event && assistant){if(event.kind==='selection')assistant.historySelectionAuthority=true;if(event.kind==='empty')assistant.historySelectionSuperseded=true;}
     if(invalid && assistant){assistant=normalizeMessage({role:'assistant',content:row.answer,responseType:row.source});assistant.historyEventInvalid=true;}
     // Legacy rows stay on the existing merge path. A validated event or rejected
     // event is a known server turn; its position cannot be forged by browser data.
     if(validated||invalid)for(const item of [user,assistant].filter(Boolean))serverEvents.set(item,{index,turnId:event?.turnId||null,kind:event?.kind||'invalid',
-      ...(event?.kind==='pending_clarification'?{pendingClarification:{domain:event.domain,clarificationType:event.clarificationType,...(event.version===2?{factors:{...event.factors},requestedDimensions:[...event.requestedDimensions]}:{productType:event.productType})}}:{})});
+      ...(event?.kind==='pending_clarification'?{pendingClarification:{domain:event.domain,clarificationType:event.clarificationType,...(event.version===2?{factors:{...event.factors},requestedDimensions:[...event.requestedDimensions]}:{productType:event.productType,...(event.version===4?{selectedAxis:event.selectedAxis}:{})})}}:{})});
     return [user,assistant].filter(Boolean);
   });
 }
@@ -175,7 +177,12 @@ function structuredStateBase(history=[]){
   const activeSkus=[...new Set(activeProductIds.map(id=>skuByProductId[id]||PRODUCTS[id]?.sku).filter(Boolean))];
   const pendingClarification=trustedPendingClarification(authoritativeHistory);
   const activeProblemDomains=[...new Set([context.lastProblemDomain,pendingClarification?.domain].filter(Boolean))];
-  const guidedDiscovery=reconstructGuidedDiscovery(authoritativeHistory);
+  let guidedDiscovery=reconstructGuidedDiscovery(authoritativeHistory);
+  if(pendingClarification?.clarificationType==='guided_discovery'&&pendingClarification?.selectedAxis){
+    guidedDiscovery={...guidedDiscovery,
+      productType:guidedDiscovery.productType||{value:pendingClarification.productType,source:'server-persistence',explicit:true},
+      preferenceAxis:{value:pendingClarification.selectedAxis,source:'server-persistence',explicit:true},preferenceValue:null};
+  }
   const lastAcne=[...authoritativeHistory].reverse().find(x=>x?.role==='assistant'&&x?.routing?.acneDecision);
   const acneDecision=pendingClarification?.domain==='acne'?{active:true,trusted:true,clarificationType:pendingClarification.clarificationType,factors:{...pendingClarification.factors},requestedDimensions:[...pendingClarification.requestedDimensions]}:lastAcne?.routing?.acneDecision?{active:true,factors:{...lastAcne.routing.acneDecision.factors}}:null;
   return{activeProductIds,activeSkus,activeProblemDomains,lastRecommendedProducts:[...ordinal],lastOrdinalProductList:[...ordinal],selectedProductId,focusedProductId,purchaseProductId,productContextStatus,lastMentionedProduct:focusedProductId,guidedDiscovery,pendingClarification,acneDecision,lastUserIntent:lastUser?.intent||detectCustomerGoal(lastUser?.content||'').intent||null,lastAssistantIntent:lastAssistant?.intent||detectCustomerGoal(precedingUser?.content||'').intent||null,lastCommerceFocus:context.lastCommerceIntent||null};

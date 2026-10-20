@@ -41,6 +41,8 @@ function currentDimensions(question) {
     needState: dimension(need?.needState || null),
     productType: dimension(productType),
     bodyArea: dimension(need?.bodyArea || null),
+    preferenceAxis: null,
+    preferenceValue: null,
     goal: dimension(isPureBrowse(question) ? 'browse' : need || productType ? 'guided_discovery' : null)
   };
 }
@@ -54,8 +56,21 @@ function mergeDimensions(current, inherited = {}) {
     // older product-focused turn into the new recommendation flow.
     productType: current.productType || (currentHasNeed ? null : inherited.productType) || null,
     bodyArea: current.bodyArea || (currentHasNeed ? null : inherited.bodyArea) || null,
+    preferenceAxis: current.preferenceAxis || (currentHasNeed ? null : inherited.preferenceAxis) || null,
+    preferenceValue: current.preferenceValue || (currentHasNeed ? null : inherited.preferenceValue) || null,
     goal: current.goal || inherited.goal || null
   };
+}
+
+function scentPreference(text) {
+  if (/\b(?:illatmentes|semleges|natur)\w*/.test(text)) return 'unscented';
+  if (/\blevendula\w*/.test(text)) return 'lavender';
+  if (/\b(?:citrus|citrom)\w*/.test(text)) return 'citrus';
+  if (/\bfriss\w*/.test(text)) return 'fresh';
+  if (/\bvirag\w*/.test(text)) return 'floral';
+  if (/\b(?:gyogynoveny|teafa|rozmaring|menta)\w*/.test(text)) return 'herbal';
+  if (/\b(?:edes|fuszeres|csoki|mezes)\w*/.test(text)) return 'sweet_spicy';
+  return null;
 }
 
 function resolveGuidedDiscovery({ question, conversationState = null }) {
@@ -64,6 +79,13 @@ function resolveGuidedDiscovery({ question, conversationState = null }) {
   let inherited = conversationState?.guidedDiscovery || {};
   const excludedTypes = detectExcludedProductTypes(question);
   if (excludedTypes.includes(inherited.productType?.value)) inherited = { ...inherited, productType: null };
+  if (inherited.productType && !inherited.preferenceAxis && /^illat(?:\s+alapjan)?$/.test(text)) {
+    current = { ...current, preferenceAxis: dimension('scent', 'clarification-answer') };
+  } else if (inherited.productType && inherited.preferenceAxis?.value === 'scent') {
+    const preference = scentPreference(text);
+    if (preference) current = { ...current, preferenceAxis: inherited.preferenceAxis,
+      preferenceValue: dimension(preference, 'clarification-answer') };
+  }
   if (inherited.productType && current.needState) current={...current,needState:{...current.needState,source:'clarification-answer',explicit:true},bodyArea:current.bodyArea?{...current.bodyArea,source:'clarification-answer',explicit:true}:null};
   if (inherited.productType && !current.needState) {
     const contextualNeed = /\b(?:szaraz|erzekeny)\w*/.test(text) ? 'dry_skin'
@@ -76,6 +98,8 @@ function resolveGuidedDiscovery({ question, conversationState = null }) {
   const type = dimensions.productType?.value;
 
   if (current.browseIntent) return { kind: 'browse', dimensions };
+  if (dimensions.preferenceAxis && !dimensions.preferenceValue) return { kind: 'clarify_preference', dimensions };
+  if (current.preferenceValue && type) return { kind: 'category_answer', dimensions };
   if (!current.needState && !current.productType) return inherited.productType ? { kind: 'category_answer', dimensions } : null;
   if (!need && !type) return null;
 

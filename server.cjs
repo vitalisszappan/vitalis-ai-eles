@@ -1409,6 +1409,14 @@ function validateConversationHistoryRows(rows) {
 }
 function validateConversationHistoryEvent(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  if (value.version === 4) {
+    const keys=['version','turnId','kind','route','domain','clarificationType','productType','selectedAxis'];
+    if(Object.keys(value).length!==keys.length||keys.some(key=>!Object.hasOwn(value,key)))return null;
+    if(value.turnId!==null && !(typeof value.turnId==='string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(value.turnId)))return null;
+    if(value.kind!=='pending_clarification'||value.route!=='clarification'||value.domain!=='product'||value.clarificationType!=='guided_discovery')return null;
+    if(!['szappan','shampoo','krem','dezodor','ajakbalzsam'].includes(value.productType)||value.selectedAxis!=='scent')return null;
+    return {version:4,turnId:value.turnId,kind:value.kind,route:value.route,domain:value.domain,clarificationType:value.clarificationType,productType:value.productType,selectedAxis:value.selectedAxis};
+  }
   if (value.version === 3) {
     const keys=['version','turnId','kind','route','domain','clarificationType','productType'];
     if(Object.keys(value).length!==keys.length||keys.some(key=>!Object.hasOwn(value,key)))return null;
@@ -1464,8 +1472,10 @@ function buildConversationHistoryEvent(result, turnId) {
     &&routing.responseSource==='guided-discovery'&&routing.contextTarget==='guided_discovery'
     &&['szappan','shampoo','krem','dezodor','ajakbalzsam'].includes(guidedType);
   if(pendingGuided){
-    const event={version:3,turnId:typeof turnId==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(turnId)?turnId:null,
+    const selectedAxis=routing?.guidedDiscovery?.preferenceAxis?.value;
+    const event={version:selectedAxis==='scent'?4:3,turnId:typeof turnId==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(turnId)?turnId:null,
       kind:'pending_clarification',route:'clarification',domain:'product',clarificationType:'guided_discovery',productType:guidedType};
+    if(event.version===4)event.selectedAxis=selectedAxis;
     return validateConversationHistoryEvent(event);
   }
   const acne=routing?.acneDecision;

@@ -55,6 +55,21 @@ assert.deepEqual(absent.links,[]);
 const freshMore=ask('ennyi?');
 assert.equal(freshMore.route,'clarification');
 assert.notEqual(freshMore.source,'catalog-absent');
+const freshScent=ask('illat');
+assert.notEqual(freshScent.routing.guidedDiscovery?.productType?.value,'szappan');
+
+for(const [preference,pattern] of [['levendulás',/levendul/i],['inkább illatmentes',/illatmentes|natúr/i]]){
+  let scentRun=turn([],'szappan');
+  scentRun=turn(scentRun.history,'illat');
+  assert.equal(scentRun.result.route,'clarification',preference);
+  assert.equal(scentRun.result.routing.guidedDiscovery.preferenceAxis.value,'scent',preference);
+  assert.match(scentRun.result.answer,/friss\/citrusos.*illatmentes/i,preference);
+  assert.deepEqual(scentRun.result.links,[],preference);
+  scentRun=turn(scentRun.history,preference);
+  assert.equal(scentRun.result.routing.domain,'soap',preference);
+  assert.ok(scentRun.result.links.length,preference);
+  assert.ok(scentRun.result.links.every(link=>pattern.test(link.name)),`${preference}: ${scentRun.result.links.map(link=>link.name).join(' | ')}`);
+}
 
 let soapContext=turn([],'szappan');
 for(const followUp of ['ennyi?','csak ennyi?','más nincs?','van még?','milyen van még?']){
@@ -74,6 +89,30 @@ moreSoap=turn(moreSoap.history,'mutass még');
 assert.ok(moreSoap.result.links.every(link=>!firstShown.has(link.id)));
 
 (async()=>{
+  const scentSession='category-scent-discovery-session-123456';
+  const scentFirst=ask('szappan');
+  const scentFirstRow={id:crypto.randomUUID(),created_at:'2026-10-20T07:59:00.000Z',session_id:scentSession,
+    question:'szappan',answer:scentFirst.answer,source:scentFirst.source,routing_trace:scentFirst.routing,
+    history_event:buildConversationHistoryEvent(scentFirst,crypto.randomUUID())};
+  const scentFirstMemory=await rehydrateSessionHistory({sessionId:scentSession,
+    loadRows:async()=>validateConversationHistoryRows([scentFirstRow])});
+  const axis=ask('illat',scentFirstMemory.history,scentFirstMemory.state);
+  assert.equal(axis.route,'clarification');
+  assert.equal(axis.routing.guidedDiscovery.preferenceAxis.value,'scent');
+  const axisRow={id:crypto.randomUUID(),created_at:'2026-10-20T07:59:01.000Z',session_id:scentSession,
+    question:'illat',answer:axis.answer,source:axis.source,routing_trace:axis.routing,
+    history_event:buildConversationHistoryEvent(axis,crypto.randomUUID())};
+  assert.equal(axisRow.history_event.version,4);
+  assert.equal(axisRow.history_event.selectedAxis,'scent');
+  const scentMemory=await rehydrateSessionHistory({sessionId:scentSession,
+    loadRows:async()=>validateConversationHistoryRows([scentFirstRow,axisRow])});
+  assert.equal(scentMemory.state.guidedDiscovery.productType.value,'szappan');
+  assert.equal(scentMemory.state.guidedDiscovery.preferenceAxis.value,'scent');
+  const lavender=ask('levendulás',scentMemory.history,scentMemory.state);
+  assert.equal(lavender.routing.domain,'soap');
+  assert.ok(lavender.links.length);
+  assert.ok(lavender.links.every(link=>/levendul/i.test(link.name)));
+
   for(const [category,preference,pattern] of [
     ['szappan','száraz és érzékeny',/szappan/i],
     ['sampon','viszket és korpás',/sampon/i]
