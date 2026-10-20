@@ -14,7 +14,7 @@ const { searchKnowledge } = require('./knowledge-fallback.cjs');
 const {detectExcludedProductTypes,detectProductTypeConstraint,inferredHairType,HAIR_WASH_TYPES}=require('./product-type-constraint.cjs');
 const {isTypeComparison}=require('./hair-wash-products.cjs');
 const {determineAnswerMode}=require('./answer-mode.cjs');
-const { resolveGuidedDiscovery } = require('./guided-discovery.cjs');
+const { resolveGuidedDiscovery, isBroadCategoryRequest } = require('./guided-discovery.cjs');
 const { resolveAcneDecision } = require('./acne-decision.cjs');
 const { buildProblemDomainDecision } = require('./problem-domain-decision.cjs');
 const { extractSubtypeRequest, compatibleSubtypeExpert, subtypeCardIdentity } = require('./product-type-constraint.cjs');
@@ -196,7 +196,7 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
   }
 
   const refinement = recommendationRefinement(question, history, context);
-  if (refinement) {
+  if (refinement && !guided?.dimensions?.needState) {
     const intent = `recommendation_refinement_${refinement.type}`;
     if (!refinement.justified) {
       return decision({ ...base, route: 'clarification', intent, goal: 'select_recommendation', domain: context.lastProblemDomain || 'product',
@@ -234,7 +234,7 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
       rejectionReasons: ['ambiguous_product_reference'], responseSource: 'conversation-context' });
   }
 
-  const acneDecision = resolveAcneDecision({ question, history, conversationState });
+  const acneDecision = conversationState?.guidedDiscovery?.productType ? null : resolveAcneDecision({ question, history, conversationState });
   if (acneDecision) {
     const resolved = acneDecision.kind === 'resolved' || acneDecision.kind === 'usage';
     return decision({
@@ -275,6 +275,31 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
       domain: 'product', contextUsed: false, contextTarget: 'product', matchedCanonicalIds: ambiguousFamilyIds,
       matchedProductIds: ambiguousFamilyIds, confidence: 1, threshold: 1,
       rejectionReasons: ['ambiguous_product_family'], responseSource: 'conversation-context' });
+  }
+  const guidedCategoryIds = { szappan: 'soap', shampoo: 'shampoo', krem: 'cream', dezodor: 'deodorant', ajakbalzsam: 'lip_care' };
+  const broadCategoryId = guidedCategoryIds[guided?.dimensions?.productType?.value];
+  const broadCategory = broadCategoryId ? catalog.searchCategory(broadCategoryId) : null;
+  const categoryFollowupText = normalize(question);
+  const categoryMoreQuestion = /^(?:(?:csak\s+)?ennyi|mas\s+nincs|van\s+meg|milyen\s+van\s+meg)$/.test(categoryFollowupText);
+  const categoryShowMore = /^(?:mutass|mutasd|listazz|sorolj)(?:\s+meg)?\??$/.test(categoryFollowupText);
+  if ((categoryMoreQuestion || categoryShowMore) && broadCategory?.products.length) {
+    if (categoryShowMore) {
+      const alreadyShown = new Set(context.lastRecommendedProducts || []);
+      const remaining = broadCategory.products.filter(item => !alreadyShown.has(item.id) && !alreadyShown.has(item.canonicalProductId));
+      return decision({ ...base, route: 'product_category', intent: 'catalog_category_more', goal: 'find_product',
+        domain: broadCategoryId, contextUsed: true, contextTarget: 'guided_discovery', categoryFollowup: 'show_more',
+        guidedDiscovery: guided.dimensions, matchedProductIds: remaining.map(item => item.id), confidence: 1, threshold: 1,
+        responseSource: 'guided-discovery' });
+    }
+    return decision({ ...base, route: 'clarification', intent: 'catalog_category_more', goal: 'find_product',
+      domain: broadCategoryId, contextUsed: true, contextTarget: 'guided_discovery', categoryFollowup: 'more_available',
+      guidedDiscovery: guided.dimensions, confidence: 1, threshold: 1, rejectionReasons: ['category_preference_missing'],
+      responseSource: 'guided-discovery' });
+  }
+  if ((categoryMoreQuestion || categoryShowMore) && !broadCategoryId) {
+    return decision({ ...base, route: 'clarification', intent: 'catalog_category_more', goal: 'find_product',
+      domain: 'product', contextUsed: false, contextTarget: 'product', confidence: 1, threshold: 1,
+      rejectionReasons: ['missing_category_context'], responseSource: 'conversation-context' });
   }
   const alternative = recommendationAlternative(question, history, context);
   if (alternative) {
@@ -342,12 +367,18 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
       : guided.kind === 'clarify_need' ? 'guided_missing_need_state' : 'guided_suitability_unavailable';
     return decision({ ...base, route: 'clarification', intent: 'product_recommendation', goal: 'find_product', domain: guided.dimensions.needState?.value || 'product', contextTarget: 'guided_discovery', contextUsed: Boolean(conversationState?.guidedDiscovery), guidedDiscovery: guided.dimensions, confidence: 1, threshold: 1, rejectionReasons: [reason], responseSource: 'guided-discovery' });
   };
+  if (!directCanonical && guided?.kind === 'clarify_need' && broadCategory?.products.length > 1
+    && isBroadCategoryRequest(question, guided.dimensions.productType.value)) {
+    const resolved = guidedDecision();
+    if (resolved) return resolved;
+  }
 
   // Unsupported current needs and completion of an earlier discovery turn own
   // the turn before stale product references can be resolved.
   const unsupportedGuidedNeed = ['sensitive_skin', 'dry_hands', 'wrinkles_or_mature_skin'].includes(guided?.dimensions?.needState?.value)
     && guided?.dimensions?.needState?.source === 'current-turn';
   const completesInheritedNeed = guided?.dimensions?.productType?.source === 'current-turn'
+    && Boolean(detectProductTypeConstraint(question))
     && Boolean(guided?.dimensions?.needState)
     && guided?.dimensions?.needState?.source !== 'current-turn';
   const standaloneTypeOnly = guided?.dimensions?.productType?.source === 'current-turn'
@@ -437,7 +468,12 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
     ? Boolean(inferredHairType(item))
     : require('./product-type-constraint.cjs').matchesProductType(item, effectiveProductTypeConstraint));
   if (expert && expertMatchesConstraint) {
-    return decision({ ...base, route: 'expert_rule', intent: expert.intent, matchedRuleId: expert.ruleId, primaryProductId: expert.primaryProductId || null, matchedProductIds: (expert.links || []).map((item) => item.id).filter(Boolean), confidence: 1, threshold: 1, responseSource: expert.source });
+    return decision({ ...base, productTypeConstraint: effectiveProductTypeConstraint, route: 'expert_rule', intent: expert.intent, matchedRuleId: expert.ruleId, primaryProductId: expert.primaryProductId || null, matchedProductIds: (expert.links || []).map((item) => item.id).filter(Boolean), confidence: 1, threshold: 1, responseSource: expert.source });
+  }
+  if (!directCanonical && ['category_answer','unsupported_need_type'].includes(guided?.kind) && broadCategory?.products.length) {
+    return decision({ ...base, route: 'product_category', intent: 'product_recommendation', goal: 'find_product',
+      domain: broadCategoryId, contextUsed: true, contextTarget: 'guided_discovery', guidedDiscovery: guided.dimensions,
+      matchedProductIds: broadCategory.products.map(item => item.id), confidence: 1, threshold: 1, responseSource: 'guided-discovery' });
   }
   if (directCanonical) {
     return decision({ ...base, route: 'exact_product', goal: 'find_product', intent: 'product_detail', domain: 'product', matchedCanonicalIds: [directCanonical], matchedProductIds: [directCanonical], confidence: 1, threshold: 1, responseSource: 'product-context' });

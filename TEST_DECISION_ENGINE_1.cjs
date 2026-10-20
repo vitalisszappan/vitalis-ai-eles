@@ -30,8 +30,8 @@ const cases = [
   { q: 'tusfürdőtök van?', route: 'product_category', goal: 'find_product', intent: 'catalog_category_found', domain: 'shower_gel', links: true },
   { q: 'van kézkrém?', route: 'product_category', goal: 'find_product', domain: 'hand_cream' },
   { q: 'van sarokkrém?', route: 'product_category', goal: 'find_product', domain: 'heel_care' },
-  { q: 'van szappan?', route: 'product_category', goal: 'find_product', domain: 'soap', links: true },
-  { q: 'van sampon?', route: 'hair_product_type', goal: 'find_product', intent: 'product_type_availability', domain: 'shampoo', links: true },
+  { q: 'van szappan?', route: 'clarification', goal: 'find_product', domain: 'product' },
+  { q: 'van sampon?', route: 'clarification', goal: 'find_product', domain: 'product' },
   { q: 'milyen dezodorotok van?', route: 'product_category', goal: 'find_product', domain: 'deodorant', links: true },
   { q: 'izzadásgátlóról', route: 'product_category', domain: 'deodorant', links: true },
 

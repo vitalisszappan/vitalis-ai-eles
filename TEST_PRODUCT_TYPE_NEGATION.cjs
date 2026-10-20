@@ -60,9 +60,9 @@ assert.ok(liquid.links.length > 0);
 assert.ok(liquid.links.every((item) => item.productType === 'liquid_shampoo'));
 
 const control = ask('Van sampon?');
-assert.equal(control.route, 'hair_product_type');
-assert.equal(control.intent, 'product_type_availability');
-assert.match(control.answer, /^Igen\./);
+assert.equal(control.route, 'clarification');
+assert.equal(control.routing.contextTarget, 'guided_discovery');
+assert.deepEqual(control.links, []);
 
 restoreCatalogFixture();
 console.log('Product-type negation regressions: PASS');

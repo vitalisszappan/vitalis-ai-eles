@@ -38,7 +38,8 @@ for (const question of [
   'Melyik krémet ajánlod?'
 ]) {
   const result = route(question);
-  assert.equal(result.route, 'product_category', question);
+  assert.equal(result.route, 'clarification', question);
+  assert.equal(result.contextTarget, 'guided_discovery', question);
   assert.notEqual(result.intent, 'checkout_problem', question);
   assert.notEqual(result.intent, 'order_start', question);
 }

@@ -521,11 +521,21 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
     }
     const guidedNeed = routing.guidedDiscovery?.needState?.value;
     const guidedType = routing.guidedDiscovery?.productType?.value;
-    const guidedAnswer = routing.contextTarget === 'guided_discovery'
+    const guidedCategoryLabel = guidedType === 'szappan' ? 'szappanunk' : guidedType === 'shampoo' ? 'samponunk'
+      : guidedType === 'krem' ? 'krémünk' : guidedType === 'dezodor' ? 'dezodorunk' : guidedType === 'ajakbalzsam' ? 'ajakbalzsamunk' : 'termékünk';
+    const guidedAnswer = routing.categoryFollowup === 'more_available'
+      ? `Nem, többféle ${guidedCategoryLabel} is van. Ha elmondod, milyen igényre vagy milyen változatot keresel, segítek szűkíteni.`
+      : routing.contextTarget === 'guided_discovery'
       ? guidedNeed === 'sensitive_skin' && !guidedType ? 'Érzékeny bőrre szappant vagy krémet/balzsamot keresel?'
       : guidedNeed === 'dry_hands' && !guidedType ? 'Kézkrémet vagy szappant keresel?'
       : guidedNeed === 'wrinkles_or_mature_skin' && !guidedType ? 'Krémet vagy balzsamot keresel?'
-      : !guidedNeed && guidedType ? `Milyen bőrigényre keresel ${guidedType === 'krem' ? 'krémet' : guidedType === 'szappan' ? 'szappant' : guidedType === 'balzsam' ? 'balzsamot' : 'sampont'}?`
+      : !guidedNeed && guidedType ? (guidedType === 'szappan'
+        ? 'Milyen bőrre keresed: száraz/érzékeny, zsíros-pattanásos, problémás bőrre, vagy inkább illat alapján választanál?'
+        : guidedType === 'shampoo' ? 'Milyen haj- vagy fejbőrproblémára keresel sampont?'
+        : guidedType === 'krem' ? 'Melyik testtájra és milyen bőrigényre keresel krémet?'
+        : guidedType === 'dezodor' ? 'Milyen illatot vagy dezodorváltozatot keresel?'
+        : guidedType === 'ajakbalzsam' ? 'Illatos vagy inkább semleges ajakbalzsamot szeretnél?'
+        : `Milyen bőrigényre keresel ${guidedType === 'balzsam' ? 'balzsamot' : 'terméket'}?`)
       : guidedNeed === 'dry_hands' ? 'Megmutathatom a választott terméktípus kínálatát, de száraz kézre való alkalmasságot most nem tudok biztosan állítani.'
       : guidedNeed === 'wrinkles_or_mature_skin' ? 'Megmutathatom a krémek és balzsamok kínálatát, de ránccsökkentő hatást most nem tudok biztosan állítani.'
       : 'Megmutathatom a választott kategória kínálatát, de ehhez a bőrigényhez most nem tudok biztos termékalkalmasságot állítani.'
@@ -689,9 +699,24 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
     const found = decisionCatalog.searchCategory(routing.domain);
     const constrained=routing.productTypeConstraint?found.products.filter(item=>matchesProductType(item,routing.productTypeConstraint)):found.products;
     let products=routing.productTypeConstraint?constrained:found.products;
+    if(routing.categoryFollowup==='show_more'){
+      const allowed=new Set(routing.matchedProductIds||[]);
+      products=products.filter(item=>allowed.has(item.id));
+      if(!products.length)return attachDecision({source:'unas-catalog',answer:'A jelenlegi kategóriában már megmutattam az elérhető találatokat. Ha elmondod, milyen igényre keresel terméket, segítek szűkíteni.',confidence:100,links:[],suggestions:[],ruleId:null,intent:'catalog_category_more',matchedKnowledgeIds:[]},routing);
+    }
     const q = normalize(question);
+    if (routing.contextTarget === 'guided_discovery') {
+      const guidedType=routing.guidedDiscovery?.productType?.value;
+      if(guidedType==='ajakbalzsam'&&/\b(?:semleges|illatmentes|natur)\w*/.test(q)){
+        const neutral=products.filter(item=>/\b(?:illatmentes|natur)\w*/.test(normalize(item.name)));
+        if(neutral.length)products=neutral;
+      }
+      const preferenceWords=q.split(/\s+/).filter(word=>word.length>=5&&!/^(inkabb|szeretnek|legyen|illat|illatos|semleges)$/.test(word));
+      const preferredByName=products.filter(item=>preferenceWords.some(word=>normalize(item.name).includes(word.replace(/(?:at|et|ot)$/,''))));
+      if(preferredByName.length)products=preferredByName;
+    }
     if (/normal\w* bor/.test(q)) products = products.filter((item) => /normal\w* bor/.test(normalize(item.name)));
-    if (/erzekeny\w* bor/.test(q)) products = products.filter((item) => /erzekeny\w*.*bor|bor\w*.*erzekeny/.test(normalize(item.name)));
+    if (/erzekeny\w*(?: bor)?/.test(q)) products = products.filter((item) => /erzekeny\w*.*bor|bor\w*.*erzekeny/.test(normalize(item.name)));
     if (!products.length && !found.category) return attachDecision({ source: 'catalog-absent',
       answer: 'Jelenleg nem tal\u00e1ltam ilyen term\u00e9ket a webshop k\u00edn\u00e1lat\u00e1ban.', confidence: 0,
       links: [], suggestions: [], ruleId: null, intent: 'catalog_category_absent', matchedKnowledgeIds: [] }, routing);

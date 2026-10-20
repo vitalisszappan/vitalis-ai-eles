@@ -46,7 +46,7 @@ function currentDimensions(question) {
 }
 
 function mergeDimensions(current, inherited = {}) {
-  const currentHasNeed = Boolean(current.needState);
+  const currentHasNeed = current.needState?.source === 'current-turn';
   return {
     browseIntent: current.browseIntent || null,
     needState: current.needState || inherited.needState || null,
@@ -59,19 +59,27 @@ function mergeDimensions(current, inherited = {}) {
 }
 
 function resolveGuidedDiscovery({ question, conversationState = null }) {
-  const current = currentDimensions(question);
+  let current = currentDimensions(question);
   const text = normalize(question);
-  const inherited = conversationState?.guidedDiscovery || {};
+  let inherited = conversationState?.guidedDiscovery || {};
+  const excludedTypes = detectExcludedProductTypes(question);
+  if (excludedTypes.includes(inherited.productType?.value)) inherited = { ...inherited, productType: null };
+  if (inherited.productType && current.needState) current={...current,needState:{...current.needState,source:'clarification-answer',explicit:true},bodyArea:current.bodyArea?{...current.bodyArea,source:'clarification-answer',explicit:true}:null};
+  if (inherited.productType && !current.needState) {
+    const contextualNeed = /\b(?:szaraz|erzekeny)\w*/.test(text) ? 'dry_skin'
+      : /\b(?:zsiros|pattanasos)\w*/.test(text) ? 'acne'
+      : /\b(?:viszket|korpas|hamlik)\w*/.test(text) ? 'itchy_scalp' : null;
+    if (contextualNeed) current={...current,needState:dimension(contextualNeed,'clarification-answer'),bodyArea:dimension(contextualNeed==='itchy_scalp'?'scalp':'skin','clarification-answer')};
+  }
   const dimensions = mergeDimensions(current, inherited);
   const need = dimensions.needState?.value;
   const type = dimensions.productType?.value;
 
   if (current.browseIntent) return { kind: 'browse', dimensions };
-  if (!current.needState && !current.productType) return null;
+  if (!current.needState && !current.productType) return inherited.productType ? { kind: 'category_answer', dimensions } : null;
   if (!need && !type) return null;
 
   if (current.productType && inherited.browseIntent && !need) return { kind: 'defer', dimensions };
-  if (current.productType && !need && (/\b(?:mutass\w*|listaz\w*|sorolj\w*)\b/.test(text) || /\bmilyen\b.*\b(?:van|vannak)\b/.test(text))) return { kind: 'defer', dimensions };
 
   // This exact combination already has an approved catalog-backed contract.
   if (need === 'sensitive_skin' && type === 'szappan') return { kind: 'defer', dimensions };
@@ -79,6 +87,16 @@ function resolveGuidedDiscovery({ question, conversationState = null }) {
   if (need && !type) return { kind: 'clarify_product_type', dimensions };
   if (!need && type) return { kind: 'clarify_need', dimensions };
   return { kind: 'unsupported_need_type', dimensions };
+}
+
+function isBroadCategoryRequest(question, productType) {
+  if (!productType) return false;
+  let text = normalize(question);
+  const pattern = { szappan: /\bszappan\w*/g, shampoo: /\bsampon\w*/g, krem: /\bkrem\w*/g,
+    dezodor: /\bdezodor\w*/g, ajakbalzsam: /\b(?:ajakbalzsam|ajakapolo)\w*/g }[productType];
+  if (!pattern) return false;
+  text = text.replace(pattern, ' ').replace(/\b(?:van|vannak|valami|egy|keresek|keresem|szeretnek|erdekel|nekem|kerlek|mutass|milyen|melyik|ajanl\w*|javasol\w*|listaz\w*|sorolj\w*|termeket|termek)\b/g, ' ').replace(/[^a-z0-9]+/g, ' ').trim();
+  return !text;
 }
 
 function reconstructGuidedDiscovery(history = []) {
@@ -101,5 +119,6 @@ module.exports = {
   currentDimensions,
   mergeDimensions,
   resolveGuidedDiscovery,
-  reconstructGuidedDiscovery
+  reconstructGuidedDiscovery,
+  isBroadCategoryRequest
 };

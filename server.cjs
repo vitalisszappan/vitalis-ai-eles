@@ -1409,6 +1409,14 @@ function validateConversationHistoryRows(rows) {
 }
 function validateConversationHistoryEvent(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  if (value.version === 3) {
+    const keys=['version','turnId','kind','route','domain','clarificationType','productType'];
+    if(Object.keys(value).length!==keys.length||keys.some(key=>!Object.hasOwn(value,key)))return null;
+    if(value.turnId!==null && !(typeof value.turnId==='string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(value.turnId)))return null;
+    if(value.kind!=='pending_clarification'||value.route!=='clarification'||value.domain!=='product'||value.clarificationType!=='guided_discovery')return null;
+    if(!['szappan','shampoo','krem','dezodor','ajakbalzsam'].includes(value.productType))return null;
+    return {version:3,turnId:value.turnId,kind:value.kind,route:value.route,domain:value.domain,clarificationType:value.clarificationType,productType:value.productType};
+  }
   if (value.version === 2) {
     const keys=['version','turnId','kind','route','domain','clarificationType','factors','requestedDimensions'];
     if (Object.keys(value).length!==keys.length || keys.some(key=>!Object.hasOwn(value,key))) return null;
@@ -1451,6 +1459,15 @@ function validateConversationHistoryEvent(value) {
 function buildConversationHistoryEvent(result, turnId) {
   if (!result || typeof result!=='object') return null;
   const routing=result.routing&&typeof result.routing==='object'?result.routing:null;
+  const guidedType=routing?.guidedDiscovery?.productType?.value;
+  const pendingGuided=result.route==='clarification'&&routing?.route==='clarification'
+    &&routing.responseSource==='guided-discovery'&&routing.contextTarget==='guided_discovery'
+    &&['szappan','shampoo','krem','dezodor','ajakbalzsam'].includes(guidedType);
+  if(pendingGuided){
+    const event={version:3,turnId:typeof turnId==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(turnId)?turnId:null,
+      kind:'pending_clarification',route:'clarification',domain:'product',clarificationType:'guided_discovery',productType:guidedType};
+    return validateConversationHistoryEvent(event);
+  }
   const acne=routing?.acneDecision;
   const pendingAcne=result.route==='clarification'&&routing?.route==='clarification'
     &&routing.responseSource==='acne-decision'&&routing.contextTarget==='acne_decision'

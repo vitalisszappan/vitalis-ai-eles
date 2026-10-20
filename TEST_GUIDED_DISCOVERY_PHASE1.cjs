@@ -43,11 +43,15 @@ for (const [query, need, wording] of needOnly) {
   noCards(result);
 }
 
-for (const [query, type] of [['Valami jó krémet keresek.', 'krem'], ['Szappant keresek.', 'szappan'], ['Sampon érdekel.', 'shampoo']]) {
+for (const [query, type, wording] of [
+  ['Valami jó krémet keresek.', 'krem', /testtájra.*bőrigényre/i],
+  ['Szappant keresek.', 'szappan', /Milyen bőrre/i],
+  ['Sampon érdekel.', 'shampoo', /haj- vagy fejbőrproblémára/i]
+]) {
   const result = ask(query);
   assert.equal(result.route, 'clarification');
   assert.equal(result.routing.guidedDiscovery.productType.value, type);
-  assert.match(result.answer, /Milyen bőrigényre/i);
+  assert.match(result.answer, wording);
   noCards(result);
 }
 
@@ -79,9 +83,10 @@ noCards(run.result);
 
 run = turn([], 'Krém érdekel.');
 run = turn(run.history, 'Száraz bőrre.');
-assert.equal(run.result.route, 'clarification');
+assert.equal(run.result.route, 'product_category');
 assert.notEqual(run.result.routing.primaryProductId, 'shea_vajas_szappan');
-noCards(run.result);
+assert.ok(run.result.links.length > 0);
+assert.ok(run.result.links.every((link) => /krém|balzsam/i.test(link.name)));
 
 for (const query of ['Van valami száraz bőrre?', 'Mit ajánlotok pikkelysömörre?', 'Mit ajánlasz ekcémára?', 'Viszket és hámlik a fejbőröm.']) {
   const expert = ask(query);

@@ -26,8 +26,13 @@ let wrongConfidentProduct = 0;
 for (const [question, exists, namePattern] of cases) {
   const result = ask(question);
   if (exists) {
-    assert.ok(result.links.length > 0, question);
-    assert.ok(result.links.every((link) => namePattern.test(link.name)), question);
+    if (['ajakbalzsam', 'dezodor'].includes(question)) {
+      assert.equal(result.route, 'clarification', question);
+      assert.deepEqual(result.links, [], question);
+    } else {
+      assert.ok(result.links.length > 0, question);
+      assert.ok(result.links.every((link) => namePattern.test(link.name)), question);
+    }
   } else {
     assert.equal(result.source, 'catalog-absent', question);
     assert.equal(result.confidence, 0, question);

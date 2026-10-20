@@ -15,6 +15,7 @@ const CATEGORY_DEFINITIONS = [
   { id: 'shower_gel', label: 'tusfürdő', query: /\b(tusfurdo|tusfurdotok|folyekony szappan)\w*/, product: /\b(tusfurdo|folyekony szappan)\w*/ },
   { id: 'sunscreen', label: 'naptej/fényvédő', query: /\b(naptej|fenyvedo|fenyvedelem|spf)\w*/, product: /\b(naptej|fenyvedo|spf ?[0-9]*)\w*/ },
   { id: 'deodorant', label: 'dezodor', query: /\b(dezodor|izzadasgatlo|izzadasgatlorol)\w*/, product: /\b(dezodor|kremdezodor)\w*/ },
+  { id: 'lip_care', label: 'ajakbalzsam', query: /\b(ajakbalzsam|ajakapolo)\w*/, product: /\b(ajakbalzsam|ajakapolo)\w*/ },
   { id: 'shampoo', label: 'sampon', query: /\b(sampon|samponotok)\w*/, product: /\b(sampon|samponszappan)\w*/ },
   { id: 'soap', label: 'szappan', query: /\b(szappan|szappanotok)\w*/, product: /\b(szappan)\w*/ },
   { id: 'hand_cream', label: 'kézkrém', query: /\b(kezkrem|kezapolo)\w*/, product: /\b(kezkrem|kezapolo|testapolo krem|shea vaj)\w*/ },

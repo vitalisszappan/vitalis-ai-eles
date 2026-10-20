@@ -9,7 +9,9 @@ const NEGATABLE_TYPES=Object.freeze([
   ['tusfurdo','tusfurdo\\w*'],
   ['szappan','szappan\\w*'],
   ['krem','krem\\w*'],
-  ['balzsam','balzsam\\w*']
+  ['balzsam','balzsam\\w*'],
+  ['dezodor','dezodor\\w*'],
+  ['ajakbalzsam','(?:ajakbalzsam|ajakapolo)\\w*']
 ]);
 function negationPatterns(typePattern){return[
   new RegExp(`\\bnem\\s+${typePattern}(?:\\s+(?:erdekel\\w*|szeretn\\w*))?`,'g'),
@@ -23,14 +25,14 @@ function detectExcludedProductTypes(question){
   return excluded;
 }
 function withoutNegatedProductTypes(question){let q=normalize(question);for(const [,pattern] of NEGATABLE_TYPES){for(const regex of negationPatterns(pattern))q=q.replace(regex,' ');}return q.replace(/\s+/g,' ').trim();}
-function detectProductTypeConstraint(question){const q=withoutNegatedProductTypes(question);if(/\b(samponszappan\w*|sampon szappan\w*)/.test(q))return'shampoo_soap';if(/\b(szilard sampon\w*|samponrud\w*|shampoo bar\w*)/.test(q))return'solid_shampoo';if(/\bfolyekony sampon\w*/.test(q))return'liquid_shampoo';if(/\btusfurdo\w*/.test(q))return'tusfurdo';if(/\bszappan\w*/.test(q))return'szappan';if(/\bkrem\w*/.test(q))return'krem';if(/\bbalzsam\w*/.test(q))return'balzsam';return null;}
+function detectProductTypeConstraint(question){const q=withoutNegatedProductTypes(question);if(/\b(samponszappan\w*|sampon szappan\w*)/.test(q))return'shampoo_soap';if(/\b(szilard sampon\w*|samponrud\w*|shampoo bar\w*)/.test(q))return'solid_shampoo';if(/\bfolyekony sampon\w*/.test(q))return'liquid_shampoo';if(/\btusfurdo\w*/.test(q))return'tusfurdo';if(/\bszappan\w*/.test(q))return'szappan';if(/\b(?:ajakbalzsam|ajakapolo)\w*/.test(q))return'ajakbalzsam';if(/\bdezodor\w*/.test(q))return'dezodor';if(/\bkrem\w*/.test(q))return'krem';if(/\bbalzsam\w*/.test(q))return'balzsam';return null;}
 // Legacy canonical objects may use their ID; catalog records require mapped identity.
 function semanticProductId(product) {
   if (product?.commerceIdentity || String(product?.id || '').startsWith('catalog:')) return product?.canonicalProductId || null;
   return product?.id;
 }
 function inferredHairType(product){const explicit=product?.productType;if(HAIR_WASH_TYPES.includes(explicit))return explicit;const raw=[semanticProductId(product),product?.name,product?.title,product?.label,...(product?.category||[])].filter(Boolean).join(' '),text=normalize(raw);if(/shampoo_soap|\b(samponszappan\w*|sampon szappan\w*)/.test(`${raw} ${text}`))return'shampoo_soap';if(/solid_shampoo|\b(szilard sampon\w*|samponrud\w*|shampoo bar\w*)/.test(`${raw} ${text}`))return'solid_shampoo';if(/\bsampon\w*/.test(text))return'liquid_shampoo';return null;}
-function matchesProductType(product,constraint){if(!constraint)return true;if(HAIR_WASH_TYPES.includes(constraint))return inferredHairType(product)===constraint;const text=normalize([semanticProductId(product),product?.name,product?.title,product?.label].filter(Boolean).join(' '));if(constraint==='tusfurdo')return /\btusfurdo\w*/.test(text);if(constraint==='szappan')return /\bszappan\w*/.test(text)&&!inferredHairType(product);if(constraint==='krem')return /\bkrem\w*/.test(text);if(constraint==='balzsam')return /\bbalzsam\w*/.test(text);return false;}
+function matchesProductType(product,constraint){if(!constraint)return true;if(HAIR_WASH_TYPES.includes(constraint))return inferredHairType(product)===constraint;const text=normalize([semanticProductId(product),product?.name,product?.title,product?.label].filter(Boolean).join(' '));if(constraint==='tusfurdo')return /\btusfurdo\w*/.test(text);if(constraint==='szappan')return /\bszappan\w*/.test(text)&&!inferredHairType(product);if(constraint==='krem')return /\bkrem\w*/.test(text);if(constraint==='balzsam')return /\bbalzsam\w*/.test(text);if(constraint==='dezodor')return /\b(?:dezodor|kremdezodor)\w*/.test(text);if(constraint==='ajakbalzsam')return /\b(?:ajakbalzsam|ajakapolo)\w*/.test(text);return false;}
 // Narrow current-turn requests only. Keep legacy extraction (including generic
 // shampoo's null constraint) unchanged for all existing consumers.
 const BODY_REQUEST = /\btestapolo(?:t|tok|k|itok)?\b/g;

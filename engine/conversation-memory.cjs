@@ -54,13 +54,14 @@ function rowsToHistory(rows) {
       assistant=normalizeMessage({role:'assistant',content:row.answer,responseType:row.source,turnId:event.turnId,
         route:event.route,productTypeConstraint:event.productTypeConstraint,links:event.products,targetProductId:event.targetProductId,
         ...(event.kind==='empty'?{catalogStatus:'CATALOG_AVAILABLE_NO_MATCH'}:{})});
+      if(event.version===3) assistant.routing={guidedDiscovery:{productType:{value:event.productType,source:'current-turn',explicit:true},needState:null,bodyArea:null,browseIntent:null,goal:{value:'guided_discovery',source:'current-turn',explicit:true}}};
     }
     if(event && assistant){if(event.kind==='selection')assistant.historySelectionAuthority=true;if(event.kind==='empty')assistant.historySelectionSuperseded=true;}
     if(invalid && assistant){assistant=normalizeMessage({role:'assistant',content:row.answer,responseType:row.source});assistant.historyEventInvalid=true;}
     // Legacy rows stay on the existing merge path. A validated event or rejected
     // event is a known server turn; its position cannot be forged by browser data.
     if(validated||invalid)for(const item of [user,assistant].filter(Boolean))serverEvents.set(item,{index,turnId:event?.turnId||null,kind:event?.kind||'invalid',
-      ...(event?.kind==='pending_clarification'?{pendingClarification:{domain:event.domain,clarificationType:event.clarificationType,factors:{...event.factors},requestedDimensions:[...event.requestedDimensions]}}:{})});
+      ...(event?.kind==='pending_clarification'?{pendingClarification:{domain:event.domain,clarificationType:event.clarificationType,...(event.version===2?{factors:{...event.factors},requestedDimensions:[...event.requestedDimensions]}:{productType:event.productType})}}:{})});
     return [user,assistant].filter(Boolean);
   });
 }
