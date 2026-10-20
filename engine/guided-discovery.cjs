@@ -79,7 +79,11 @@ function resolveGuidedDiscovery({ question, conversationState = null }) {
   let inherited = conversationState?.guidedDiscovery || {};
   const excludedTypes = detectExcludedProductTypes(question);
   if (excludedTypes.includes(inherited.productType?.value)) inherited = { ...inherited, productType: null };
-  if (inherited.productType && !inherited.preferenceAxis && /^illat(?:\s+alapjan)?$/.test(text)) {
+  const directScentPreference = current.productType ? scentPreference(text) : null;
+  if (directScentPreference) {
+    current = { ...current, preferenceAxis: dimension('scent'),
+      preferenceValue: dimension(directScentPreference) };
+  } else if (inherited.productType && !inherited.preferenceAxis && /^illat(?:\s+alapjan)?$/.test(text)) {
     current = { ...current, preferenceAxis: dimension('scent', 'clarification-answer') };
   } else if (inherited.productType && inherited.preferenceAxis?.value === 'scent') {
     const preference = scentPreference(text);

@@ -60,6 +60,49 @@ assert.notEqual(freshScent.routing.guidedDiscovery?.productType?.value,'szappan'
 const freshUnscented=ask('illatmentes');
 assert.notEqual(freshUnscented.routing.guidedDiscovery?.productType?.value,'szappan');
 
+for(const [query,value,pattern] of [
+  ['illatmentes szappan','unscented',/illatmentes|natúr/i],
+  ['levendulás szappan','lavender',/levendul/i],
+  ['levendula szappan','lavender',/levendul/i],
+  ['natúr szappan','unscented',/illatmentes|natúr/i]
+]){
+  const result=ask(query);
+  assert.equal(result.route,'product_category',query);
+  assert.equal(result.routing.productTypeConstraint,'szappan',query);
+  assert.equal(result.routing.guidedDiscovery.productType.value,'szappan',query);
+  assert.equal(result.routing.guidedDiscovery.preferenceAxis.value,'scent',query);
+  assert.equal(result.routing.guidedDiscovery.preferenceValue.value,value,query);
+  assert.ok(result.links.length,query);
+  assert.ok(result.links.every(link=>pattern.test(link.name)),`${query}: ${result.links.map(link=>link.name).join(' | ')}`);
+}
+const unsupportedScentCombination=ask('citrusos szappan');
+assert.equal(unsupportedScentCombination.route,'product_category');
+assert.equal(unsupportedScentCombination.routing.guidedDiscovery.preferenceValue.value,'citrus');
+assert.ok(unsupportedScentCombination.links.length);
+assert.ok(unsupportedScentCombination.links.every(link=>/citr|citrom/i.test(link.name)));
+const freshLavender=ask('levendulás');
+assert.equal(freshLavender.routing.guidedDiscovery?.productType?.value??null,null);
+const unscentedLipCare=ask('illatmentes ajakbalzsam');
+assert.equal(unscentedLipCare.routing.guidedDiscovery.preferenceValue.value,'unscented');
+assert.ok(unscentedLipCare.links.length);
+assert.ok(unscentedLipCare.links.every(link=>/ajakbalzsam|ajakápoló/i.test(link.name)&&/illatmentes|natúr/i.test(link.name)));
+const unsupportedLavenderShampoo=ask('levendulás sampon');
+assert.equal(unsupportedLavenderShampoo.route,'product_category');
+assert.equal(unsupportedLavenderShampoo.routing.guidedDiscovery.preferenceValue.value,'lavender');
+assert.deepEqual(unsupportedLavenderShampoo.links,[]);
+assert.match(unsupportedLavenderShampoo.answer,/nem találok/i);
+
+const directDrySensitiveSoap=ask('szappan száraz érzékeny bőrre');
+assert.ok(directDrySensitiveSoap.links.length);
+assert.ok(directDrySensitiveSoap.links.every(link=>/szappan/i.test(link.name)&&!/aktív szenes|zsíros bőrre/i.test(link.name)));
+const directOilyAcneSoap=ask('szappant keresek zsíros pattanásos bőrre');
+assert.notEqual(directOilyAcneSoap.route,'hard_fallback');
+assert.equal(directOilyAcneSoap.routing.productTypeConstraint,'szappan');
+const directItchyShampoo=ask('sampon viszkető fejbőrre');
+assert.notEqual(directItchyShampoo.route,'hard_fallback');
+assert.equal(directItchyShampoo.routing.productTypeConstraint,'shampoo');
+assert.ok(directItchyShampoo.links.some(link=>/Dermavital sampon/i.test(link.name)));
+
 for(const [preference,pattern] of [['levendulás',/levendul/i],['levendula',/levendul/i],
   ['illatmentes',/illatmentes|natúr/i],['inkább illatmentes',/illatmentes|natúr/i],['natúr',/illatmentes|natúr/i]]){
   let scentRun=turn([],'szappan');
