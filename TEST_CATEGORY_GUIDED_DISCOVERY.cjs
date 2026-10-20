@@ -57,8 +57,11 @@ assert.equal(freshMore.route,'clarification');
 assert.notEqual(freshMore.source,'catalog-absent');
 const freshScent=ask('illat');
 assert.notEqual(freshScent.routing.guidedDiscovery?.productType?.value,'szappan');
+const freshUnscented=ask('illatmentes');
+assert.notEqual(freshUnscented.routing.guidedDiscovery?.productType?.value,'szappan');
 
-for(const [preference,pattern] of [['levendulás',/levendul/i],['inkább illatmentes',/illatmentes|natúr/i]]){
+for(const [preference,pattern] of [['levendulás',/levendul/i],['levendula',/levendul/i],
+  ['illatmentes',/illatmentes|natúr/i],['inkább illatmentes',/illatmentes|natúr/i],['natúr',/illatmentes|natúr/i]]){
   let scentRun=turn([],'szappan');
   scentRun=turn(scentRun.history,'illat');
   assert.equal(scentRun.result.route,'clarification',preference);
@@ -108,10 +111,14 @@ assert.ok(moreSoap.result.links.every(link=>!firstShown.has(link.id)));
     loadRows:async()=>validateConversationHistoryRows([scentFirstRow,axisRow])});
   assert.equal(scentMemory.state.guidedDiscovery.productType.value,'szappan');
   assert.equal(scentMemory.state.guidedDiscovery.preferenceAxis.value,'scent');
-  const lavender=ask('levendulás',scentMemory.history,scentMemory.state);
-  assert.equal(lavender.routing.domain,'soap');
-  assert.ok(lavender.links.length);
-  assert.ok(lavender.links.every(link=>/levendul/i.test(link.name)));
+  for(const [preference,pattern] of [['illatmentes',/illatmentes|natúr/i],['inkább illatmentes',/illatmentes|natúr/i],
+    ['levendulás',/levendul/i],['levendula',/levendul/i]]){
+    const result=ask(preference,scentMemory.history,scentMemory.state);
+    assert.equal(result.routing.domain,'soap',preference);
+    assert.equal(result.routing.guidedDiscovery.preferenceAxis.value,'scent',preference);
+    assert.ok(result.links.length,preference);
+    assert.ok(result.links.every(link=>pattern.test(link.name)),preference);
+  }
 
   for(const [category,preference,pattern] of [
     ['szappan','száraz és érzékeny',/szappan/i],
