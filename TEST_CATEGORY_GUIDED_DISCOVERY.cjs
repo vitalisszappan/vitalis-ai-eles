@@ -7,13 +7,14 @@ const { createAnswer } = require('./engine/answer-service.cjs');
 const { ExpertRuleEngine } = require('./engine/rule-engine.cjs');
 const { structuredState, rehydrateSessionHistory } = require('./engine/conversation-memory.cjs');
 const { createCatalogSearch } = require('./engine/catalog-search.cjs');
-const { normalize } = require('./engine/normalizer.cjs');
 const { buildConversationHistoryEvent, validateConversationHistoryRows } = require('./server.cjs');
 
 const knowledge = JSON.parse(fs.readFileSync('./data/knowledge.json', 'utf8'));
 const ruleEngine = new ExpertRuleEngine('./data/rules/expert-rules.json');
+const catalog=createCatalogSearch();
 const ask = (question, history = []) => createAnswer({ question, history, conversationState: structuredState(history), knowledge, ruleEngine, logGap() {}, logDiagnostic() {} });
 const turn = (history, question) => { const result=ask(question,history); return {result,history:[...history,{role:'user',content:question},{role:'assistant',content:result.answer,...result}]}; };
+const matchesScentLink=(link,value)=>{const item=catalog.all().find(product=>product.id===link.id);return value==='unscented'?item?.scentProfile?.fragranceFree===true:item?.scentProfile?.scents?.includes(value);};
 
 for (const query of ['szappan','szappant keresek','valami szappan','samponotok van?','krémet szeretnék','ajakápoló']) {
   const result=ask(query);
@@ -62,11 +63,11 @@ assert.notEqual(freshScent.routing.guidedDiscovery?.productType?.value,'szappan'
 const freshUnscented=ask('illatmentes');
 assert.notEqual(freshUnscented.routing.guidedDiscovery?.productType?.value,'szappan');
 
-for(const [query,value,pattern] of [
-  ['illatmentes szappan','unscented',/illatmentes|natúr/i],
-  ['levendulás szappan','lavender',/levendul/i],
-  ['levendula szappan','lavender',/levendul/i],
-  ['natúr szappan','unscented',/illatmentes|natúr/i]
+for(const [query,value] of [
+  ['illatmentes szappan','unscented'],
+  ['levendulás szappan','lavender'],
+  ['levendula szappan','lavender'],
+  ['natúr szappan','unscented']
 ]){
   const result=ask(query);
   assert.equal(result.route,'product_category',query);
@@ -75,13 +76,16 @@ for(const [query,value,pattern] of [
   assert.equal(result.routing.guidedDiscovery.preferenceAxis.value,'scent',query);
   assert.equal(result.routing.guidedDiscovery.preferenceValue.value,value,query);
   assert.ok(result.links.length,query);
-  assert.ok(result.links.every(link=>pattern.test(link.name)),`${query}: ${result.links.map(link=>link.name).join(' | ')}`);
+  assert.ok(result.links.every(link=>{
+    const item=catalog.all().find(product=>product.id===link.id);
+    return value==='unscented'?item?.scentProfile?.fragranceFree===true:item?.scentProfile?.scents?.includes(value);
+  }),`${query}: ${result.links.map(link=>link.name).join(' | ')}`);
 }
 const unsupportedScentCombination=ask('citrusos szappan');
 assert.equal(unsupportedScentCombination.route,'product_category');
 assert.equal(unsupportedScentCombination.routing.guidedDiscovery.preferenceValue.value,'citrus');
 assert.ok(unsupportedScentCombination.links.length);
-assert.ok(unsupportedScentCombination.links.every(link=>/citr|citrom/i.test(link.name)));
+assert.ok(unsupportedScentCombination.links.every(link=>matchesScentLink(link,'citrus')));
 const freshLavender=ask('levendulás');
 assert.equal(freshLavender.routing.guidedDiscovery?.productType?.value??null,null);
 const unscentedLipCare=ask('illatmentes ajakbalzsam');
@@ -94,20 +98,25 @@ assert.equal(unsupportedLavenderShampoo.routing.guidedDiscovery.preferenceValue.
 assert.deepEqual(unsupportedLavenderShampoo.links,[]);
 assert.match(unsupportedLavenderShampoo.answer,/nem találok/i);
 
-const catalog=createCatalogSearch();
-for(const [query,category,pattern] of [
-  ['illatmentes szappan','soap',/\b(?:illatmentes|natur)\w*/],
-  ['levendulás szappan','soap',/\blevendula\w*/]
+for(const [query,category,scent] of [
+  ['illatmentes szappan','soap','unscented'],
+  ['levendulás szappan','soap','lavender']
 ]){
-  const expected=catalog.searchCategory(category).products.filter(item=>pattern.test(normalize(item.name))).map(item=>item.id).sort();
+  const expected=catalog.searchCategory(category,100).products.filter(item=>scent==='unscented'
+    ?item.scentProfile.fragranceFree===true:item.scentProfile.scents.includes(scent)).map(item=>item.id).sort();
   const result=ask(query);
   assert.equal(result.routing.productQuestionIntent,'filtered_catalog',query);
   assert.equal(result.routing.answerIntent,'filtered_catalog',query);
   assert.equal(result.intent,'catalog_category_filter',query);
-  assert.deepEqual(result.links.map(item=>item.id).sort(),expected,query);
+  if(expected.length<=3)assert.deepEqual(result.links.map(item=>item.id).sort(),expected,query);
+  else{
+    assert.equal(result.links.length,3,query);
+    assert.ok(result.links.every(item=>expected.includes(item.id)),query);
+    assert.match(result.answer,new RegExp(`\\b${expected.length} terméket találtam\\b`),query);
+  }
   assert.doesNotMatch(result.answer,/ajánlom/i,query);
 }
-const singleFilter=ask('citrusos szappan');
+const singleFilter=ask('illatmentes ajakbalzsam');
 assert.equal(singleFilter.routing.productQuestionIntent,'filtered_catalog');
 assert.equal(singleFilter.links.length,1);
 const personalizedScent=ask('melyik illatmentes szappant ajánlod?');
@@ -133,8 +142,8 @@ assert.notEqual(directItchyShampoo.route,'hard_fallback');
 assert.equal(directItchyShampoo.routing.productTypeConstraint,'shampoo');
 assert.ok(directItchyShampoo.links.some(link=>/Dermavital sampon/i.test(link.name)));
 
-for(const [preference,pattern] of [['levendulás',/levendul/i],['levendula',/levendul/i],
-  ['illatmentes',/illatmentes|natúr/i],['inkább illatmentes',/illatmentes|natúr/i],['natúr',/illatmentes|natúr/i]]){
+for(const [preference,value] of [['levendulás','lavender'],['levendula','lavender'],
+  ['illatmentes','unscented'],['inkább illatmentes','unscented'],['natúr','unscented']]){
   let scentRun=turn([],'szappan');
   scentRun=turn(scentRun.history,'illat');
   assert.equal(scentRun.result.route,'clarification',preference);
@@ -144,7 +153,7 @@ for(const [preference,pattern] of [['levendulás',/levendul/i],['levendula',/lev
   scentRun=turn(scentRun.history,preference);
   assert.equal(scentRun.result.routing.domain,'soap',preference);
   assert.ok(scentRun.result.links.length,preference);
-  assert.ok(scentRun.result.links.every(link=>pattern.test(link.name)),`${preference}: ${scentRun.result.links.map(link=>link.name).join(' | ')}`);
+  assert.ok(scentRun.result.links.every(link=>matchesScentLink(link,value)),`${preference}: ${scentRun.result.links.map(link=>link.name).join(' | ')}`);
 }
 
 let soapContext=turn([],'szappan');
@@ -184,13 +193,13 @@ assert.ok(moreSoap.result.links.every(link=>!firstShown.has(link.id)));
     loadRows:async()=>validateConversationHistoryRows([scentFirstRow,axisRow])});
   assert.equal(scentMemory.state.guidedDiscovery.productType.value,'szappan');
   assert.equal(scentMemory.state.guidedDiscovery.preferenceAxis.value,'scent');
-  for(const [preference,pattern] of [['illatmentes',/illatmentes|natúr/i],['inkább illatmentes',/illatmentes|natúr/i],
-    ['levendulás',/levendul/i],['levendula',/levendul/i]]){
+  for(const [preference,value] of [['illatmentes','unscented'],['inkább illatmentes','unscented'],
+    ['levendulás','lavender'],['levendula','lavender']]){
     const result=ask(preference,scentMemory.history,scentMemory.state);
     assert.equal(result.routing.domain,'soap',preference);
     assert.equal(result.routing.guidedDiscovery.preferenceAxis.value,'scent',preference);
     assert.ok(result.links.length,preference);
-    assert.ok(result.links.every(link=>pattern.test(link.name)),preference);
+    assert.ok(result.links.every(link=>matchesScentLink(link,value)),preference);
   }
 
   for(const [category,preference,pattern] of [

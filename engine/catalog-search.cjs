@@ -8,6 +8,7 @@ const { matchesRequestedSubtype, matchesSubtypeQualifiers } = require('./product
 const { resolveUnasCatalogSnapshotPath } = require('./unas-catalog-path.cjs');
 const { PRODUCTS } = require('./product-catalog.cjs');
 const { buildCommerceIndex } = require('./product-registry.cjs');
+const { authoritativeScentProfile } = require('./product-facts.cjs');
 
 const DEFAULT_SNAPSHOT = resolveUnasCatalogSnapshotPath();
 const DEFAULT_MAPPING = path.join(__dirname, '..', 'data', 'canonical-unas-mapping.json');
@@ -79,7 +80,8 @@ function safeProduct(product, canonicalId = null) {
     normalizedName: normalize(displayName || product.name), aliases: [],
     category: (product.categoryNames || []).map(String), public: product.public !== false,
     active: product.active !== false && product.status?.state !== 'disabled', orderable: product.orderable !== false,
-    size, price, currency: product.currency || 'HUF', url: validUrl(product.url), image
+    size, price, currency: product.currency || 'HUF', url: validUrl(product.url), image,
+    scentProfile: authoritativeScentProfile(product)
   };
   safe.productType=inferredHairType(safe);
   return safe;

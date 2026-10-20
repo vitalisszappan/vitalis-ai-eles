@@ -376,6 +376,20 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
     const resolved = guidedDecision();
     if (resolved) return resolved;
   }
+  const completesScentCategory = !directCanonical && guided?.kind === 'category_answer'
+    && guided.dimensions?.preferenceAxis?.value === 'scent'
+    && Boolean(guided.dimensions?.preferenceValue?.value)
+    && broadCategory?.products.length;
+  if (completesScentCategory) {
+    const filteredCatalogDiscovery = !guided.dimensions?.needState && productQuestionIntent !== 'recommendation';
+    const effectiveType = productTypeConstraint || guided.dimensions?.productType?.value || null;
+    return decision({ ...base, productTypeConstraint: effectiveType,
+      productQuestionIntent: filteredCatalogDiscovery ? 'filtered_catalog' : 'recommendation',
+      answerIntent: filteredCatalogDiscovery ? 'filtered_catalog' : 'product_recommendation',
+      route: 'product_category', intent: filteredCatalogDiscovery ? 'catalog_category_filter' : 'product_recommendation', goal: 'find_product',
+      domain: broadCategoryId, contextUsed: true, contextTarget: 'guided_discovery', guidedDiscovery: guided.dimensions,
+      matchedProductIds: broadCategory.products.map(item => item.id), confidence: 1, threshold: 1, responseSource: 'guided-discovery' });
+  }
 
   // Unsupported current needs and completion of an earlier discovery turn own
   // the turn before stale product references can be resolved.

@@ -66,9 +66,10 @@ function scentPreference(text) {
   if (/\b(?:illatmentes|semleges|natur)\w*/.test(text)) return 'unscented';
   if (/\blevendula\w*/.test(text)) return 'lavender';
   if (/\b(?:citrus|citrom)\w*/.test(text)) return 'citrus';
+  if (/\b(?:menta|borsmenta)\w*/.test(text)) return 'mint';
   if (/\bfriss\w*/.test(text)) return 'fresh';
   if (/\bvirag\w*/.test(text)) return 'floral';
-  if (/\b(?:gyogynoveny|teafa|rozmaring|menta)\w*/.test(text)) return 'herbal';
+  if (/\b(?:gyogynoveny|teafa|rozmaring)\w*/.test(text)) return 'herbal';
   if (/\b(?:edes|fuszeres|csoki|mezes)\w*/.test(text)) return 'sweet_spicy';
   return null;
 }

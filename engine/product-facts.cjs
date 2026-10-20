@@ -29,7 +29,7 @@ const INGREDIENT_ALIASES = Object.freeze({
 const FACT_TYPES = Object.freeze([
   'name', 'price', 'currency', 'url', 'image', 'ingredients', 'inci',
   'keyIngredients', 'ingredientBenefits', 'usageInstructions',
-  'recommendedFor', 'productDescription', 'productBenefits', 'approvedClaims', 'warnings'
+  'recommendedFor', 'productDescription', 'productBenefits', 'approvedClaims', 'warnings', 'scentProfile'
 ]);
 
 function clean(value) { return typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : ''; }
@@ -252,6 +252,28 @@ function typedIngredientBlocks(text) {
     ingredients: plain.length === 1 ? validatePlainIngredients(plain[0].value) : []
   };
 }
+
+function authoritativeScentProfile(product) {
+  const blocks = typedIngredientBlocks(product?.longDescription);
+  const formula = [...blocks.inci, ...blocks.ingredients];
+  const identityText = scanFold([product?.name, product?.shortDescription].filter(Boolean).join(' '));
+  const formulaText = scanFold([...ingredientSectionCandidates(product?.longDescription).map((item) => item.value), ...formula].filter(Boolean).join(' '));
+  const evidenceText = `${identityText} ${formulaText}`;
+  const scents = new Set();
+  if (/\b(?:levendula|lavandula)\w*/.test(evidenceText)) scents.add('lavender');
+  if (/\b(?:citromfu|citrom|narancs|citronella|melissa|citrus|cymbopogon)\w*/.test(evidenceText)) scents.add('citrus');
+  if (/\b(?:menta|borsmenta|mentha)\w*/.test(evidenceText)) scents.add('mint');
+  if (/\b(?:gyogynoveny|teafa|melaleuca|rozmaring|rosmarinus|eukaliptusz|eucalyptus|szantal|santalum)\w*/.test(evidenceText)) scents.add('herbal');
+  if (/\b(?:virag|rozsa|rosa|geranium|pelargonium|ylang|cananga)\w*/.test(evidenceText)) scents.add('floral');
+  if (/\b(?:edes|fuszeres|csoki|csokolade|mez|chili)\w*/.test(identityText)
+    || /\b(?:fahej|cinnamomum|szegfuszeg|eugenia|capsicum|chocolate)\w*/.test(formulaText)) scents.add('sweet_spicy');
+  const addedFragrance = /\b(?:parfum|fragrance|illoolaj|illo olaj)\w*/.test(evidenceText)
+    || /\b(?:lavandula|melissa|citrus|cymbopogon|mentha|melaleuca|rosmarinus|eucalyptus|santalum|pelargonium|cananga|cinnamomum|eugenia)\w*(?:\s+\w+){0,3}\s+oil\b/.test(evidenceText);
+  const explicitUnscented = /\billatmentes\w*/.test(scanFold(`${product?.name || ''} ${product?.shortDescription || ''}`));
+  const completeFormula = formula.length >= 2;
+  return { fragranceFree: addedFragrance ? false : explicitUnscented || completeFormula ? true : null,
+    scents: [...scents].sort(), evidence: explicitUnscented ? 'explicit_unscented' : addedFragrance ? 'aromatic_ingredient' : completeFormula ? 'approved_formula' : 'insufficient' };
+}
 function explicitBenefits(text, ingredients) {
   const source = String(text || '');
   const result = [];
@@ -431,7 +453,8 @@ function buildProductFactsResolver(options = {}) {
       productDescription: validSnapshot ? authoritativeProductDescription(snapshot) || null : null,
       productBenefits: null,
       approvedClaims: null,
-      warnings: validSnapshot ? section(snapshot.longDescription, [/^fontos tudnivalok/, /^mire figyelj/]) || null : null
+      warnings: validSnapshot ? section(snapshot.longDescription, [/^fontos tudnivalok/, /^mire figyelj/]) || null : null,
+      scentProfile: validSnapshot ? authoritativeScentProfile(snapshot) : null
     };
     const out = values[type] == null ? [] : [{ value: values[type], priority: SOURCE_PRIORITY.unas_snapshot, evidence: source }];
     const deterministic = deterministicProducts[productId];
@@ -537,4 +560,4 @@ function createProductFactsResolver(options = {}) {
 }
 
 const defaultResolver = createProductFactsResolver({ reloadOnFileChange: true });
-module.exports = { FACT_TYPES, SOURCE_PRIORITY, INGREDIENT_ALIASES, createProductFactsResolver, ...defaultResolver };
+module.exports = { FACT_TYPES, SOURCE_PRIORITY, INGREDIENT_ALIASES, authoritativeScentProfile, createProductFactsResolver, ...defaultResolver };

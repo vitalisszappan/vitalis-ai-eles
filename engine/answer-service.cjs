@@ -700,7 +700,8 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
   }
 
   if (routing.route === 'product_category') {
-    const found = decisionCatalog.searchCategory(routing.domain);
+    const scentFilter=Boolean(routing.guidedDiscovery?.preferenceAxis?.value==='scent'&&routing.guidedDiscovery?.preferenceValue?.value);
+    const found = decisionCatalog.searchCategory(routing.domain,scentFilter?Number.MAX_SAFE_INTEGER:6);
     const constrained=routing.productTypeConstraint?found.products.filter(item=>matchesProductType(item,routing.productTypeConstraint)):found.products;
     let products=routing.productTypeConstraint?constrained:found.products;
     if(routing.categoryFollowup==='show_more'){
@@ -713,11 +714,9 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
       const guidedType=routing.guidedDiscovery?.productType?.value;
       const scent=routing.guidedDiscovery?.preferenceValue?.value;
       if(routing.guidedDiscovery?.preferenceAxis?.value==='scent'&&scent){
-        const scentPattern={unscented:/\b(?:illatmentes|natur)\w*/,lavender:/\blevendula\w*/,
-          citrus:/\b(?:citrus|citrom)\w*/,fresh:/\b(?:friss|menta|citrom)\w*/,
-          floral:/\b(?:virag|rozsa|levendula)\w*/,herbal:/\b(?:gyogynoveny|teafa|rozmaring|menta)\w*/,
-          sweet_spicy:/\b(?:edes|fuszeres|csoki|mezes)\w*/}[scent];
-        const scentMatches=scentPattern?products.filter(item=>scentPattern.test(normalize(item.name))):[];
+        const scentMatches=products.filter(item=>scent==='unscented'
+          ? item.scentProfile?.fragranceFree===true
+          : item.scentProfile?.scents?.includes(scent));
         if(!scentMatches.length)return attachDecision({source:'unas-catalog',answer:'Ehhez az illatirányhoz most nem találok biztosan azonosítható terméket a választott kategóriában.',confidence:100,links:[],suggestions:[],ruleId:null,intent:routing.productQuestionIntent==='filtered_catalog'?'catalog_category_filter':'product_recommendation',matchedKnowledgeIds:[]},routing);
         products=scentMatches;
       }
@@ -744,7 +743,7 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
     const preferred = sensitiveDryRequest ? products.find((item) => /natur kecsketejes/.test(normalize(item.name))) : products[0];
     const recommendationReason = sensitiveDryRequest ? 'Illatmentes, érzékeny és száraz bőrre készült.' : /normal\w* bor/.test(q) ? 'A leírása szerint normál bőrre készült.' : 'A leírása szerint megfelel annak, amit keresel.';
     const genericCreamDiscovery = recommendation && routing.domain === 'cream' && !/\b(?:borre|arcra|kezre|testre|szaraz|erzekeny|irritalt|ekcem|pattanas|problem)\w*\b/.test(q);
-    const filterLabel={unscented:'illatmentes',lavender:'levendulás',citrus:'citrusos',fresh:'friss',floral:'virágos',herbal:'gyógynövényes',sweet_spicy:'édes-fűszeres'}[routing.guidedDiscovery?.preferenceValue?.value]||'keresett';
+    const filterLabel={unscented:'illatmentes',lavender:'levendulás',citrus:'citrusos',mint:'mentás',fresh:'friss',floral:'virágos',herbal:'gyógynövényes',sweet_spicy:'édes-fűszeres'}[routing.guidedDiscovery?.preferenceValue?.value]||'keresett';
     const categoryLabel={szappan:'szappanok',shampoo:'samponok',krem:'krémek',dezodor:'dezodorok',ajakbalzsam:'ajakbalzsamok'}[routing.guidedDiscovery?.productType?.value]||found.category?.label||'termékek';
     const filterArticle=/^[aeiouáéíóöőúüű]/i.test(filterLabel)?'Az':'A';
     const filteredAnswer=products.length>3
