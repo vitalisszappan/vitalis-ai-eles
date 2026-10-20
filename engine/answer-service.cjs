@@ -724,8 +724,10 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
     const names = products.slice(0, 3).map((item) => shortProductName(item.name)).join(', ');
     const distinction = routing.domain === 'deodorant' ? ' Ezek dezodorok: a testszag kialakulását segítenek megelőzni, de nem állítjuk róluk, hogy az izzadást megszüntetik.' : '';
     const recommendation = routing.productQuestionIntent === 'recommendation';
-    const preferred = /erzekeny\w* bor/.test(q) ? products.find((item) => /natur kecsketejes/.test(normalize(item.name))) : products[0];
-    const recommendationReason = /erzekeny\w* bor/.test(q) ? 'Illatmentes, érzékeny és száraz bőrre készült.' : /normal\w* bor/.test(q) ? 'A leírása szerint normál bőrre készült.' : 'A leírása szerint megfelel annak, amit keresel.';
+    const sensitiveDryRequest = /erzekeny\w* bor/.test(q)
+      || (routing.contextTarget === 'guided_discovery' && routing.guidedDiscovery?.needState?.value === 'dry_skin' && /erzekeny\w*/.test(q));
+    const preferred = sensitiveDryRequest ? products.find((item) => /natur kecsketejes/.test(normalize(item.name))) : products[0];
+    const recommendationReason = sensitiveDryRequest ? 'Illatmentes, érzékeny és száraz bőrre készült.' : /normal\w* bor/.test(q) ? 'A leírása szerint normál bőrre készült.' : 'A leírása szerint megfelel annak, amit keresel.';
     const genericCreamDiscovery = recommendation && routing.domain === 'cream' && !/\b(?:borre|arcra|kezre|testre|szaraz|erzekeny|irritalt|ekcem|pattanas|problem)\w*\b/.test(q);
     const answer = genericCreamDiscovery ? 'Milyen bőrigényre keresel krémet?'
       : recommendation

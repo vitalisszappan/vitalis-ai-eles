@@ -32,6 +32,17 @@ for (const [first,second,productPattern] of [
   assert.notEqual(run.result.route,'clarification',`${first} -> ${second}`);
   assert.ok(run.result.links.length,`${first} -> ${second}`);
   assert.ok(run.result.links.every(link=>productPattern.test(link.name)),`${first} -> ${second}`);
+  if(first==='szappan'&&/száraz/.test(second)){
+    assert.ok(run.result.links.every(link=>!/aktív szenes|zsíros bőrre/i.test(link.name)));
+    assert.match(run.result.answer,/érzékeny.*száraz|száraz.*érzékeny/i);
+    assert.equal(run.result.routing.productQuestionIntent,'recommendation');
+    assert.equal(run.result.routing.productTypeConstraint,'szappan');
+  }
+  if(first==='szappan'&&/zsíros/.test(second)){
+    assert.ok(run.result.links.every(link=>/aktív szenes|kátrány/i.test(link.name)));
+    assert.ok(run.result.links.every(link=>!/natúr kecsketejes/i.test(link.name)));
+  }
+  if(first==='sampon')assert.ok(run.result.links.some(link=>/Dermavital sampon/i.test(link.name)));
   if(first==='ajakbalzsam')assert.ok(run.result.links.every(link=>/Natúr|Illatmentes/i.test(link.name)));
 }
 
@@ -88,6 +99,12 @@ assert.ok(moreSoap.result.links.every(link=>!firstShown.has(link.id)));
     assert.notEqual(second.route,'clarification',`${category} persisted follow-up`);
     assert.ok(second.links.length,`${category} persisted follow-up`);
     assert.ok(second.links.every(link=>pattern.test(link.name)),`${category} persisted follow-up`);
+    if(category==='szappan'){
+      assert.ok(second.links.every(link=>!/aktív szenes|zsíros bőrre/i.test(link.name)));
+      assert.match(second.answer,/érzékeny.*száraz|száraz.*érzékeny/i);
+      assert.equal(second.routing.productQuestionIntent,'recommendation');
+      assert.equal(second.routing.productTypeConstraint,'szappan');
+    }
   }
   console.log('CATEGORY_GUIDED_DISCOVERY_OK');
 })().catch(error=>{console.error(error);process.exitCode=1;});
