@@ -718,7 +718,7 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
           floral:/\b(?:virag|rozsa|levendula)\w*/,herbal:/\b(?:gyogynoveny|teafa|rozmaring|menta)\w*/,
           sweet_spicy:/\b(?:edes|fuszeres|csoki|mezes)\w*/}[scent];
         const scentMatches=scentPattern?products.filter(item=>scentPattern.test(normalize(item.name))):[];
-        if(!scentMatches.length)return attachDecision({source:'unas-catalog',answer:'Ehhez az illatirányhoz most nem találok biztosan azonosítható terméket a választott kategóriában.',confidence:100,links:[],suggestions:[],ruleId:null,intent:'product_recommendation',matchedKnowledgeIds:[]},routing);
+        if(!scentMatches.length)return attachDecision({source:'unas-catalog',answer:'Ehhez az illatirányhoz most nem találok biztosan azonosítható terméket a választott kategóriában.',confidence:100,links:[],suggestions:[],ruleId:null,intent:routing.productQuestionIntent==='filtered_catalog'?'catalog_category_filter':'product_recommendation',matchedKnowledgeIds:[]},routing);
         products=scentMatches;
       }
       if(guidedType==='ajakbalzsam'&&/\b(?:semleges|illatmentes|natur)\w*/.test(q)){
@@ -738,17 +738,25 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
     const names = products.slice(0, 3).map((item) => shortProductName(item.name)).join(', ');
     const distinction = routing.domain === 'deodorant' ? ' Ezek dezodorok: a testszag kialakulását segítenek megelőzni, de nem állítjuk róluk, hogy az izzadást megszüntetik.' : '';
     const recommendation = routing.productQuestionIntent === 'recommendation';
+    const filteredCatalog = routing.productQuestionIntent === 'filtered_catalog';
     const sensitiveDryRequest = /erzekeny\w* bor/.test(q)
       || (routing.contextTarget === 'guided_discovery' && routing.guidedDiscovery?.needState?.value === 'dry_skin' && /erzekeny\w*/.test(q));
     const preferred = sensitiveDryRequest ? products.find((item) => /natur kecsketejes/.test(normalize(item.name))) : products[0];
     const recommendationReason = sensitiveDryRequest ? 'Illatmentes, érzékeny és száraz bőrre készült.' : /normal\w* bor/.test(q) ? 'A leírása szerint normál bőrre készült.' : 'A leírása szerint megfelel annak, amit keresel.';
     const genericCreamDiscovery = recommendation && routing.domain === 'cream' && !/\b(?:borre|arcra|kezre|testre|szaraz|erzekeny|irritalt|ekcem|pattanas|problem)\w*\b/.test(q);
+    const filterLabel={unscented:'illatmentes',lavender:'levendulás',citrus:'citrusos',fresh:'friss',floral:'virágos',herbal:'gyógynövényes',sweet_spicy:'édes-fűszeres'}[routing.guidedDiscovery?.preferenceValue?.value]||'keresett';
+    const categoryLabel={szappan:'szappanok',shampoo:'samponok',krem:'krémek',dezodor:'dezodorok',ajakbalzsam:'ajakbalzsamok'}[routing.guidedDiscovery?.productType?.value]||found.category?.label||'termékek';
+    const filterArticle=/^[aeiouáéíóöőúüű]/i.test(filterLabel)?'Az':'A';
+    const filteredAnswer=products.length>3
+      ? `${filterArticle} ${filterLabel} ${categoryLabel} közül ${products.length} terméket találtam. Most ezt a hármat mutatom: ${names}. Ha szeretnéd, mutatok még.`
+      : `${filterArticle} ${filterLabel} ${categoryLabel} közül ${products.length===1?'ezt találtam':'ezeket találtam'}: ${names}.`;
     const answer = genericCreamDiscovery ? 'Milyen bőrigényre keresel krémet?'
+      : filteredCatalog ? filteredAnswer
       : recommendation
       ? (preferred ? `A ${recommendationName(preferred.name)} ajánlom. ${recommendationReason}` : `Ezek felelnek meg a leírtaknak: ${names}.`)
       : /tusfurdo/.test(q) ? 'Igen. Mentás-citromos, rózsás és levendulás tusfürdőnk van.' : `Igen, van ${found.category.label}. Ezek közül választhatsz: ${names}.${distinction}`;
     const discoveryLinks = genericCreamDiscovery && !(routing.excludedProductTypes || []).length ? [] : products.slice(0, 3).map(catalogCard);
-    return attachDecision({ source: 'unas-catalog', answer, confidence: 100, links: discoveryLinks, suggestions: [], ruleId: null, intent: genericCreamDiscovery ? 'conversation-clarification' : recommendation ? 'product_recommendation' : 'catalog_category_found', matchedKnowledgeIds: [] }, routing);
+    return attachDecision({ source: 'unas-catalog', answer, confidence: 100, links: discoveryLinks, suggestions: [], ruleId: null, intent: genericCreamDiscovery ? 'conversation-clarification' : recommendation ? 'product_recommendation' : filteredCatalog ? 'catalog_category_filter' : 'catalog_category_found', matchedKnowledgeIds: [] }, routing);
   }
 
   if (routing.route === 'problem_domain') {

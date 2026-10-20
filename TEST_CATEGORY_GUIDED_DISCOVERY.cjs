@@ -6,6 +6,8 @@ const fs = require('node:fs');
 const { createAnswer } = require('./engine/answer-service.cjs');
 const { ExpertRuleEngine } = require('./engine/rule-engine.cjs');
 const { structuredState, rehydrateSessionHistory } = require('./engine/conversation-memory.cjs');
+const { createCatalogSearch } = require('./engine/catalog-search.cjs');
+const { normalize } = require('./engine/normalizer.cjs');
 const { buildConversationHistoryEvent, validateConversationHistoryRows } = require('./server.cjs');
 
 const knowledge = JSON.parse(fs.readFileSync('./data/knowledge.json', 'utf8'));
@@ -91,6 +93,34 @@ assert.equal(unsupportedLavenderShampoo.route,'product_category');
 assert.equal(unsupportedLavenderShampoo.routing.guidedDiscovery.preferenceValue.value,'lavender');
 assert.deepEqual(unsupportedLavenderShampoo.links,[]);
 assert.match(unsupportedLavenderShampoo.answer,/nem találok/i);
+
+const catalog=createCatalogSearch();
+for(const [query,category,pattern] of [
+  ['illatmentes szappan','soap',/\b(?:illatmentes|natur)\w*/],
+  ['levendulás szappan','soap',/\blevendula\w*/]
+]){
+  const expected=catalog.searchCategory(category).products.filter(item=>pattern.test(normalize(item.name))).map(item=>item.id).sort();
+  const result=ask(query);
+  assert.equal(result.routing.productQuestionIntent,'filtered_catalog',query);
+  assert.equal(result.routing.answerIntent,'filtered_catalog',query);
+  assert.equal(result.intent,'catalog_category_filter',query);
+  assert.deepEqual(result.links.map(item=>item.id).sort(),expected,query);
+  assert.doesNotMatch(result.answer,/ajánlom/i,query);
+}
+const singleFilter=ask('citrusos szappan');
+assert.equal(singleFilter.routing.productQuestionIntent,'filtered_catalog');
+assert.equal(singleFilter.links.length,1);
+const personalizedScent=ask('melyik illatmentes szappant ajánlod?');
+assert.equal(personalizedScent.routing.productQuestionIntent,'recommendation');
+assert.match(personalizedScent.answer,/ajánlom/i);
+const personalizedNeed=ask('illatmentes szappant keresek száraz érzékeny bőrre');
+assert.equal(personalizedNeed.routing.productQuestionIntent,'recommendation');
+assert.notEqual(personalizedNeed.intent,'catalog_category_filter');
+assert.doesNotMatch(personalizedNeed.answer,/közül (?:ezt|ezeket) találtam/i);
+let personalizedChoice=turn([],'levendulás szappan');
+personalizedChoice=turn(personalizedChoice.history,'melyiket választanád?');
+assert.equal(personalizedChoice.result.intent,'recommendation_choice');
+assert.notEqual(personalizedChoice.result.intent,'catalog_category_filter');
 
 const directDrySensitiveSoap=ask('szappan száraz érzékeny bőrre');
 assert.ok(directDrySensitiveSoap.links.length);

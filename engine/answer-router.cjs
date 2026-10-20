@@ -476,9 +476,15 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
     return decision({ ...base, productTypeConstraint: effectiveProductTypeConstraint, route: 'expert_rule', intent: expert.intent, matchedRuleId: expert.ruleId, primaryProductId: expert.primaryProductId || null, matchedProductIds: (expert.links || []).map((item) => item.id).filter(Boolean), confidence: 1, threshold: 1, responseSource: expert.source });
   }
   if (!directCanonical && ['category_answer','unsupported_need_type'].includes(guided?.kind) && broadCategory?.products.length) {
+    const filteredCatalogDiscovery = guided.kind === 'category_answer'
+      && Boolean(guided.dimensions?.preferenceAxis?.value)
+      && Boolean(guided.dimensions?.preferenceValue?.value)
+      && !guided.dimensions?.needState
+      && productQuestionIntent !== 'recommendation';
     return decision({ ...base, productTypeConstraint: effectiveProductTypeConstraint,
-      productQuestionIntent: 'recommendation', answerIntent: 'product_recommendation',
-      route: 'product_category', intent: 'product_recommendation', goal: 'find_product',
+      productQuestionIntent: filteredCatalogDiscovery ? 'filtered_catalog' : 'recommendation',
+      answerIntent: filteredCatalogDiscovery ? 'filtered_catalog' : 'product_recommendation',
+      route: 'product_category', intent: filteredCatalogDiscovery ? 'catalog_category_filter' : 'product_recommendation', goal: 'find_product',
       domain: broadCategoryId, contextUsed: true, contextTarget: 'guided_discovery', guidedDiscovery: guided.dimensions,
       matchedProductIds: broadCategory.products.map(item => item.id), confidence: 1, threshold: 1, responseSource: 'guided-discovery' });
   }
