@@ -33,10 +33,7 @@ const RULE_PATH = path.join(
   'expert-rules.json'
 );
 
-const CONVERSATION_LOG = path.join(
-  LOG_DIR,
-  'conversations.jsonl'
-);
+const CONVERSATION_LOG = process.env.CONVERSATION_LOG || path.join(LOG_DIR, 'conversations.jsonl');
 
 const COMMERCE_EVENT_LOG = process.env.COMMERCE_EVENT_LOG || path.join(LOG_DIR, 'commerce-events.jsonl');
 const ORDER_PROOF_LOG = process.env.ORDER_PROOF_LOG || path.join(LOG_DIR, 'order-proofs-poc.jsonl');
@@ -75,6 +72,7 @@ const { validatePreflightOrderKey, preflightUnasOrder, toPreflightDiagnostic } =
 const { createRevenuePhase4Service } = require('./engine/revenue-phase4.cjs');
 const { createRevenueAdminReader } = require('./engine/revenue-admin-read.cjs');
 const {rehydrateSessionHistory,validSessionId}=require('./engine/conversation-memory.cjs');
+const { createConversationDeletionService, createAdminConversationDeletionHandler } = require('./engine/conversation-deletion.cjs');
 const { validatePageObservation, assessPageObservationFreshness, sanitizePageUrl } = require('./engine/page-context-observation.cjs');
 const {
   buildShadowPayload,
@@ -2589,6 +2587,64 @@ async function handleChat(
    ADMIN BESZÉLGETÉSEK
 ========================================================= */
 
+function parseDeletedConversationRows(result) {
+  const rows = JSON.parse(result?.body || '[]');
+  if (!Array.isArray(rows)) throw new Error('invalid_conversation_delete_response');
+  return rows;
+}
+
+const conversationDeletionRemote = supabaseConfigured() ? {
+  async deleteSession(sessionId) {
+    const result = await supabaseRequest({
+      method: 'DELETE',
+      pathname: conversationTablePath(`?session_id=eq.${encodeURIComponent(sessionId)}&select=*`),
+      headers: { Prefer: 'return=representation' },
+      operation: 'conversation_delete_session',
+      table: CONVERSATION_TABLE
+    });
+    return parseDeletedConversationRows(result);
+  },
+  async deleteAll() {
+    const result = await supabaseRequest({
+      method: 'DELETE',
+      pathname: conversationTablePath('?session_id=not.eq.admin-knowledge-builder&select=*'),
+      headers: { Prefer: 'return=representation' },
+      operation: 'conversation_delete_all',
+      table: CONVERSATION_TABLE
+    });
+    return parseDeletedConversationRows(result);
+  },
+  async restore(rows) {
+    if (!rows.length) return;
+    await supabaseRequest({
+      method: 'POST',
+      pathname: conversationTablePath(),
+      body: rows,
+      headers: { Prefer: 'return=minimal' },
+      operation: 'conversation_delete_rollback',
+      table: CONVERSATION_TABLE
+    });
+  }
+} : null;
+
+const conversationDeletionService = createConversationDeletionService({
+  localPath: CONVERSATION_LOG,
+  validSessionId,
+  remote: conversationDeletionRemote
+});
+
+const handleAdminConversationDeletion = createAdminConversationDeletionHandler({
+  authorize: authorizeAdmin,
+  service: conversationDeletionService,
+  parseBody,
+  sendJson,
+  logger: {
+    error(label, metadata) {
+      console.error(`${label} operation=${metadata.operation} table=${CONVERSATION_TABLE} code=${metadata.code} rollback_failed=${metadata.rollbackFailed}`);
+    }
+  }
+});
+
 async function handleAdminConversations(
   req,
   res,
@@ -3782,7 +3838,7 @@ const server =
                 '*',
 
               'Access-Control-Allow-Methods':
-                'GET,POST,OPTIONS',
+                'GET,POST,DELETE,OPTIONS',
 
               'Access-Control-Allow-Headers':
                 'Content-Type,X-Admin-Token'
@@ -3841,6 +3897,22 @@ const server =
         /* -------------------------
            ADMIN BESZÉLGETÉSEK
         ------------------------- */
+
+        if (req.method === 'DELETE' && url.pathname === '/api/admin/conversations') {
+          await handleAdminConversationDeletion(req, res, url, null);
+          return;
+        }
+
+        const deleteConversationMatch = req.method === 'DELETE'
+          ? url.pathname.match(/^\/api\/admin\/conversations\/([^/]+)$/)
+          : null;
+        if (deleteConversationMatch) {
+          let sessionId = '';
+          try { sessionId = decodeURIComponent(deleteConversationMatch[1]); }
+          catch { return sendJson(res, 400, { ok: false, error: 'Érvénytelen beszélgetés-azonosító.' }); }
+          await handleAdminConversationDeletion(req, res, url, sessionId);
+          return;
+        }
 
         if (
           req.method ===

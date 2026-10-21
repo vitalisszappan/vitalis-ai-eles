@@ -348,6 +348,7 @@
       >
 
       <button id="exportConversationsButton" type="button">Export</button>
+      <button id="deleteAllConversationsButton" class="danger-button" type="button">Beszélgetések törlése</button>
 
     </section>
 
@@ -366,7 +367,22 @@
 
   </main>
 
-  <script src="/admin.js?v=20260813-unas-order-preflight"></script>
+  <dialog id="conversationDeleteDialog" aria-labelledby="conversationDeleteTitle">
+    <form method="dialog" class="delete-dialog-content">
+      <h2 id="conversationDeleteTitle">Beszélgetés törlése</h2>
+      <p id="conversationDeleteMessage"></p>
+      <label id="deleteConfirmationLabel" class="delete-confirmation-label" hidden>
+        A végleges törléshez írd be: <strong>TÖRLÉS</strong>
+        <input id="deleteConfirmationInput" type="text" autocomplete="off">
+      </label>
+      <div class="delete-dialog-actions">
+        <button id="cancelConversationDeleteButton" type="button" class="secondary-button">Mégse</button>
+        <button id="confirmConversationDeleteButton" type="button" class="danger-button">Beszélgetés törlése</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="/admin.js?v=20261021-conversation-delete"></script>
 
 </body>
 

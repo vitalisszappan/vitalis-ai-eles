@@ -51,6 +51,14 @@ const refreshButton =
 const adminNavigation = document.querySelector('.admin-navigation');
 const adminViewTargets = [...document.querySelectorAll('[data-admin-view-target]')];
 const exportConversationsButton = document.getElementById('exportConversationsButton');
+const deleteAllConversationsButton = document.getElementById('deleteAllConversationsButton');
+const conversationDeleteDialog = document.getElementById('conversationDeleteDialog');
+const conversationDeleteTitle = document.getElementById('conversationDeleteTitle');
+const conversationDeleteMessage = document.getElementById('conversationDeleteMessage');
+const deleteConfirmationLabel = document.getElementById('deleteConfirmationLabel');
+const deleteConfirmationInput = document.getElementById('deleteConfirmationInput');
+const cancelConversationDeleteButton = document.getElementById('cancelConversationDeleteButton');
+const confirmConversationDeleteButton = document.getElementById('confirmConversationDeleteButton');
 const downloadUnasSnapshotButton = document.getElementById('downloadUnasSnapshotButton');
 
 /* -------------------------
@@ -125,6 +133,7 @@ const unasSyncStatusMessage =
 ========================================================= */
 
 let conversations = [];
+let pendingConversationDeletion = null;
 
 let knowledgeGaps = [];
 
@@ -715,6 +724,8 @@ function renderConversations(
           )}
         </span>
 
+        <button type="button" class="conversation-delete-button danger-button">Törlés</button>
+
       </div>
       </div>
     `;
@@ -722,6 +733,16 @@ function renderConversations(
     conversationList.appendChild(
       article
     );
+
+    const deleteButton = article.querySelector('.conversation-delete-button');
+    if (deleteButton && item.session_id && item.session_id !== 'admin-knowledge-builder') {
+      deleteButton.addEventListener('click', () => openConversationDeleteDialog({
+        mode: 'single',
+        sessionId: String(item.session_id)
+      }));
+    } else if (deleteButton) {
+      deleteButton.disabled = true;
+    }
   }
 }
 
@@ -1826,6 +1847,77 @@ if (
 adminViewTargets.forEach((button) => {
   button.addEventListener('click', () => setActiveAdminView(button.dataset.adminViewTarget));
 });
+
+function updateDeleteConfirmationState() {
+  if (!confirmConversationDeleteButton) return;
+  const requiresText = pendingConversationDeletion?.mode === 'all';
+  confirmConversationDeleteButton.disabled = requiresText && deleteConfirmationInput?.value !== 'TÖRLÉS';
+}
+
+function closeConversationDeleteDialog() {
+  pendingConversationDeletion = null;
+  if (deleteConfirmationInput) deleteConfirmationInput.value = '';
+  if (conversationDeleteDialog?.open) conversationDeleteDialog.close();
+}
+
+function openConversationDeleteDialog(target) {
+  if (!conversationDeleteDialog || !target) return;
+  pendingConversationDeletion = target;
+  const deleteAll = target.mode === 'all';
+  conversationDeleteTitle.textContent = deleteAll ? 'Beszélgetések törlése' : 'Beszélgetés törlése';
+  conversationDeleteMessage.textContent = deleteAll
+    ? 'Biztosan törölni szeretnéd az összes vásárlói beszélgetést? Ez a művelet nem vonható vissza.'
+    : 'Biztosan törlöd ezt a beszélgetést? Ez a művelet nem vonható vissza.';
+  deleteConfirmationLabel.hidden = !deleteAll;
+  deleteConfirmationInput.value = '';
+  confirmConversationDeleteButton.textContent = deleteAll
+    ? 'Összes beszélgetés végleges törlése'
+    : 'Beszélgetés törlése';
+  updateDeleteConfirmationState();
+  conversationDeleteDialog.showModal();
+  if (deleteAll) deleteConfirmationInput.focus();
+}
+
+async function confirmConversationDeletion() {
+  const target = pendingConversationDeletion;
+  if (!target || confirmConversationDeleteButton.disabled) return;
+  confirmConversationDeleteButton.disabled = true;
+  cancelConversationDeleteButton.disabled = true;
+  const previousLabel = confirmConversationDeleteButton.textContent;
+  confirmConversationDeleteButton.textContent = 'Törlés...';
+  try {
+    const deleteAll = target.mode === 'all';
+    const endpoint = deleteAll
+      ? '/api/admin/conversations'
+      : `/api/admin/conversations/${encodeURIComponent(target.sessionId)}`;
+    const options = deleteAll
+      ? { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirmation: 'TÖRLÉS' }) }
+      : { method: 'DELETE' };
+    const data = await adminFetch(endpoint, options);
+    conversations = deleteAll
+      ? []
+      : conversations.filter((item) => item.session_id !== target.sessionId);
+    renderConversations(conversations);
+    closeConversationDeleteDialog();
+    setStatus(statusMessage, deleteAll
+      ? `Az összes vásárlói beszélgetés törölve (${data.deletedCount || 0} rekord).`
+      : `A beszélgetés törölve (${data.deletedCount || 0} rekord).`);
+  } catch (error) {
+    setStatus(statusMessage, `Törlési hiba: ${error.message}`, true);
+    confirmConversationDeleteButton.textContent = previousLabel;
+    updateDeleteConfirmationState();
+  } finally {
+    cancelConversationDeleteButton.disabled = false;
+  }
+}
+
+if (deleteAllConversationsButton) {
+  deleteAllConversationsButton.addEventListener('click', () => openConversationDeleteDialog({ mode: 'all' }));
+}
+if (deleteConfirmationInput) deleteConfirmationInput.addEventListener('input', updateDeleteConfirmationState);
+if (cancelConversationDeleteButton) cancelConversationDeleteButton.addEventListener('click', closeConversationDeleteDialog);
+if (confirmConversationDeleteButton) confirmConversationDeleteButton.addEventListener('click', confirmConversationDeletion);
+if (conversationDeleteDialog) conversationDeleteDialog.addEventListener('cancel', () => { pendingConversationDeletion = null; });
 
 if (exportConversationsButton) {
   exportConversationsButton.addEventListener('click', async () => {

@@ -125,6 +125,76 @@ button:disabled {
   transform: none;
 }
 
+.danger-button {
+  border-color: #a92f2f;
+  background: #a92f2f;
+}
+
+.danger-button:hover {
+  background: #842323;
+}
+
+.conversation-delete-button {
+  margin-left: auto;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+#conversationDeleteDialog {
+  width: min(520px, calc(100% - 32px));
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  box-shadow: 0 24px 70px rgba(14, 43, 71, 0.28);
+}
+
+#conversationDeleteDialog::backdrop {
+  background: rgba(14, 43, 71, 0.55);
+}
+
+.delete-dialog-content {
+  padding: 26px;
+}
+
+.delete-dialog-content h2 {
+  margin-top: 0;
+}
+
+.delete-confirmation-label {
+  display: grid;
+  gap: 8px;
+  margin: 20px 0;
+}
+
+.delete-confirmation-label[hidden] {
+  display: none;
+}
+
+.delete-confirmation-label input {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.delete-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.secondary-button {
+  border-color: var(--border);
+  background: white;
+  color: var(--text);
+}
+
+.secondary-button:hover {
+  background: var(--panel-soft);
+}
+
 #unasTestButton,
 #unasTestButtonSecondary {
   background: white;
