@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>Vitalis AI Asszisztens</title>
-  <link rel="stylesheet" href="/widget.css?v=2.0.0">
+  <link rel="stylesheet" href="/widget.css?v=2.0.1">
 </head>
 <body class="widget-page">
   <section class="chat-card" aria-label="Vitalis AI Asszisztens">
@@ -19,9 +19,8 @@
 
     <div id="messages" class="messages" aria-live="polite" aria-relevant="additions">
       <article class="bubble bot welcome">
-        <strong>Üdvözöllek! A Vitalis mesterséges intelligenciával működő virtuális asszisztense vagyok.</strong>
-        <p>Segítek a termékekkel, használattal, rendeléssel és szállítással kapcsolatos kérdésekben.</p>
-        <p>A válaszaim Szalacsi Zoltán, a Vitalis termékek készítőjének szakmai tudására épülnek.</p>
+        <strong>Szia! Miben segíthetek?</strong>
+        <p>Írd meg, mit keresel, vagy milyen problémára szeretnél terméket.</p>
       </article>
     </div>
 
@@ -29,19 +28,17 @@
       <span></span><span></span><span></span><em>Válasz készül…</em>
     </div>
 
-    <div class="quick-start" aria-label="Témák">
-      <span class="quick-title">Gyorsindítás</span>
-      <div id="suggestions" class="suggestions">
-        <button type="button" data-question="Ekcémával kapcsolatban kérdeznék.">Ekcéma</button>
-        <button type="button" data-question="Pikkelysömörrel kapcsolatban kérdeznék.">Pikkelysömör</button>
-        <button type="button" data-question="Mit ajánlasz száraz bőrre?">Száraz bőr</button>
-        <button type="button" data-question="Mit ajánlasz zsíros, pattanásos bőrre?">Pattanásos bőr</button>
-        <button type="button" data-question="Mennyi a szállítási idő?">Szállítás</button>
-        <button type="button" data-question="Hogyan kapom meg a kuponkódot?">Kuponkód</button>
-      </div>
-    </div>
+    <div id="suggestions" class="suggestions" hidden aria-hidden="true"></div>
 
     <div id="restore-notice" class="restore-notice" hidden>Az előző beszélgetést most nem sikerült visszaállítani, de itt továbbra is kérdezhetsz.</div>
+
+    <div class="newsletter-offer">
+      <a href="https://www.vitalis-szappan.hu/shop_newsletter.php?utm_source=vitalis_ai&amp;utm_medium=chat&amp;utm_campaign=first_purchase_10" target="_top" rel="noopener">
+        <strong>Első vásárlásod?</strong>
+        10% kedvezmény feliratkozásért
+        <span aria-hidden="true">→</span>
+      </a>
+    </div>
 
     <form id="form" class="composer">
       <label class="sr-only" for="input">Kérdés</label>
@@ -52,6 +49,6 @@
     <footer><button id="new-conversation" type="button">Új beszélgetés</button><span>A chat kozmetikai tájékoztatást ad, és nem helyettesít orvosi diagnózist vagy kezelést.</span></footer>
   </section>
   <script src="/commerce-event-client.js?v=1.0.0"></script>
-  <script src="/widget.js?v=2.0.1"></script>
+  <script src="/widget.js?v=2.0.2"></script>
 </body>
 </html>

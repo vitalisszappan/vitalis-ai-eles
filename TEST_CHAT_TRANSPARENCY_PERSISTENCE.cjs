@@ -10,7 +10,7 @@ const publicUi = [html, widget, embed, read('public/demo.html')].join('\n');
 
 assert.match(html, /<h1>Vitalis AI Asszisztens<\/h1>/);
 assert.match(html, /Mesterséges intelligenciával működő virtuális asszisztens, nem élő ügyintéző\./);
-assert.match(html, /Üdvözöllek! A Vitalis mesterséges intelligenciával működő virtuális asszisztense vagyok\./);
+assert.match(html, /Szia! Miben segíthetek\?/);
 assert.doesNotMatch(publicUi, /Kérdezd a készítőt|valós idejű chat|Azonnali válaszok|Szalacsi Zoltán vagyok/);
 
 assert.match(widget, /card\.target = '_blank'/);

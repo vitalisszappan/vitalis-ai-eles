@@ -38,12 +38,17 @@ button,textarea{font:inherit}
 .typing span:nth-child(2){animation-delay:.14s}.typing span:nth-child(3){animation-delay:.28s}
 .typing em{font-style:normal;margin-left:5px}
 @keyframes typingBounce{0%,60%,100%{transform:translateY(0);opacity:.55}30%{transform:translateY(-3px);opacity:1}}
-.quick-start{padding:8px 12px 10px;border-top:1px solid var(--line);background:#fff;flex:0 0 auto}
-.quick-title{display:block;color:#6d827a;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin:0 3px 7px}
-.suggestions{display:flex;gap:7px;overflow-x:auto;scrollbar-width:thin;padding-bottom:1px}
+.suggestions{display:flex;gap:7px;overflow-x:auto;scrollbar-width:thin;padding:8px 12px 10px;border-top:1px solid var(--line);background:#fff;flex:0 0 auto}
+.suggestions[hidden]{display:none}
 .suggestions button{flex:0 0 auto;background:#fff;border:1px solid #94beae;color:#125c48;padding:8px 11px;border-radius:999px;cursor:pointer;font-size:12.5px;transition:background .17s ease,border-color .17s ease,transform .17s ease}
 .suggestions button:hover{background:#f0f7f4;border-color:#62a58c;transform:translateY(-1px)}
 .suggestions button:focus-visible{outline:3px solid rgba(22,128,95,.14);outline-offset:1px}
+.newsletter-offer{padding:8px 14px;background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:12.5px;line-height:1.35;flex:0 0 auto}
+.newsletter-offer a{color:var(--green);text-decoration:none}
+.newsletter-offer a:hover{text-decoration:underline;text-underline-offset:2px}
+.newsletter-offer a:focus-visible{outline:3px solid rgba(22,128,95,.14);outline-offset:2px;border-radius:2px}
+.newsletter-offer strong{font-weight:700}
+.newsletter-offer span{margin-left:2px}
 .composer{display:flex;align-items:flex-end;gap:8px;padding:11px 12px 10px;background:#fff;border-top:1px solid #edf2ef;flex:0 0 auto}
 .composer textarea{min-width:0;flex:1;resize:none;max-height:112px;padding:12px 13px;border:2px solid #b7d1c8;border-radius:14px;font-size:15px;line-height:1.35;outline:none;overflow-y:auto}
 .composer textarea:focus{border-color:#16805f;box-shadow:0 0 0 3px rgba(22,128,95,.11)}

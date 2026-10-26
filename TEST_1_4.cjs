@@ -16,7 +16,7 @@ for(const [q,id,needle] of tests){
  if(!ok) failed++;
 }
 const html=fs.readFileSync(path.join(__dirname,'public','widget.html'),'utf8');
-for(const needle of ['Vitalis AI Asszisztens','Mesterséges intelligenciával működő virtuális asszisztens, nem élő ügyintéző.','A Vitalis mesterséges intelligenciával működő virtuális asszisztense vagyok.','Szalacsi Zoltán, a Vitalis termékek készítőjének szakmai tudására épülnek']){
+for(const needle of ['Vitalis AI Asszisztens','Mesterséges intelligenciával működő virtuális asszisztens, nem élő ügyintéző.','Szia! Miben segíthetek?','Írd meg, mit keresel, vagy milyen problémára szeretnél terméket.']){
  const ok=html.includes(needle); console.log(ok?'OK  ':'HIBA','UI:',needle); if(!ok) failed++;
 }
 if(failed){console.error(`\n${failed} teszt hibás.`);process.exit(1);} else console.log('\nMinden 1.4 teszt sikeres.');

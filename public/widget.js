@@ -359,6 +359,8 @@ function add(text, role, options = {}) {
 
 function setSuggestions(items) {
   suggestionsEl.replaceChildren();
+  suggestionsEl.hidden = true;
+  suggestionsEl.setAttribute('aria-hidden', 'true');
 
   if (
     !Array.isArray(items) ||
@@ -467,6 +469,11 @@ function setSuggestions(items) {
     suggestionsEl.append(
       button
     );
+  }
+
+  if (suggestionsEl.childElementCount) {
+    suggestionsEl.hidden = false;
+    suggestionsEl.setAttribute('aria-hidden', 'false');
   }
 }
 
