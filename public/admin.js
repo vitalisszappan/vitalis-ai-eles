@@ -5,6 +5,70 @@
 ========================================================= */
 
 /* =========================================================
+   BESZÉLGETÉS-CSOPORTOSÍTÁS (session_id szerint)
+========================================================= */
+
+// BEGIN CONVERSATION GROUPING
+const VitalisAdminConversations = (() => {
+  function value(item, keys) {
+    for (const key of keys) {
+      const current = item?.[key];
+      if (current != null && String(current).trim()) return String(current).trim();
+    }
+    return '';
+  }
+  function question(item) { return value(item, ['question', 'user_message', 'userMessage', 'message']); }
+  function answer(item) { return value(item, ['answer', 'bot_answer', 'botAnswer', 'response']); }
+  function createdAt(item) { return value(item, ['created_at', 'createdAt', 'timestamp', 'date']); }
+  function groupConversations(rows = []) {
+    const groups = new Map();
+    (Array.isArray(rows) ? rows : []).forEach((row, index) => {
+      const rawSessionId = typeof row?.session_id === 'string' ? row.session_id.trim() : '';
+      const sessionId = rawSessionId && rawSessionId !== 'unknown' ? rawSessionId : null;
+      const key = sessionId ? `session:${sessionId}` : `legacy:${index}`;
+      if (!groups.has(key)) groups.set(key, { key, sessionId, turns: [], firstIndex: index, latestActivityAt: '' });
+      const group = groups.get(key);
+      group.turns.push({ row, index });
+      if (createdAt(row) > group.latestActivityAt) group.latestActivityAt = createdAt(row);
+    });
+    const ordered = [...groups.values()];
+    for (const group of ordered) {
+      group.turns.sort((left, right) => {
+        const a = Date.parse(createdAt(left.row)), b = Date.parse(createdAt(right.row));
+        if (Number.isFinite(a) && Number.isFinite(b) && a !== b) return a - b;
+        if (Number.isFinite(a) !== Number.isFinite(b)) return Number.isFinite(a) ? -1 : 1;
+        return left.index - right.index;
+      });
+      group.title = question(group.turns[0]?.row) || '–';
+    }
+    return ordered.sort((left, right) => {
+      const a = Date.parse(left.latestActivityAt), b = Date.parse(right.latestActivityAt);
+      if (Number.isFinite(a) && Number.isFinite(b) && a !== b) return b - a;
+      return left.firstIndex - right.firstIndex;
+    });
+  }
+  function matchesSearch(group, query) {
+    const needle = String(query || '').trim().toLocaleLowerCase();
+    if (!needle) return true;
+    return group.turns.some(({ row }) => [
+      question(row), answer(row), value(row, ['page_url', 'pageUrl']), value(row, ['source'])
+    ].filter(Boolean).join(' ').toLocaleLowerCase().includes(needle));
+  }
+  function conversationStatistics(allGroups, visibleGroups, isToday) {
+    return {
+      total: allGroups.length,
+      today: allGroups.filter((group) => group.turns.some(({ row }) => isToday(createdAt(row)))).length,
+      visible: visibleGroups.length
+    };
+  }
+  function deleteTarget(group) {
+    return group?.sessionId && group.sessionId !== 'admin-knowledge-builder' ? group.sessionId : null;
+  }
+  return { groupConversations, matchesSearch, conversationStatistics, deleteTarget, question, answer, createdAt };
+})();
+// END CONVERSATION GROUPING
+
+/* =========================================================
    DOM ELEMEK
 ========================================================= */
 
@@ -520,24 +584,15 @@ function isValidKnowledgeGap(
 function updateConversationStatistics(
   visibleItems
 ) {
-  const todayCount =
-    conversations.filter(
-      (
-        item
-      ) =>
-        isToday(
-          getCreatedAt(
-            item
-          )
-        )
-    ).length;
+  const allGroups = VitalisAdminConversations.groupConversations(conversations);
+  const statistics = VitalisAdminConversations.conversationStatistics(allGroups, visibleItems, isToday);
 
   if (
     totalCountElement
   ) {
     totalCountElement.textContent =
       String(
-        conversations.length
+        statistics.total
       );
   }
 
@@ -546,7 +601,7 @@ function updateConversationStatistics(
   ) {
     todayCountElement.textContent =
       String(
-        todayCount
+        statistics.today
       );
   }
 
@@ -555,7 +610,7 @@ function updateConversationStatistics(
   ) {
     visibleCountElement.textContent =
       String(
-        visibleItems.length
+        statistics.visible
       );
   }
 }
@@ -587,13 +642,12 @@ function renderConversations(
   conversationList.innerHTML =
     '';
 
+  const groups = VitalisAdminConversations.groupConversations(items);
   updateConversationStatistics(
-    items
+    groups
   );
 
-  if (
-    !items.length
-  ) {
+  if (!groups.length) {
     conversationList.innerHTML = `
       <div class="empty-state">
         Nincs megjeleníthető beszélgetés.
@@ -603,46 +657,34 @@ function renderConversations(
     return;
   }
 
-  for (
-    const item of
-    items
-  ) {
-    const question =
-      getQuestion(
-        item
-      );
-
-    const answer =
-      getAnswer(
-        item
-      );
-
-    const createdAt =
-      getCreatedAt(
-        item
-      );
-
-    const pageUrl =
-      getPageUrl(
-        item
-      );
-
-    const source =
-      String(
-        item.source ||
-        'ismeretlen'
-      );
-
-    const confidence =
-      item.confidence !==
-        null &&
-      item.confidence !==
-        undefined
-        ? String(
-            item.confidence
-          )
-        : '–';
-
+  for (const group of groups) {
+    const turnsMarkup = group.turns.map(({ row }) => {
+      const question = getQuestion(row);
+      const answer = getAnswer(row);
+      const createdAt = getCreatedAt(row);
+      const pageUrl = getPageUrl(row);
+      const source = String(row.source || 'ismeretlen');
+      const confidence = row.confidence !== null && row.confidence !== undefined ? String(row.confidence) : '–';
+      return `
+        <section class="conversation-turn">
+          <div class="conversation-meta">
+            <span>${escapeHtml(formatDate(createdAt))}</span>
+            ${pageUrl ? `<span>${escapeHtml(pageUrl)}</span>` : ''}
+          </div>
+          <div class="conversation-question">
+            <strong>VÁSÁRLÓ KÉRDÉSE</strong>
+            <p>${escapeHtml(question || '–')}</p>
+          </div>
+          <div class="conversation-answer">
+            <strong>CHATBOT VÁLASZA</strong>
+            <p>${escapeHtml(answer || '–')}</p>
+          </div>
+          <div class="conversation-meta">
+            <span>Forrás: ${escapeHtml(source)}</span>
+            <span>Biztonsági pontszám: ${escapeHtml(confidence)}</span>
+          </div>
+        </section>`;
+    }).join('');
     const article = document.createElement('details');
 
     article.className =
@@ -650,83 +692,15 @@ function renderConversations(
 
     article.innerHTML = `
       <summary class="conversation-summary">
-        <strong>${escapeHtml(question || '–')}</strong>
-        <span>${escapeHtml(formatDate(createdAt))}</span>
+        <strong>${escapeHtml(group.title)}</strong>
+        <span>${escapeHtml(formatDate(group.latestActivityAt))}</span>
+        <span>${group.turns.length} forduló</span>
       </summary>
       <div class="conversation-details">
-      <div class="conversation-meta">
-
-        <span>
-          ${escapeHtml(
-            formatDate(
-              createdAt
-            )
-          )}
-        </span>
-
-        ${
-          pageUrl
-            ? `
-              <span>
-                ${escapeHtml(
-                  pageUrl
-                )}
-              </span>
-            `
-            : ''
-        }
-
-      </div>
-
-      <div class="conversation-question">
-
-        <strong>
-          VÁSÁRLÓ KÉRDÉSE
-        </strong>
-
-        <p>
-          ${escapeHtml(
-            question ||
-            '–'
-          )}
-        </p>
-
-      </div>
-
-      <div class="conversation-answer">
-
-        <strong>
-          CHATBOT VÁLASZA
-        </strong>
-
-        <p>
-          ${escapeHtml(
-            answer ||
-            '–'
-          )}
-        </p>
-
-      </div>
-
-      <div class="conversation-meta">
-
-        <span>
-          Forrás:
-          ${escapeHtml(
-            source
-          )}
-        </span>
-
-        <span>
-          Biztonsági pontszám:
-          ${escapeHtml(
-            confidence
-          )}
-        </span>
-
+        ${turnsMarkup}
+        <div class="conversation-meta">
         <button type="button" class="conversation-delete-button danger-button">Törlés</button>
-
-      </div>
+        </div>
       </div>
     `;
 
@@ -735,10 +709,11 @@ function renderConversations(
     );
 
     const deleteButton = article.querySelector('.conversation-delete-button');
-    if (deleteButton && item.session_id && item.session_id !== 'admin-knowledge-builder') {
+    const deleteTarget = VitalisAdminConversations.deleteTarget(group);
+    if (deleteButton && deleteTarget) {
       deleteButton.addEventListener('click', () => openConversationDeleteDialog({
         mode: 'single',
-        sessionId: String(item.session_id)
+        sessionId: deleteTarget
       }));
     } else if (deleteButton) {
       deleteButton.disabled = true;
@@ -773,9 +748,11 @@ async function loadConversations() {
       conversations
     );
 
+    const groups = VitalisAdminConversations.groupConversations(conversations);
+    const turnCount = groups.reduce((count, group) => count + group.turns.length, 0);
     setStatus(
       statusMessage,
-      `Betöltve: ${conversations.length} beszélgetés. Forrás: ${
+      `Betöltve: ${groups.length} beszélgetés, ${turnCount} forduló. Forrás: ${
         data.storage ||
         'ismeretlen'
       }.`
@@ -824,40 +801,9 @@ function filterConversations() {
     return;
   }
 
-  const filtered =
-    conversations.filter(
-      (
-        item
-      ) => {
-
-        const searchableText = [
-          getQuestion(
-            item
-          ),
-
-          getAnswer(
-            item
-          ),
-
-          getPageUrl(
-            item
-          ),
-
-          item.source
-        ]
-          .filter(
-            Boolean
-          )
-          .join(
-            ' '
-          )
-          .toLowerCase();
-
-        return searchableText.includes(
-          query
-        );
-      }
-    );
+  const filtered = VitalisAdminConversations.groupConversations(conversations)
+    .filter((group) => VitalisAdminConversations.matchesSearch(group, query))
+    .flatMap((group) => group.turns.map(({ row }) => row));
 
   renderConversations(
     filtered

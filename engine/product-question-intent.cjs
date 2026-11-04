@@ -17,7 +17,7 @@ function detectProductQuestionIntent(question) {
   if (/\b(mit erdemes tudni rola|milyen ez|lehet arcra hasznalni|hasznalhato arcra|szappan vagy sampon)\b/.test(text)) return 'product_information';
   if (/\b(milyen illata|milyen az illata|illat[a]? van)\b/.test(text)) return 'scent';
   if (/\b(ajanl\w*|javasol\w*|melyiket valassz\w*|mit valassz\w*|melyik jobb|melyik\b.*\bjo|melyik a legjobb|mit hasznaljak|keresek)\b/.test(text)) return 'recommendation';
-  if (/\b(van belole mas\w*|mas illat|masik valtozat|mekkora a kiszereles)\b/.test(text)) return 'variant';
+  if (/\b(van belole mas\w*|mas illat|masik valtozat|mekkora a kiszereles)\b|\bmekkora\b.*\bkiszereles\w*/.test(text)) return 'variant';
   if (/^(van|vannak|kaphato|elerheto)\b/.test(text)) return 'availability';
   return null;
 }

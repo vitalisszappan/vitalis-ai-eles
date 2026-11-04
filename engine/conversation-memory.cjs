@@ -63,7 +63,10 @@ function rowsToHistory(rows) {
     // Legacy rows stay on the existing merge path. A validated event or rejected
     // event is a known server turn; its position cannot be forged by browser data.
     if(validated||invalid)for(const item of [user,assistant].filter(Boolean))serverEvents.set(item,{index,turnId:event?.turnId||null,kind:event?.kind||'invalid',
-      ...(event?.kind==='pending_clarification'?{pendingClarification:{domain:event.domain,clarificationType:event.clarificationType,...(event.version===2?{factors:{...event.factors},requestedDimensions:[...event.requestedDimensions]}:{productType:event.productType,...(event.version===4?{selectedAxis:event.selectedAxis}:{})})}}:{})});
+      ...(event?.kind==='pending_clarification'?{pendingClarification:{domain:event.domain,clarificationType:event.clarificationType,
+        ...(event.version===2?{factors:{...event.factors},requestedDimensions:[...event.requestedDimensions]}:{}),
+        ...(event.version===3||event.version===4?{productType:event.productType,...(event.version===4?{selectedAxis:event.selectedAxis}:{})}:{}),
+        ...(event.version===5?{requestedGoal:event.requestedGoal,requestedIntent:event.requestedIntent,requestedAttribute:event.requestedAttribute}:{})}}:{})});
     return [user,assistant].filter(Boolean);
   });
 }
@@ -143,7 +146,7 @@ function authoritativeProductFocus(history=[]){
     const products=renderedProductList(item);
     candidates=[...products];
     if(item.targetProductId){
-      focusedProductId=item.targetProductId;selectedProductId=item.targetProductId;productContextStatus='resolved';
+      focusedProductId=item.targetProductId;selectedProductId=item.route==='expert_rule'?null:item.targetProductId;productContextStatus='resolved';
     }else if(products.length===1){
       focusedProductId=products[0];selectedProductId=null;productContextStatus='resolved';
     }else{

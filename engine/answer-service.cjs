@@ -288,6 +288,8 @@ function finalizeSubtypeOutput({ routing, draft, question, history }) {
   let compositionRouting = routing.subtypeRequest ? draft.routing : routing;
   if (catalogReference) compositionRouting = { ...compositionRouting, answerMode: 'DIRECT' };
   const result = composeCommunication({ decision: compositionRouting, draft, question, history });
+  const primaryProductId = draft.primaryProductId || routing.primaryProductId;
+  if (primaryProductId) result.primaryProductId = primaryProductId;
   if (catalogReference) result.routing = { ...draft.routing, answerMode: compositionRouting.answerMode };
   if (routing.subtypeRequest) {
     // Every subtype composition path preserves the same proven result set.
@@ -584,10 +586,15 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
     if (routing.goal === 'ask_variant') {
       const card = productCards([target])[0];
       const size = /\b(\d+\s*(?:ml|g))\b/i.exec(card?.name || '')?.[1] || null;
-      const asksSize = /kiszereles|mekkora/.test(normalize(question));
-      const asksScent = /illat/.test(normalize(question));
-      const answer = asksSize && size ? `A kiszerelése ${size.replace(/\s+/g, ' ')}.` : asksScent ? 'Más illatról most nem tudok biztosat mondani.' : 'Másik változatról most nem tudok biztosat mondani.';
-      return attachDecision({ source: 'conversation-context', answer, confidence: 100, links: card ? [card] : [], suggestions: [], ruleId: 'variant-query', intent: 'variant_query', matchedKnowledgeIds: [] }, routing);
+      const asksSize = routing.requestedAttribute === 'size' || /kiszereles|mekkora|meret/.test(normalize(question));
+      const asksScent = routing.requestedAttribute === 'scent' || /illat/.test(normalize(question));
+      const productName = shortProductName(card?.name || PRODUCTS[target]?.name || 'A termék');
+      const answer = asksSize && size
+        ? `A ${productName} kiszerelése ${size.replace(/\s+/g, ' ')}.`
+        : asksSize
+          ? `A ${productName} kiszereléséről jelenleg nincs elég biztos katalógusadatom.`
+          : asksScent ? 'Más illatról most nem tudok biztosat mondani.' : 'Másik változatról most nem tudok biztosat mondani.';
+      return attachDecision({ source: 'conversation-context', answer, confidence: 100, links: card ? [card] : [], targetProductId: target, suggestions: [], ruleId: 'variant-query', intent: 'variant_query', matchedKnowledgeIds: [] }, routing);
     }
     if (routing.goal === 'ask_product_information') {
       const attributeAnswer = productAttributeAnswer(target, routing.intent, question);
@@ -2021,6 +2028,63 @@ function historyAfterComplaintBoundary(history = []) {
   return boundary ? history.slice(boundary.index + 1) : history;
 }
 
+function resumePendingProductQuestion(routing, conversationState, question, resolvedTarget = null) {
+  const pending = conversationState?.pendingClarification;
+  if (pending?.domain !== 'product' || pending?.clarificationType !== 'product_reference') return routing;
+  const variant = pending.requestedGoal === 'ask_variant' && pending.requestedIntent === 'variant_query'
+    && ['size', 'scent', 'variant'].includes(pending.requestedAttribute);
+  const price = pending.requestedGoal === 'ask_price' && pending.requestedIntent === 'price_query'
+    && pending.requestedAttribute === 'price';
+  if (!variant && !price) return routing;
+  let target = resolvedTarget;
+  if (routing.route === 'exact_product' && routing.matchedCanonicalIds?.length === 1) {
+    target ||= routing.matchedCanonicalIds[0];
+  } else if (routing.route === 'context_followup' && routing.contextTarget && routing.contextTarget !== 'product'
+    && routing.matchedProductIds?.length === 1) {
+    target ||= routing.contextTarget;
+  } else if (['expert_rule', 'commerce'].includes(routing.route) && routing.primaryProductId
+    && routing.matchedProductIds?.includes(routing.primaryProductId)) {
+    target ||= routing.primaryProductId;
+  }
+  if (!target) {
+    if (routing.route === 'clarification' && routing.contextTarget === 'product') {
+      return { ...routing, pendingProductClarification: {
+        requestedGoal: pending.requestedGoal,
+        requestedIntent: pending.requestedIntent,
+        requestedAttribute: pending.requestedAttribute
+      } };
+    }
+    return routing;
+  }
+  return {
+    ...routing,
+    route: 'context_followup',
+    goal: pending.requestedGoal,
+    intent: pending.requestedIntent,
+    domain: 'product',
+    contextUsed: true,
+    contextTarget: target,
+    matchedCanonicalIds: [target],
+    matchedProductIds: [target],
+    primaryProductId: target,
+    productQuestionIntent: variant ? 'variant' : null,
+    answerIntent: price ? 'price_query' : null,
+    requestedAttribute: pending.requestedAttribute,
+    responseSource: 'pending-product-clarification'
+  };
+}
+
+function catalogProductsInAnswer(routing, answer, question) {
+  if (!['problem_domain', 'expert_rule', 'product_category'].includes(routing?.route)) return [];
+  const category = decisionCatalog.detectCategory(question);
+  if (!category || !Array.isArray(answer?.links)) return [];
+  const catalogIds = new Set(decisionCatalog.searchCategory(category.id, 100).products
+    .map((item) => item.canonicalProductId)
+    .filter((id) => id && PRODUCTS[id]));
+  return [...new Set(answer.links.map((item) => item?.id)
+    .filter((id) => id && catalogIds.has(id) && PRODUCTS[id]))];
+}
+
 /* =========================================================
    FŐ VÁLASZKÉPZÉS
 ========================================================= */
@@ -2039,10 +2103,19 @@ function createAnswerUnsafe({
   const complaintBoundary = latestComplaintBoundary(history);
   const effectiveHistory = historyAfterComplaintBoundary(history);
   const effectiveState = complaintBoundary ? structuredState(effectiveHistory) : conversationState;
-  const selectedRouting = routeAnswer({ question, history: effectiveHistory, knowledge, ruleEngine, conversationState: effectiveState });
+  const normalRouting = routeAnswer({ question, history: effectiveHistory, knowledge, ruleEngine, conversationState: effectiveState });
+  const requestedAttribute = normalRouting.goal === 'ask_price' ? 'price'
+    : normalRouting.goal === 'ask_variant' ? /kiszereles|meret|mekkora/.test(normalize(question)) ? 'size'
+      : /illat/.test(normalize(question)) ? 'scent' : 'variant'
+      : null;
+  const selectedRouting = resumePendingProductQuestion(
+    requestedAttribute ? { ...normalRouting, requestedAttribute } : normalRouting,
+    effectiveState,
+    question
+  );
   const semanticEvidence = buildSemanticEvidence({ question, routing: selectedRouting, history: effectiveHistory, conversationState: effectiveState });
   const semanticGuard = validateSemanticRoute({ routing: selectedRouting, evidence: semanticEvidence });
-  const { routing } = applySemanticGuardEnforcement({ routing: selectedRouting, guard: semanticGuard });
+  let { routing } = applySemanticGuardEnforcement({ routing: selectedRouting, guard: semanticGuard });
   const relevantComplaintHistory = Boolean(complaintBoundary
     && complaintBoundary.index === history.length - 1
     && complaintBoundary.item.intent !== 'complaint_resolved'
@@ -2084,6 +2157,39 @@ function createAnswerUnsafe({
   const answerPlan = planAnswer({ question, routing, conversationState: effectiveState });
   const draft = materializeDecision({ routing, question, history: effectiveHistory, knowledge, ruleEngine, logGap, conversationState: effectiveState, technicalFailure, logDiagnostic, answerPlan });
   const result = finalizeSubtypeOutput({ routing, draft, question, history: effectiveHistory });
+  const pending = effectiveState?.pendingClarification;
+  if (pending?.domain === 'product' && pending?.clarificationType === 'product_reference') {
+    const candidates = catalogProductsInAnswer(normalRouting, draft, question);
+    const categoryResolutionAttempt = ['problem_domain', 'expert_rule', 'product_category'].includes(normalRouting.route)
+      && Boolean(decisionCatalog.detectCategory(question));
+    if (candidates.length === 1) {
+      const resumedRouting = resumePendingProductQuestion(normalRouting, effectiveState, question, candidates[0]);
+      const resumedEvidence = buildSemanticEvidence({ question, routing: resumedRouting, history: effectiveHistory, conversationState: effectiveState });
+      const resumedGuard = validateSemanticRoute({ routing: resumedRouting, evidence: resumedEvidence });
+      const { routing: enforcedRouting } = applySemanticGuardEnforcement({ routing: resumedRouting, guard: resumedGuard });
+      if (enforcedRouting.route === 'context_followup') {
+        const resumedPlan = planAnswer({ question, routing: enforcedRouting, conversationState: effectiveState });
+        const resumedDraft = materializeDecision({ routing: enforcedRouting, question, history: effectiveHistory, knowledge, ruleEngine, logGap, conversationState: effectiveState, technicalFailure, logDiagnostic, answerPlan: resumedPlan });
+        return finalizeSubtypeOutput({ routing: enforcedRouting, draft: resumedDraft, question, history: effectiveHistory });
+      }
+    } else if (categoryResolutionAttempt) {
+      const clarificationRouting = {
+        ...normalRouting,
+        route: 'clarification',
+        intent: pending.requestedIntent,
+        goal: pending.requestedGoal,
+        domain: 'product',
+        contextUsed: true,
+        contextTarget: 'product',
+        rejectionReasons: ['ambiguous_product_reference'],
+        responseSource: 'conversation-context',
+        requestedAttribute: pending.requestedAttribute
+      };
+      const clarificationPlan = planAnswer({ question, routing: clarificationRouting, conversationState: effectiveState });
+      const clarificationDraft = materializeDecision({ routing: clarificationRouting, question, history: effectiveHistory, knowledge, ruleEngine, logGap, conversationState: effectiveState, technicalFailure, logDiagnostic, answerPlan: clarificationPlan });
+      return finalizeSubtypeOutput({ routing: clarificationRouting, draft: clarificationDraft, question, history: effectiveHistory });
+    }
+  }
   if (draft && draft.recommendationIntent) {
     Object.defineProperty(result, 'recommendationIntent', {
       value: draft.recommendationIntent,

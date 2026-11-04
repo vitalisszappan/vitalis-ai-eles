@@ -1407,6 +1407,15 @@ function validateConversationHistoryRows(rows) {
 }
 function validateConversationHistoryEvent(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  if (value.version === 5) {
+    const keys=['version','turnId','kind','route','domain','clarificationType','requestedGoal','requestedIntent','requestedAttribute'];
+    if(Object.keys(value).length!==keys.length||keys.some(key=>!Object.hasOwn(value,key)))return null;
+    if(value.turnId!==null && !(typeof value.turnId==='string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(value.turnId)))return null;
+    if(value.kind!=='pending_clarification'||value.route!=='clarification'||value.domain!=='product'||value.clarificationType!=='product_reference')return null;
+    if(!((value.requestedGoal==='ask_variant'&&value.requestedIntent==='variant_query'&&['size','scent','variant'].includes(value.requestedAttribute))
+      ||(value.requestedGoal==='ask_price'&&value.requestedIntent==='price_query'&&value.requestedAttribute==='price')))return null;
+    return {version:5,turnId:value.turnId,kind:value.kind,route:value.route,domain:value.domain,clarificationType:value.clarificationType,requestedGoal:value.requestedGoal,requestedIntent:value.requestedIntent,requestedAttribute:value.requestedAttribute};
+  }
   if (value.version === 4) {
     const keys=['version','turnId','kind','route','domain','clarificationType','productType','selectedAxis'];
     if(Object.keys(value).length!==keys.length||keys.some(key=>!Object.hasOwn(value,key)))return null;
@@ -1465,6 +1474,26 @@ function validateConversationHistoryEvent(value) {
 function buildConversationHistoryEvent(result, turnId) {
   if (!result || typeof result!=='object') return null;
   const routing=result.routing&&typeof result.routing==='object'?result.routing:null;
+  const requestedGoal=routing?.goal;
+  const requestedIntent=routing?.intent;
+  const requestedAttribute=routing?.requestedAttribute;
+  const pendingProductReference=result.route==='clarification'&&routing?.route==='clarification'
+    &&routing.contextTarget==='product'
+    &&((requestedGoal==='ask_variant'&&requestedIntent==='variant_query')
+      ||(requestedGoal==='ask_price'&&requestedIntent==='price_query'));
+  if(pendingProductReference){
+    return validateConversationHistoryEvent({version:5,turnId:typeof turnId==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(turnId)?turnId:null,
+      kind:'pending_clarification',route:'clarification',domain:'product',clarificationType:'product_reference',requestedGoal,requestedIntent,
+      requestedAttribute:['size','scent','variant','price'].includes(requestedAttribute)?requestedAttribute:requestedGoal==='ask_price'?'price':'variant'});
+  }
+  if(result.route==='clarification'&&routing?.route==='clarification'&&routing.contextTarget==='product'
+    &&routing.pendingProductClarification
+    &&['ask_variant','ask_price'].includes(routing.pendingProductClarification.requestedGoal)){
+    const pending=routing.pendingProductClarification;
+    return validateConversationHistoryEvent({version:5,turnId:typeof turnId==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(turnId)?turnId:null,
+      kind:'pending_clarification',route:'clarification',domain:'product',clarificationType:'product_reference',
+      requestedGoal:pending.requestedGoal,requestedIntent:pending.requestedIntent,requestedAttribute:pending.requestedAttribute});
+  }
   const guidedType=routing?.guidedDiscovery?.productType?.value;
   const pendingGuided=result.route==='clarification'&&routing?.route==='clarification'
     &&routing.responseSource==='guided-discovery'&&routing.contextTarget==='guided_discovery'
@@ -1493,12 +1522,8 @@ function buildConversationHistoryEvent(result, turnId) {
   const scoped=type && ['subtype_catalog','expert_rule'].includes(route);
   const routedCanonicalIds=Array.isArray(result.routing?.matchedCanonicalIds)?result.routing.matchedCanonicalIds:[];
   const matchedIds=Array.isArray(result.routing?.matchedProductIds)?result.routing.matchedProductIds:[];
-  const routedContextTarget=result.routing?.route==='context_followup'&&result.routing?.contextUsed===true
-    &&typeof result.routing?.contextTarget==='string'&&routedCanonicalIds.length===1&&matchedIds.length===1
-    &&routedCanonicalIds[0]===result.routing.contextTarget&&matchedIds[0]===result.routing.contextTarget
-    ?result.routing.contextTarget:null;
   const explicitPrimary=result.targetProductId||result.primaryProductId
-    ||routedContextTarget||(result.route==='exact_product'&&routedCanonicalIds.length===1?routedCanonicalIds[0]:null);
+    ||(result.route==='exact_product'&&routedCanonicalIds.length===1?routedCanonicalIds[0]:null);
   const catalogFocus=['context_followup','commerce'].includes(route) && links.some(p=>typeof p.id==='string'&&p.id.startsWith('catalog:'));
   const canonicalFocus=route==='context_followup' && typeof explicitPrimary==='string'
     && /^[a-z0-9_]{1,80}$/.test(explicitPrimary) && links.length===1 && links[0]?.id===explicitPrimary

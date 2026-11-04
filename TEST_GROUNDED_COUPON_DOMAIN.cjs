@@ -69,6 +69,27 @@ for (const [question, intent, pattern] of [
   assert.notEqual(result.fallbackRootCause, 'context_missing', question);
 }
 
+for (const question of [
+  'Első vásárlásom',
+  'Első vásárló vagyok',
+  'Most vásárolok először',
+  'Hol a kedvezmény?',
+  'Hol van a 10%?',
+  'Kérem a 10 százalékot',
+  'Kérem a 10%-ot',
+  'Követelem a 10 százalékot',
+  'Jár nekem a 10%?',
+  'Hogyan kapom meg a 10 százalékot?'
+]) {
+  const result = grounded(question, /hírlev(?:él|el\w*).*10%.*e-mail/i);
+  assert.notEqual(result.fallbackRootCause, 'context_missing', question);
+  assert.doesNotMatch(result.answer, new RegExp(protectedCode, 'i'), question);
+}
+
+for (const question of ['10% niacinamide', '10 százalék urea']) {
+  assert.notEqual(ask(question).route, 'coupon_policy', question);
+}
+
 const freshOrdinal = ask('Az elsőt kérem.');
 assert.notEqual(freshOrdinal.route, 'coupon_policy');
 assert.equal(freshOrdinal.route, 'clarification');
