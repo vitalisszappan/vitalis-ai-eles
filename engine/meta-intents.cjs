@@ -23,6 +23,10 @@ function resolveMetaIntent(question) {
   const q = normalize(question);
   if (!q) return null;
 
+  if (/^(?:latom )?(?:nem erti|nem erted|nem ezt kerdeztem|felreertette|felreertett)$/.test(q)) {
+    return result('conversation-repair', 'conversation-repair', 'Értem, írd meg még egyszer röviden, mire vagy kíváncsi, és arra válaszolok.');
+  }
+
   if (/^(koszonom|koszi|nagyon koszonom|koszonom szepen|oke koszonom|rendben koszonom)[.! ]*$/.test(q)) {
     return result('social-thanks', 'social-thanks', 'Nagyon sz\u00edvesen! Ha szeretn\u00e9l, seg\u00edtek m\u00e9g a v\u00e1laszt\u00e1sban vagy a haszn\u00e1latban.');
   }

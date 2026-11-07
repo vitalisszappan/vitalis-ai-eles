@@ -7,7 +7,7 @@ const CONTACT = /\b(kapcsolat\w*|eler\w*|erlek\w*|email\w*|e-mail\w*|ugyfelszolg
 const GENERAL_CATALOG = /\b(milyen (?:mas )?termek(?:eket|eitek)|milyen termekkategoria\w*|mik a termekkategoria\w*|mit lehet nalatok kapni|mit arultok|teljes kinalat|altalanos kinalat)\b/;
 const SHIPPING_TIME = /^mikor erkezik meg[.!?]*$|\bhany nap alatt er ide\b|\bmikor erkez\w*\b.*\b(rendeles\w*|csomag\w*)\b|\b(mennyi ido|hany nap|mikor erkez\w*|szallitasi ido|kiszallitasi ido|mennyi(?:re)? gyorsan)\b.*\b(szallit\w*|kiszallit\w*|erkez\w*)\b|\b(szallit\w*|kiszallit\w*)\b.*\b(mennyi ido|hany nap|mikor|ido)\b/;
 const SHIPPING_COST = /\bhol latom\b.*\b(szallit\w*|kiszallit\w*)\b.*\b(dij|koltseg)\w*|\b(mennyi|mennyibe kerul|mennyit fizet\w*|mi az ara|mekkora a dij|szallitasi dij|szallitasi koltseg|kiszallitasi dij|kiszallitasi koltseg)\b.*\b(szallit\w*|kiszallit\w*|posta\w*)\b|\b(szallit\w*|kiszallit\w*|posta\w*)\b.*\b(mennyi|mennyibe|koltseg|dij|ar)\w*/;
-const FREE_SHIPPING = /\b(ingyenes|dijmentes)\b.*\b(szallit\w*|kiszallit\w*|posta\w*)\b|\b(szallit\w*|kiszallit\w*)\b.*\b(ingyenes|dijmentes)\b/;
+const FREE_SHIPPING = /\b(ingyenes|dijmentes)\b.*\b(szallit\w*|kiszallit\w*|posta\w*)\b|\b(szallit\w*|kiszallit\w*)\b.*\b(ingyenes|dijmentes)\b|\b(?:nem (?:akar\w*|szeretn\w*|kell\w*)|ne kell\w*)\b(?:\s+\w+){0,5}\s+(?:szallit\w*|kiszallit\w*|posta\w*)(?:\s+\w+){0,3}\s+fizet\w*\b/;
 const CARRIER = /\b(gls|mpl|dpd|futarszolgalat\w*|melyik futar\w*)\b/;
 
 const OWNER_APPROVED_BUSINESS_FACTS = Object.freeze({

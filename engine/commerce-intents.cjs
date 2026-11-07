@@ -4,7 +4,7 @@ const { normalize } = require('./normalizer.cjs');
 
 const PATTERNS = [
   ['order_confirmation_problem', /\b(?:nem|sem) (?:kaptam|erkezett|jott)\b.*\b(?:rendelesi )?visszaigazolas\w*\b|\bnem kaptam visszaigazolast\b/],
-  ['checkout_problem', /\b(nem enged tovabb|nem tud(?:om|ok) (?:tovabbmenni|tovabb menni|megvenni|megrendelni|fizetni)|nem sikerul (?:rendelni|megrendelni|fizetni)|rendelesnel (?:elakad|elakadtam|hibat? ir)|hibat? ir ki a rendelesnel|nem enged kosarba tenni|miert nem (?:lehet(?:\s+\w+){0,4}? rendelni|tudom megvenni))\b/],
+  ['checkout_problem', /\b(nem enged tovabb|nem tud(?:om|ok) (?:tovabbmenni|tovabb menni|megvenni|megrendelni|fizetni)|nem sikerul (?:rendelni|megrendelni|fizetni)|rendelesnel (?:elakad|elakadtam|hibat? ir)|hibat? ir ki a rendelesnel|nem enged kosarba tenni|miert nem (?:lehet(?:\s+\w+){0,4}? rendelni|tudom megvenni))\b|\b(?:mas termek\w*|nem kulon)\b.*\bkosarba\b.*\b(?:tesz\w*|rak\w*|kerul\w*)\b|\b(?:de|helyett)\b.*\bcsomagot\b.*\b(?:tesz\w*|rak\w*)\b.*\bkosarba\b|\bnem kulon\b.*\b(?:tesz\w*|rak\w*)\b.*\bkosarba\b|\bkosarba\b.*\b(?:tesz\w*|rak\w*)\b.*\b(?:mas termek\w*|csomag\w*)\b.*\b(?:hozzaad\w*|tesz\w*|rak\w*|kerul\w*)\b/],
   ['order_status', /\b(hol tart|allapota|hol jar)\b.*\b(rendeles|csomag)/],
   ['gls_parcel_point', /\bgls\b.*\b(?:pont|csomagpont)\w*\b/],
   ['shipping_cost', /\b(szallitas|futar|hazhozszallitas)\w*.*\b(mennyi|mennyibe|dij|koltseg)|\b(mennyi|mennyibe)\b.*\bhazhozszallitas\w*/],
@@ -12,7 +12,7 @@ const PATTERNS = [
   ['parcel_locker', /\b(csomagautomata|automata|csomagpont)\w*\b.*\b(ker|szallit|atvet|valaszt)\w*|\b(automataba|csomagpontra)\b/],
   ['cash_on_delivery', /\b(utanvet|utanvetel)\w*|\b(futarnal|kezbesitonel)\b.*\b(fizet|atvetel)\w*/],
   ['shipping_carrier', /\b(foxpost|gls|mpl|dpd|futarszolgalat)\w*\b|\bmelyik futar\w*/],
-  ['personal_pickup', /\b(szemelyes\w*\s+atvet|szemelyesen\s+atve|at\s+tudom\s+venni\s+szemelyesen|bemehetek erte|elmehetek erte)\w*/],
+  ['personal_pickup', /\b(szemelyes\w*\s+atvet|szemelyesen\s+atve|at\s+tudom\s+venni\s+szemelyesen|bemehetek erte|elmehetek erte)\w*|\bszemelyes\s+(?:uzlet\w*|bolt\w*)\b|\bszemelyesen\b(?:\s+\w+){0,5}\s+(?:megvenni|venni|kapni|kaphato)\b|\b(?:megvenni|venni|kapni|kaphato)\b(?:\s+\w+){0,5}\s+szemelyesen\b/],
   ['registration_phone_format', /\b(regisztracio\w*|regisztral\w*)\b.*\btelefonszam\w*\b|\btelefonszam\w*\b.*\b(regisztracio\w*|regisztral\w*|hogy\s+irjam\s+be|milyen\s+formatum)\b/],
   ['shipping_time', /\b(mikor erkezik|mennyi ido|hany nap|szallitasi ido)\b/],
   ['shipping_general', /\b(hogy|hogyan|mivel)?\s*szallit|szallitas\w*|kiszallitas\w*/],
