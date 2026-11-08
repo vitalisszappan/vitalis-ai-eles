@@ -54,7 +54,7 @@ function activeRecommendationContext(history, context) {
 }
 
 function recommendationChoiceRequest(text) {
-  const asksChoice = /\b(melyiket valasztanad|melyik(?: lenne)? jobb(?: nekem)?|(?:a )?ketto kozul melyiket|te melyiket venned|melyiket ajanlod inkabb)\b/.test(text);
+  const asksChoice = /\b(melyiket valasztan(?:ad|al)|melyik(?: a)?(?: lenne)? jobb(?: nekem)?|(?:a )?ketto kozul melyiket|te melyiket venned|melyiket ajanlod inkabb|ha csak egyet valasztan(?:ad|al) melyiket)\b/.test(text);
   return asksChoice ? { priceAware: /\bolcsobb\b/.test(text) } : null;
 }
 
@@ -117,9 +117,15 @@ function recommendationAlternative(question, history, context) {
   const active = activeRecommendationContext(history, context);
   if (!active) return choice ? { choice: true, priceAware: choice.priceAware, products: [...new Set(context.lastRecommendedProducts || [])], primary: null, justified: false } : null;
   if (choice) {
+    const expertPrimaryChoice = active.sourceRoute === 'expert_rule' && active.products.includes(active.primary);
+    if (expertPrimaryChoice) {
+      const products = active.products.filter((id) => PRODUCTS[id]);
+      const primary = products.includes(active.primary) ? active.primary : null;
+      return { choice: true, priceAware: choice.priceAware, products, primary, justified: Boolean(primary && groundedBenefit(primary)), expertPrimaryChoice: true };
+    }
     const products = active.products.slice(0, 2);
     const groundedRoles = products.length === 2 && products.every((id) => productFacts.getFact(id, 'productBenefits').status === 'grounded');
-    return { choice: true, priceAware: choice.priceAware, products, primary: active.primary, justified: active.sourceRoute === 'expert_rule' && groundedRoles };
+    return { choice: true, priceAware: choice.priceAware, products, primary: active.primary, justified: active.sourceRoute === 'expert_rule' && groundedRoles, expertPrimaryChoice: false };
   }
   const alternatives = active.products.filter((id) => id !== active.primary);
   if (!asksCheaper) return { cheaper: false, primary: active.primary, productId: alternatives[0] || null };
@@ -303,16 +309,18 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
   }
   const alternative = recommendationAlternative(question, history, context);
   if (alternative) {
-    if (alternative.choice && (!alternative.justified || alternative.products.length !== 2 || !alternative.products.includes(alternative.primary))) {
+    const choiceMissingProducts = alternative.expertPrimaryChoice ? alternative.products.length < 1 : alternative.products.length < 2;
+    if (alternative.choice && (!alternative.justified || choiceMissingProducts || !alternative.products.includes(alternative.primary))) {
       return decision({ ...base, route: 'clarification', intent: 'recommendation_choice', goal: 'select_recommendation', domain: context.lastProblemDomain || 'product',
         contextUsed: alternative.products.length > 0, contextTarget: 'products', matchedCanonicalIds: [],
         matchedProductIds: alternative.products, confidence: 1, threshold: 1,
-        rejectionReasons: [alternative.products.length < 2 ? 'missing_recommendation_choice_products' : 'recommendation_choice_priority_unclear'], responseSource: 'conversation-context' });
+        rejectionReasons: [choiceMissingProducts ? 'missing_recommendation_choice_products' : 'recommendation_choice_priority_unclear'], responseSource: 'conversation-context' });
     }
     if (alternative.choice) {
       return decision({ ...base, route: 'recommendation_alternative', intent: 'recommendation_choice', goal: 'select_recommendation', domain: context.lastProblemDomain || 'product',
         contextUsed: true, contextTarget: alternative.primary, matchedCanonicalIds: alternative.products, matchedProductIds: alternative.products,
         primaryProductId: alternative.primary, choiceProductIds: alternative.products, priceAwareChoice: alternative.priceAware,
+        expertPrimaryChoice: alternative.expertPrimaryChoice === true,
         confidence: 1, threshold: 1, responseSource: 'product-facts' });
     }
     return decision({ ...base, route: 'recommendation_alternative', intent: alternative.cheaper ? 'cheaper_recommendation' : 'alternative_reference',

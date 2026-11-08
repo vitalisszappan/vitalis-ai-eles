@@ -658,19 +658,34 @@ function materializeDecision({ routing, question, history, knowledge, ruleEngine
         targetProductId: selectedId || null, factsUsed, groundingStatus: 'grounded', responseStrategy: 'grounded_recommendation_refinement', ctaStrategy: 'none' }, routing);
     }
     if (routing.intent === 'recommendation_choice') {
-      const ids = routing.choiceProductIds || routing.matchedProductIds || [];
+      const ids = [...new Set((routing.choiceProductIds || routing.matchedProductIds || []).filter((id) => PRODUCTS[id]))];
       const chosenId = routing.primaryProductId;
-      const alternativeId = ids.find((id) => id !== chosenId);
-      const chosenBenefit = productFacts.getFact(chosenId, 'productBenefits');
-      const alternativeBenefit = productFacts.getFact(alternativeId, 'productBenefits');
-      const factsUsed = [
-        { productId: chosenId, factType: 'productBenefits', status: chosenBenefit.status, value: chosenBenefit.status === 'grounded' ? chosenBenefit.value : null, provenance: chosenBenefit.provenance || [] },
-        { productId: alternativeId, factType: 'productBenefits', status: alternativeBenefit.status, value: alternativeBenefit.status === 'grounded' ? alternativeBenefit.value : null, provenance: alternativeBenefit.provenance || [] }
-      ];
+      const alternativeIds = ids.filter((id) => id !== chosenId);
+      const benefitFact = (id) => {
+        const fact = productFacts.getFact(id, 'productBenefits');
+        return { productId: id, factType: 'productBenefits', status: fact.status, value: fact.status === 'grounded' ? fact.value : null, provenance: fact.provenance || [] };
+      };
+      const factsUsed = [benefitFact(chosenId), ...alternativeIds.map(benefitFact)];
+      const chosenBenefit = factsUsed[0];
       const chosenClaim = chosenBenefit.value?.[0]?.claim?.replace(/[.]+$/, '');
-      const alternativeClaim = alternativeBenefit.value?.[0]?.claim?.replace(/[.]+$/, '');
-      let answer = `A leírt igényedre inkább a ${recommendationName(PRODUCTS[chosenId]?.name || chosenId)} választanám: ${lowerInitial(chosenClaim)}. A ${PRODUCTS[alternativeId]?.name || alternativeId} szerepe inkább: ${lowerInitial(alternativeClaim)}.`;
-      if (routing.priceAwareChoice) {
+      if (routing.expertPrimaryChoice) {
+        const chosenName = recommendationName(PRODUCTS[chosenId]?.name || chosenId);
+        const alternativeNames = alternativeIds.map((id) => PRODUCTS[id]?.name || id);
+        const alternativesText = alternativeNames.length === 0
+          ? ''
+          : alternativeNames.length === 1
+            ? ` A ${alternativeNames[0]} külön alternatíva.`
+            : ` A ${alternativeNames.slice(0, -1).join(', ')} és a ${alternativeNames.at(-1)} külön alternatívák.`;
+        const answer = `A leírt igényedre a korábbi ajánlásból a ${chosenName} választanám.${alternativesText}`;
+        return attachDecision({ source: 'product-facts', answer, confidence: 100, links: productCards(ids), suggestions: [], ruleId: 'grounded-recommendation-choice', intent: routing.intent, matchedKnowledgeIds: [], answerIntent: 'product_recommendation', targetProductId: chosenId, factsUsed, groundingStatus: 'grounded', responseStrategy: 'grounded_recommendation_choice', ctaStrategy: 'none' }, routing);
+      }
+      const alternativeId = alternativeIds[0] || null;
+      const alternativeBenefit = alternativeId ? benefitFact(alternativeId) : null;
+      const alternativeClaim = alternativeBenefit?.value?.[0]?.claim?.replace(/[.]+$/, '');
+      let answer = alternativeId
+        ? `A leírt igényedre inkább a ${recommendationName(PRODUCTS[chosenId]?.name || chosenId)} választanám: ${lowerInitial(chosenClaim)}. A ${PRODUCTS[alternativeId]?.name || alternativeId} szerepe inkább: ${lowerInitial(alternativeClaim)}.`
+        : `A leírt igényedre inkább a ${recommendationName(PRODUCTS[chosenId]?.name || chosenId)} választanám.`;
+      if (routing.priceAwareChoice && alternativeId) {
         const chosenPrice = productFacts.getFact(chosenId, 'price');
         const alternativePrice = productFacts.getFact(alternativeId, 'price');
         factsUsed.push(
