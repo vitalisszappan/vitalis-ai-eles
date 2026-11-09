@@ -487,6 +487,10 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
   }
 
   const expert = ruleEngine?.resolve(question, history) || null;
+  const currentBusinessInfo = turnIntent.source === 'business-info' ? turnIntent : null;
+  if (expert?.source === 'admin-intent' && currentBusinessInfo?.intent && currentBusinessInfo.intent !== expert.intent) {
+    return decision({ ...base, route: 'business_info', intent: currentBusinessInfo.intent, goal: 'business_information', domain: 'business_info', contextUsed: false, contextTarget: null, matchedCanonicalIds: [], matchedProductIds: [], primaryProductId: null, confidence: 1, threshold: 1, responseSource: 'business-info' });
+  }
   if (expert?.source === 'admin-intent') {
     return decision({ ...base, route: 'commerce', intent: expert.intent, goal: goal.goal === 'unknown' ? 'ask_shipping' : goal.goal, matchedRuleId: expert.ruleId, confidence: 1, threshold: 1, responseSource: 'admin-intent' });
   }
