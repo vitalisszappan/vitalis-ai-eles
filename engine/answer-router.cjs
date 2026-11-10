@@ -54,7 +54,7 @@ function activeRecommendationContext(history, context) {
 }
 
 function recommendationChoiceRequest(text) {
-  const asksChoice = /\b(melyiket valasztan(?:ad|al)|melyik(?: a)?(?: lenne)? jobb(?: nekem)?|(?:a )?ketto kozul melyiket|te melyiket venned|melyiket ajanlod inkabb|ha csak egyet valasztan(?:ad|al) melyiket)\b/.test(text);
+  const asksChoice = /\b(melyiket valasztan(?:ad|al)|melyik(?: a)?(?: lenne)? jobb(?: nekem)?|(?:a )?ketto kozul melyiket|te melyiket venned|melyiket ajanlod inkabb|ha csak egyet valasztan(?:ad|al)(?: melyiket)?|ha egyet (?:kellene|kene) valasztani|melyikkel (?:kezdjek|erdemes kezdeni))\b/.test(text);
   return asksChoice ? { priceAware: /\bolcsobb\b/.test(text) } : null;
 }
 
@@ -201,6 +201,19 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
       responseSource: 'approved-coupon-policy' });
   }
 
+  const businessInfo = turnIntent.source === 'business-info' ? turnIntent : null;
+  if (businessInfo) {
+    return decision({ ...base, route: 'business_info', intent: businessInfo.intent, goal: 'business_information', domain: 'business_info', contextUsed: false, contextTarget: null, matchedCanonicalIds: [], matchedProductIds: [], primaryProductId: null, confidence: 1, threshold: 1, responseSource: 'business-info' });
+  }
+
+  if (turnIntent.source === 'commerce-intents' && turnIntent.intent === 'checkout_problem') {
+    const explicitProduct = findProductInText(normalizedCurrent);
+    const target = explicitProduct || context.purchaseProductId || null;
+    return decision({ ...base, route: 'commerce', intent: 'checkout_problem', goal: 'start_order', domain: 'commerce',
+      contextUsed: Boolean(target && !explicitProduct), contextTarget: target,
+      matchedProductIds: target ? [target] : [], confidence: 1, threshold: 1, responseSource: 'commerce-intent' });
+  }
+
   const refinement = recommendationRefinement(question, history, context);
   if (refinement && !guided?.dimensions?.needState) {
     const intent = `recommendation_refinement_${refinement.type}`;
@@ -266,11 +279,6 @@ function routeAnswerCore({ question, history = [], knowledge = [], ruleEngine, c
 
   if (guided?.kind === 'browse') {
     return decision({ ...base, route: 'business_info', intent: 'general_catalog', goal: 'browse_catalog', domain: 'business_info', guidedDiscovery: guided.dimensions, confidence: 1, threshold: 1, responseSource: 'guided-discovery' });
-  }
-
-  const businessInfo = turnIntent.source === 'business-info' ? turnIntent : null;
-  if (businessInfo) {
-    return decision({ ...base, route: 'business_info', intent: businessInfo.intent, goal: 'business_information', domain: 'business_info', contextUsed: false, contextTarget: null, matchedCanonicalIds: [], matchedProductIds: [], primaryProductId: null, confidence: 1, threshold: 1, responseSource: 'business-info' });
   }
 
   const directCanonical = findProductInText(normalize(question));

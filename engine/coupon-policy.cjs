@@ -56,9 +56,12 @@ function detectCouponIntent(question, history = []) {
   if (missingDelivery) return 'delivery_missing';
   if (contextual && /^(koszi|koszonom)( a)? semmit$/.test(q)) return 'delivery_missing_recovery';
   if (firstPurchase) return /\b(hol|hogyan|hogy|kapom|kaphatom)\b/.test(q) ? 'acquisition' : 'coupon_exists';
-  const requestedPercentOffer = /\b10(?:\s+szazalek\w*)?\b/.test(q)
-    && (/\b(hol|kerem|kovetelem|jar|kapom|kaphatom|hogyan|hogy)\b/.test(q) || couponWord || contextual);
+  const requestedPercentOffer = /\b10(?:\s*(?:%|szazalek\w*))?\b/.test(q)
+    && (/\b(hol|kerem|kovetelem|jar|kapom|kaphatom|hogyan|hogy)\b/.test(q) || couponWord);
   if (requestedPercentOffer) return /\b(hol|kerem|kovetelem|kapom|kaphatom|hogyan|hogy)\b/.test(q) ? 'acquisition' : 'coupon_exists';
+  if (couponWord && /\b(?:add|adj|ker\w*)\b/.test(q)
+    && /\b(?:kupon(?:kod\w*)?|kedvezmeny(?:kod\w*)?)\b/.test(q)) return 'code_request';
+  if (couponWord && /\bkaphat\w*\b/.test(q)) return 'coupon_exists';
   if (couponWord && /\b(hol|kerem|kovetelem)\b/.test(q)) return 'acquisition';
   if (/\bhirlevel\w*\b.*\b(kedvezmeny|kupon)\w*|\b(kedvezmeny|kupon)\w*.*\bhirlevel\w*\b/.test(q)) {
     return /\b(hogyan|hogy|hol|jutok|kapom|kaphatom)\b/.test(q) ? 'acquisition' : 'coupon_exists';
